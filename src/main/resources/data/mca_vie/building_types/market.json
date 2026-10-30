@@ -1,0 +1,10 @@
+{
+  "color": "ff2ecc71",
+  "visible": true,
+  "priority": 4,
+  "blocks": {
+    "minecraft:barrel": 6
+  },
+  "iconU": 5,
+  "iconV": 0
+}

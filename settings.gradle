@@ -1,0 +1,20 @@
+pluginManagement {
+    repositories {
+        maven {
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
+        }
+        maven {
+            name = 'Architectury'
+            url = "https://maven.architectury.dev/"
+        }
+        maven {
+            // requis par architectury-loom même pour un projet Fabric seul
+            name = 'Forge'
+            url = "https://files.minecraftforge.net/maven/"
+        }
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'mca-vie'

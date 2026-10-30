@@ -1,0 +1,11 @@
+{
+  "color": "ff3498db",
+  "visible": true,
+  "priority": 3,
+  "blocks": {
+    "minecraft:lectern": 1,
+    "minecraft:bookshelf": 6
+  },
+  "iconU": 6,
+  "iconV": 0
+}

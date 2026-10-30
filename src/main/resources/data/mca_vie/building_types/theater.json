@@ -1,0 +1,11 @@
+{
+  "color": "ff9b59b6",
+  "visible": true,
+  "priority": 5,
+  "blocks": {
+    "minecraft:note_block": 8
+  },
+  "iconU": 1,
+  "iconV": 1,
+  "noBeds": true
+}

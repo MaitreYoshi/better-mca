@@ -1,0 +1,8 @@
+{
+  "replace": false,
+  "values": [
+    "mca_vie:wooden_cross_tomb",
+    "mca_vie:stele_tomb",
+    "mca_vie:marble_tomb"
+  ]
+}

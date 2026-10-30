@@ -1,0 +1,52 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.maitreyoshi.mcavie.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "BlockEntityTypeMixin",
+    "BlockItemMixin",
+    "BreedableRelationshipMixin",
+    "PregnancyMixin",
+    "RelationshipMixin",
+    "TimeCommandMixin",
+    "TombstoneDataMixin",
+    "VillagerEntityMCAMixin",
+    "VillagerTasksMCAMixin",
+    "village.BuildingMixin",
+    "village.EnterBuildingTaskMixin",
+    "village.RenameVillageMessageMixin",
+    "village.ReportBuildingMessageMixin",
+    "village.SaveVillageMessageMixin",
+    "village.TasksMixin",
+    "village.VillageAccessor",
+    "village.VillageMarriageManagerMixin",
+    "village.VillageProcreationManagerMixin",
+    "village.VillageTaxesManagerMixin",
+    "village.VillageMixin",
+    "village.VillagerEntityMCATradeMixin",
+    "village.VillagerTradeMixin"
+  ],
+  "client": [
+    "client.AbstractDynamicScreenMixin",
+    "client.BlueprintScreenMixin",
+    "client.CameraHudMixin",
+    "client.CameraMouseMixin",
+    "client.CameraZoomMixin",
+    "client.CreateWorldGameTabMixin",
+    "client.ClickableWidgetAccessor",
+    "client.DestinyScreenMixin",
+    "client.EntityRendererMixin",
+    "client.HairLayerMixin",
+    "client.InteractScreenMixin",
+    "client.PhotoHeldItemMixin",
+    "client.TombstoneRendererMixin",
+    "client.VillagerEditorScreenAccessor",
+    "client.VillagerEditorScreenMixin",
+    "client.VillagerModelAgingMixin",
+    "client.VillagerRendererAgingMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "color": "ffd4af37",
+  "visible": true,
+  "priority": 2,
+  "blocks": {
+    "minecraft:lectern": 1,
+    "#minecraft:banners": 2
+  },
+  "iconU": 1,
+  "iconV": 0
+}
