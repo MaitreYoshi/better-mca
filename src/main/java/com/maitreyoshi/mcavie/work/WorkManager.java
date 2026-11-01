@@ -129,6 +129,7 @@ public final class WorkManager {
         updateCareer(villager, world, age);
 
         Job job = WorkRegistry.get(world.getServer()).getJob(villager.getUuid());
+        syncProfession(villager, job);
         boolean shouldWork = job.isCraft()
                 && (AgeState.byCurrentAge(villager.getBreedingAge()) == AgeState.ADULT || age >= APPRENTICE_AGE)
                 && isWorkTime(world)
@@ -235,7 +236,7 @@ public final class WorkManager {
                 String profession = villager.getProfessionName();
                 String former = job != Job.NONE ? "job.mca_vie." + job.id()
                         : profession.equals("mca.none") ? null : "entity.minecraft.villager." + profession;
-                if (villager.isGuard()) {
+                if (villager.isGuard() || isSyncedProfession(villager, job)) {
                     villager.setProfession(VillagerProfession.NONE);
                 }
                 record = registry.getOrCreate(villager.getUuid());
@@ -303,8 +304,44 @@ public final class WorkManager {
                 || brain.hasActivity(Activity.RAID) || brain.hasActivity(Activity.PRE_RAID);
     }
 
+    // un seul métier : la profession vanilla suit celle de Better MCA (échanges), le nom affiché reste le nôtre
+    @Nullable
+    private static VillagerProfession professionFor(Job job) {
+        return switch (job) {
+            case FARMER -> VillagerProfession.FARMER;
+            case LUMBERJACK -> VillagerProfession.FLETCHER;
+            case FISHER -> VillagerProfession.FISHERMAN;
+            case BREEDER -> VillagerProfession.SHEPHERD;
+            case DOCTOR -> VillagerProfession.CLERIC;
+            case BLACKSMITH -> VillagerProfession.TOOLSMITH;
+            case BAKER -> VillagerProfession.BUTCHER;
+            case TEACHER -> VillagerProfession.LIBRARIAN;
+            default -> null;
+        };
+    }
+
+    private static boolean isSyncedProfession(VillagerEntityMCA villager, Job job) {
+        VillagerProfession profession = professionFor(job);
+        return profession != null && villager.getProfession() == profession;
+    }
+
+    private static void syncProfession(VillagerEntityMCA villager, Job job) {
+        VillagerProfession profession = professionFor(job);
+        if (profession == null || AgeState.byCurrentAge(villager.getBreedingAge()) != AgeState.ADULT) {
+            return;
+        }
+        if (villager.getProfession() != profession) {
+            villager.setProfession(profession);
+        }
+        // sans expérience, la tâche vanilla LoseUnimportantJob lui retire sa profession faute de bloc de métier
+        if (villager.getExperience() == 0) {
+            villager.setExperience(1);
+        }
+    }
+
     public static void setJob(VillagerEntityMCA villager, Job job) {
         WorkRegistry.Record record = getRecord(villager);
+        Job previous = record.job;
         if (record.job != job) {
             record.level = 1;
             record.experience = 0;
@@ -318,7 +355,9 @@ public final class WorkManager {
             villager.setProfession(ProfessionsMCA.GUARD.get());
         } else if (job == Job.ARCHER) {
             villager.setProfession(ProfessionsMCA.ARCHER.get());
-        } else if (villager.isGuard()) {
+        } else if (professionFor(job) != null) {
+            syncProfession(villager, job);
+        } else if (villager.isGuard() || isSyncedProfession(villager, previous)) {
             villager.setProfession(VillagerProfession.NONE);
         }
         if (isWorking(villager)) {
