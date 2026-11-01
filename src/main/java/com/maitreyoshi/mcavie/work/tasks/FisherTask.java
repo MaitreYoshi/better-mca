@@ -147,7 +147,7 @@ public class FisherTask extends AbstractJobTask {
     private void findSpot(ServerWorld world, VillagerEntityMCA villager) {
         reach.prune(world);
         WorkManager.Zone zone = zone(villager);
-        BlockPos origin = villager.getBlockPos();
+        BlockPos origin = zone.center();
         BlockPos.Mutable cursor = new BlockPos.Mutable();
         double best = Double.MAX_VALUE;
         for (int dx = -SCAN_RANGE; dx <= SCAN_RANGE; dx++) {
@@ -162,17 +162,21 @@ public class FisherTask extends AbstractJobTask {
                     if (!zone.contains(cursor)) {
                         continue;
                     }
-                    double dist = cursor.getSquaredDistance(origin);
+                    double dist = cursor.getSquaredDistance(villager.getPos());
                     if (dist >= best || !isStandable(world, cursor) || reach.isBlacklisted(world, cursor)) {
                         continue;
                     }
-                    for (Direction dir : Direction.Type.HORIZONTAL) {
-                        BlockPos candidate = cursor.down().offset(dir);
-                        if (isGoodWater(world, candidate)) {
-                            best = dist;
-                            spot = cursor.toImmutable();
-                            water = candidate;
-                            break;
+                    // eau au niveau du sol, ou un bloc plus bas (berge surélevée)
+                    candidates:
+                    for (int drop = 1; drop <= 2; drop++) {
+                        for (Direction dir : Direction.Type.HORIZONTAL) {
+                            BlockPos candidate = cursor.down(drop).offset(dir);
+                            if (isGoodWater(world, candidate)) {
+                                best = dist;
+                                spot = cursor.toImmutable();
+                                water = candidate;
+                                break candidates;
+                            }
                         }
                     }
                 }
