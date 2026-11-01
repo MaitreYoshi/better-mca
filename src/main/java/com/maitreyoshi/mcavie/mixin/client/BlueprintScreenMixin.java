@@ -70,11 +70,11 @@ public abstract class BlueprintScreenMixin extends Screen {
     @Shadow(remap = false)
     private int pageNumber;
     @Shadow(remap = false)
-    private ButtonWidget[] buttonTaxes;
+    private net.mca.util.compat.ButtonWidget[] buttonTaxes;
     @Shadow(remap = false)
-    private ButtonWidget[] buttonBirths;
+    private net.mca.util.compat.ButtonWidget[] buttonBirths;
     @Shadow(remap = false)
-    private ButtonWidget[] buttonMarriage;
+    private net.mca.util.compat.ButtonWidget[] buttonMarriage;
 
     @Unique
     private final List<ButtonWidget> mcavie$selected = new java.util.ArrayList<>();
