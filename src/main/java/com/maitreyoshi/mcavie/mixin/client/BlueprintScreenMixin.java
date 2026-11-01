@@ -142,6 +142,8 @@ public abstract class BlueprintScreenMixin extends Screen {
         ButtonWidget justiceTab = addDrawableChild(ButtonWidget.builder(Text.translatable("gui.mca_vie.justice.tab"), b -> setPage(JUSTICE))
                 .dimensions(bx, by + 88, 80, 20).build());
         justiceTab.active = !page.equals(JUSTICE);
+        // Un focus clavier resté d'une page précédente dessine une bordure blanche qui ressemble à l'onglet ouvert.
+        setFocused(null);
         mcavie$selected.clear();
         for (ButtonWidget tab : mcavie$layoutTabs(bx)) {
             boolean map = page.equals("advanced") && tab.getMessage().getContent() instanceof net.minecraft.text.TranslatableTextContent t
