@@ -78,3 +78,8 @@ tasks.named('check') {
     dependsOn 'treeLayoutCheck'
     dependsOn 'treeSelectionCheck'
 }
+
+tasks.register('familyAgesCheck', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.maitreyoshi.mcavie.life.FamilyAgesCheck'
+}
