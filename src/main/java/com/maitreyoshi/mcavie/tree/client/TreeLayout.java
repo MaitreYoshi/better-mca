@@ -142,7 +142,7 @@ public final class TreeLayout {
             lines.add(TreeTexts.trim(font, profession, MAX_TEXT_WIDTH));
             colors.add(0xAAAAAA);
         }
-        if (TreeTexts.isShown(person.relationToViewer())) {
+        if (TreeTexts.isShownOnCard(person.relationToViewer())) {
             lines.add(TreeTexts.trim(font, TreeTexts.yourRelation(person.relationToViewer(), person.gender()), MAX_TEXT_WIDTH));
             colors.add(0xFFFF55);
         }
