@@ -52,8 +52,13 @@ public class MCAVie implements ModInitializer {
     private static void registerCommand() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(
                 CommandManager.literal("surname")
-                        .then(CommandManager.literal("fill").requires(s -> s.hasPermissionLevel(2))
+                        // Pas de requires() : sinon « fill » serait pris comme nom de famille par un non-opérateur.
+                        .then(CommandManager.literal("fill")
                                 .executes(ctx -> {
+                                    if (!ctx.getSource().hasPermissionLevel(2)) {
+                                        ctx.getSource().sendError(Text.translatable("command.mca_vie.fill_denied"));
+                                        return 0;
+                                    }
                                     int filled = Surnames.fillMissing(ctx.getSource().getServer().getOverworld());
                                     ctx.getSource().sendFeedback(() -> Text.translatable("command.mca_vie.filled", filled), true);
                                     return filled;

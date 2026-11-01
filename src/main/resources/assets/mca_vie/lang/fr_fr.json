@@ -2,6 +2,7 @@
   "gui.mca_vie.surname": "Nom de famille",
   "command.mca_vie.none": "Tu n'as pas encore de nom de famille. Utilise /surname <nom> pour en choisir un.",
   "command.mca_vie.filled": "%s personne(s) de l'arbre ont reçu un nom de famille.",
+  "command.mca_vie.fill_denied": "Il faut être opérateur (ou avoir les cheats activés en solo) pour utiliser /surname fill.",
   "command.mca_vie.current": "Ton nom de famille est %s.",
   "command.mca_vie.set": "Ton nom de famille est maintenant %s. Il sera transmis à tes enfants.",
 
