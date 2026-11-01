@@ -69,6 +69,15 @@ public abstract class BlueprintScreenMixin extends Screen {
 
     @Shadow(remap = false)
     private int pageNumber;
+    @Shadow(remap = false)
+    private ButtonWidget[] buttonTaxes;
+    @Shadow(remap = false)
+    private ButtonWidget[] buttonBirths;
+    @Shadow(remap = false)
+    private ButtonWidget[] buttonMarriage;
+
+    @Unique
+    private final List<ButtonWidget> mcavie$selected = new java.util.ArrayList<>();
 
     @Unique
     private int mcavie$marketPage;
@@ -133,7 +142,14 @@ public abstract class BlueprintScreenMixin extends Screen {
         ButtonWidget justiceTab = addDrawableChild(ButtonWidget.builder(Text.translatable("gui.mca_vie.justice.tab"), b -> setPage(JUSTICE))
                 .dimensions(bx, by + 88, 80, 20).build());
         justiceTab.active = !page.equals(JUSTICE);
-        mcavie$layoutTabs(bx);
+        mcavie$selected.clear();
+        for (ButtonWidget tab : mcavie$layoutTabs(bx)) {
+            boolean map = page.equals("advanced") && tab.getMessage().getContent() instanceof net.minecraft.text.TranslatableTextContent t
+                    && t.getKey().equals("gui.blueprint.map");
+            if (!tab.active || map) {
+                mcavie$selected.add(tab);
+            }
+        }
         if (page.equals(MARKET)) {
             mcavie$addMarketWidgets();
         }
@@ -174,14 +190,53 @@ public abstract class BlueprintScreenMixin extends Screen {
                     .dimensions(x + 56, y, 50, 20).build());
         }
         if (page.equals("rules")) {
+            int cx = width / 2 + 130;
+            int top = BlueprintPanels.rulesTop(height) - 6;
+            ButtonWidget[][] changers = {buttonTaxes, buttonBirths, buttonMarriage};
+            for (int i = 0; i < changers.length; i++) {
+                if (changers[i] == null) {
+                    continue;
+                }
+                int y = top + i * BlueprintPanels.RULES_ROW;
+                changers[i][1].setPosition(cx - 40, y);
+                changers[i][0].setPosition(cx - 20, y);
+                changers[i][2].setPosition(cx + 20, y);
+            }
             boolean allowed = rank != null && rank.isAtLeast(VillageRights.SET_TAXES);
-            int y = height / 2 - 50;
+            int y = top + 3 * BlueprintPanels.RULES_ROW;
             ButtonWidget less = addDrawableChild(ButtonWidget.builder(Text.literal("-"), b -> mcavie$send(VillageNetwork.NATURE, -1))
-                    .dimensions(width / 2 + 80, y, 20, 20).build());
+                    .dimensions(cx - 40, y, 20, 20).build());
             ButtonWidget more = addDrawableChild(ButtonWidget.builder(Text.literal("+"), b -> mcavie$send(VillageNetwork.NATURE, 1))
-                    .dimensions(width / 2 + 150, y, 20, 20).build());
-            less.active = allowed;
-            more.active = allowed;
+                    .dimensions(cx + 20, y, 20, 20).build());
+            less.visible = allowed;
+            more.visible = allowed;
+        }
+    }
+
+    @Inject(method = "renderRules", at = @At("HEAD"), cancellable = true, remap = false)
+    private void mcavie$renderRules(DrawContext context, CallbackInfo ci) {
+        ci.cancel();
+        int[] values = {Math.round(village.getTaxes() * 100), Math.round(village.getPopulationThreshold() * 100),
+                Math.round(village.getMarriageThreshold() * 100), VillageState.of(village).natureShare};
+        Rank[] required = {VillageRights.SET_TAXES, VillageRights.SET_BIRTHS, VillageRights.SET_MARRIAGES, VillageRights.SET_TAXES};
+        ButtonWidget[][] changers = {buttonTaxes, buttonBirths, buttonMarriage};
+        for (int i = 0; i < changers.length; i++) {
+            changers[i][0].setMessage(Text.literal(values[i] + "%"));
+            boolean allowed = rank != null && rank.isAtLeast(required[i]);
+            for (ButtonWidget b : changers[i]) {
+                b.active = allowed;
+                b.visible = allowed;
+            }
+        }
+        BlueprintPanels.renderRules(context, textRenderer, village, rank, values, required,
+                width / 2 - 92, BlueprintPanels.rulesTop(height), width / 2 + 130, width / 2 + 188);
+    }
+
+    @Override
+    public void renderBackground(DrawContext context) {
+        super.renderBackground(context);
+        if (village != null && page != null && !page.equals("waiting") && !page.equals("empty") && !page.equals("rename")) {
+            BlueprintPanels.renderFrame(context, width, height);
         }
     }
 
@@ -197,7 +252,7 @@ public abstract class BlueprintScreenMixin extends Screen {
     }
 
     @Unique
-    private void mcavie$layoutTabs(int bx) {
+    private List<ButtonWidget> mcavie$layoutTabs(int bx) {
         List<ButtonWidget> tabs = children().stream()
                 .filter(c -> c instanceof ButtonWidget w && w.getX() == bx && w.getWidth() == 80)
                 .map(c -> (ButtonWidget) c)
@@ -212,6 +267,7 @@ public abstract class BlueprintScreenMixin extends Screen {
             }
             y += step;
         }
+        return tabs;
     }
 
     @Unique
@@ -294,6 +350,9 @@ public abstract class BlueprintScreenMixin extends Screen {
                 setPage(REGISTRY);
             }).dimensions(width / 2 - 92 + (i + 1) * 66, height / 2 - 84, 64, 20).build());
             button.active = mcavie$registryFilter != filter;
+            if (!button.active) {
+                mcavie$selected.add(button);
+            }
         }
         int pages = BlueprintPanels.registryPages(village, mcavie$registryFilter);
         mcavie$registryPage = Math.max(0, Math.min(pages - 1, mcavie$registryPage));
@@ -348,6 +407,11 @@ public abstract class BlueprintScreenMixin extends Screen {
         if (village == null || page == null) {
             return;
         }
+        for (ButtonWidget selected : mcavie$selected) {
+            if (selected.visible && children().contains(selected)) {
+                BlueprintPanels.markSelected(context, textRenderer, selected);
+            }
+        }
         switch (page) {
             case "rank" -> {
                 int left = width / 2 - 92;
@@ -362,10 +426,6 @@ public abstract class BlueprintScreenMixin extends Screen {
                     BlueprintPanels.renderCatalogInfo(context, textRenderer, selectedBuilding, width / 2 + 35, height / 2 + 70);
                 }
             }
-            case "rules" -> {
-                BlueprintPanels.renderTaxCap(context, textRenderer, village, width / 2, height / 2 + 78, 180);
-                BlueprintPanels.renderNature(context, textRenderer, village, width / 2 + 125, height / 2 - 60, 110);
-            }
             case DECREES -> {
                 long today = client != null && client.world != null ? WorldCalendar.now(client.world).dayIndex() : 0;
                 BlueprintPanels.renderDecrees(context, textRenderer, village, rank, today, mcavie$decreeButtons, width / 2 + 38, height / 2 - 80);
@@ -375,8 +435,11 @@ public abstract class BlueprintScreenMixin extends Screen {
                     width / 2 + 41, height / 2 - 88, width / 2 - 46, height / 2 + 78);
             case REGISTRY -> {
                 long today = client != null && client.world != null ? WorldCalendar.now(client.world).dayIndex() : 0;
-                BlueprintPanels.renderRegistry(context, textRenderer, village, mcavie$registryFilter, mcavie$registryPage, today,
-                        width / 2 - 92, height / 2 - 58, width / 2 + 180 - (width / 2 - 92));
+                Text hovered = BlueprintPanels.renderRegistry(context, textRenderer, village, mcavie$registryFilter, mcavie$registryPage, today,
+                        width / 2 - 92, height / 2 - 58, width / 2 + 180 - (width / 2 - 92), mouseX, mouseY);
+                if (hovered != null) {
+                    context.drawTooltip(textRenderer, hovered, mouseX, mouseY);
+                }
             }
             case JUSTICE -> {
                 long today = client != null && client.world != null ? WorldCalendar.now(client.world).dayIndex() : 0;

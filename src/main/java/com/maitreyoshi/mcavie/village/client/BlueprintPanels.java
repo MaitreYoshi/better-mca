@@ -232,30 +232,58 @@ public final class BlueprintPanels {
         context.drawTextWithShadow(text, Text.translatable("gui.mca_vie.building.upkeep", rule.upkeep), x, y, WHITE);
     }
 
-    public static void renderTaxCap(DrawContext context, TextRenderer text, Village village, int centerX, int y, int width) {
+    /** Fond commun des pages du Plan : le contenu ne flotte plus sur le monde. */
+    public static void renderFrame(DrawContext context, int screenWidth, int screenHeight) {
+        int left = screenWidth / 2 - 98;
+        int right = Math.min(screenWidth - 4, screenWidth / 2 + 196);
+        int top = Math.max(2, screenHeight / 2 - 108);
+        int bottom = Math.min(screenHeight - 2, screenHeight / 2 + 110);
+        context.fill(left, top, right, bottom, 0xb0000000);
+        context.drawBorder(left, top, right - left, bottom - top, 0x40ffffff);
+    }
+
+    /** Onglet ou filtre ouvert : cadre et libellé dorés au lieu du gris « désactivé ». */
+    public static void markSelected(DrawContext context, TextRenderer text, net.minecraft.client.gui.widget.ButtonWidget button) {
+        context.drawBorder(button.getX() - 1, button.getY() - 1, button.getWidth() + 2, button.getHeight() + 2, GOLD);
+        context.drawCenteredTextWithShadow(text, button.getMessage(), button.getX() + button.getWidth() / 2,
+                button.getY() + (button.getHeight() - 8) / 2, GOLD);
+    }
+
+    public static final int RULES_ROW = 44;
+
+    public static int rulesTop(int screenHeight) {
+        return screenHeight / 2 - 66;
+    }
+
+    /** Page Règles de MCA redessinée : nom, valeur, phrase courte, rang exact quand c'est bloqué. */
+    public static void renderRules(DrawContext context, TextRenderer text, Village village, Rank personalRank,
+                                   int[] values, Rank[] required, int x, int y, int controlX, int right) {
         VillageState state = VillageState.of(village);
+        context.drawTextWithShadow(text, Text.translatable("gui.mca_vie.rules.title"), x, y - 26, WHITE);
+        Text you = Text.translatable("gui.mca_vie.rules.you", personalRank == null ? Text.literal("?") : Text.translatable(personalRank.getTranslationKey()));
+        context.drawTextWithShadow(text, you, right - text.getWidth(you), y - 26, GRAY);
+
         int max = Math.round(VillageRights.maxTaxes(state.rank) * 100);
         int equilibrium = VillageEconomy.equilibrium(village, Prestige.evaluateCached(village, state.rank), Math.round(village.getTaxes() * 100));
-        y = centered(context, text, Text.translatable("gui.mca_vie.rules.tax_cap", max, state.rank.getName()), centerX, y, width, GRAY);
-        centered(context, text, Text.translatable("gui.mca_vie.rules.equilibrium", equilibrium), centerX, y, width, GRAY);
-    }
-
-    public static void renderNature(DrawContext context, TextRenderer text, Village village, int centerX, int y, int width) {
-        VillageState state = VillageState.of(village);
-        context.drawCenteredTextWithShadow(text, Text.translatable("gui.mca_vie.rules.nature"), centerX, y, WHITE);
-        context.drawCenteredTextWithShadow(text, Text.literal(state.natureShare + " %"), centerX, y + 16, GOLD);
-        y += 36;
         boolean storage = Prestige.hasActive(Prestige.evaluateCached(village, state.rank), village, "storage");
-        Text hint = storage ? Text.translatable("gui.mca_vie.rules.nature_hint") : Text.translatable("gui.mca_vie.rules.nature_storage");
-        centered(context, text, hint, centerX, y, width, storage ? GRAY : RED);
-    }
-
-    private static int centered(DrawContext context, TextRenderer text, Text line, int centerX, int y, int width, int color) {
-        for (OrderedText part : text.wrapLines(line, width)) {
-            context.drawTextWithShadow(text, part, centerX - text.getWidth(part) / 2, y, color);
-            y += LINE;
+        Text[] labels = {Text.translatable("gui.blueprint.taxes"), Text.translatable("gui.blueprint.birth"),
+                Text.translatable("gui.blueprint.marriage"), Text.translatable("gui.mca_vie.rules.nature")};
+        Text[] hints = {Text.translatable("gui.mca_vie.rules.tax_line", max, state.rank.getName(), equilibrium),
+                Text.translatable("gui.mca_vie.rules.birth_hint"), Text.translatable("gui.mca_vie.rules.marriage_hint"),
+                Text.translatable(storage ? "gui.mca_vie.rules.nature_hint" : "gui.mca_vie.rules.nature_storage")};
+        int hintWidth = controlX - 45 - x;
+        for (int i = 0; i < labels.length; i++) {
+            int rowY = y + i * RULES_ROW;
+            boolean locked = personalRank == null || !personalRank.isAtLeast(required[i]);
+            context.drawTextWithShadow(text, labels[i], x, rowY, WHITE);
+            if (locked || i == 3) {
+                context.drawCenteredTextWithShadow(text, Text.literal(values[i] + " %"), controlX, rowY, locked ? GRAY : GOLD);
+            }
+            int lineY = wrapped(context, text, hints[i], x, rowY + 12, hintWidth, i == 3 && !storage ? RED : GRAY);
+            if (locked) {
+                wrapped(context, text, Text.translatable("gui.mca_vie.rules.locked", Text.translatable(required[i].getTranslationKey())), x, lineY, hintWidth, RED);
+            }
         }
-        return y;
     }
 
     public static void renderDecrees(DrawContext context, TextRenderer text, Village village, Rank personalRank, long today,
@@ -348,22 +376,27 @@ public final class BlueprintPanels {
     public static void renderJustice(DrawContext context, TextRenderer text, Village village, Rank personalRank, long today, int x, int y, int width) {
         VillageState state = VillageState.of(village);
         VillageConfig config = VillageConfig.get();
-        line(context, text, state.prisonActive ? Text.translatable("gui.mca_vie.justice.prison_ok", config.prisonDays)
-                : Text.translatable("gui.mca_vie.justice.no_prison", VillageConfig.get().building("prison") == null ? "" : VillageConfig.get().building("prison").requiredRank().getName()),
-                x, y, width + 90, state.prisonActive ? GREEN : GRAY);
-        y += LINE + 11;
+        int full = width + 90;
+        Text status = state.prisonActive ? Text.translatable("gui.mca_vie.justice.prison_ok", config.prisonDays)
+                : Text.translatable("gui.mca_vie.justice.no_prison", VillageConfig.get().building("prison") == null ? "" : VillageConfig.get().building("prison").requiredRank().getName());
+        List<OrderedText> statusLines = text.wrapLines(status, full);
+        for (int i = 0; i < Math.min(2, statusLines.size()); i++) {
+            context.drawTextWithShadow(text, statusLines.get(i), x, y + i * LINE, state.prisonActive ? GREEN : GRAY);
+        }
+        y += 22;
         if (state.cases.isEmpty()) {
             line(context, text, Text.translatable("gui.mca_vie.justice.no_case"), x, y + 6, width, GRAY);
         }
         for (int i = 0; i < Math.min(JUSTICE_ROWS, state.cases.size()); i++) {
             VillageState.Case c = state.cases.get(i);
             long left = Math.max(0, c.day + config.judgmentDays - today);
-            line(context, text, Text.translatable("gui.mca_vie.justice.case", c.name, c.amount, left), x, y + 6 + i * 22, width, WHITE);
+            line(context, text, Text.translatable("gui.mca_vie.justice.case", c.name, c.amount), x, y + 1 + i * 22, width, WHITE);
+            line(context, text, Text.translatable("gui.mca_vie.justice.case_due", left), x, y + 11 + i * 22, width, GRAY);
         }
         y += JUSTICE_ROWS * 22 + 4;
         if (personalRank == null || !personalRank.isAtLeast(VillageRights.JUSTICE)) {
-            line(context, text, Text.translatable("gui.mca_vie.justice.rank_low", Text.translatable(VillageRights.JUSTICE.getTranslationKey())), x, y, width + 90, RED);
-            y += LINE;
+            y = wrapped(context, text, Text.translatable("gui.mca_vie.justice.rank_low", Text.translatable(VillageRights.JUSTICE.getTranslationKey()),
+                    personalRank == null ? Text.literal("?") : Text.translatable(personalRank.getTranslationKey())), x, y, full, RED);
         }
         line(context, text, Text.translatable("gui.mca_vie.justice.prisoners", state.prisoners.size()), x, y, width + 90, GOLD);
         y += LINE;
@@ -375,7 +408,7 @@ public final class BlueprintPanels {
             line(context, text, Text.translatable("gui.mca_vie.justice.prisoner", p.name, Math.max(0, p.releaseDay - today)), x + 6, y, width + 84, GRAY);
             y += LINE;
         }
-        line(context, text, Text.translatable("gui.mca_vie.justice.hint", config.crimeHappiness), x, y + 4, width + 90, GRAY);
+        wrapped(context, text, Text.translatable("gui.mca_vie.justice.hint", config.crimeHappiness), x, y + 4, full, GRAY);
     }
 
     private static List<com.maitreyoshi.mcavie.village.CivilRegistry.Entry> registryEntries(Village village, int filter) {
@@ -386,18 +419,22 @@ public final class BlueprintPanels {
         return Math.max(1, (registryEntries(village, filter).size() + REGISTRY_LINES - 1) / REGISTRY_LINES);
     }
 
-    public static void renderRegistry(DrawContext context, TextRenderer text, Village village, int filter, int page, long today, int x, int y, int width) {
+    /** Dessine le registre ; renvoie la ligne complète survolée quand elle a dû être raccourcie, sinon null. */
+    public static Text renderRegistry(DrawContext context, TextRenderer text, Village village, int filter, int page, long today, int x, int y, int width,
+                                      int mouseX, int mouseY) {
         List<com.maitreyoshi.mcavie.village.CivilRegistry.Entry> entries = registryEntries(village, filter);
         if (entries.isEmpty()) {
             context.drawTextWithShadow(text, Text.translatable("gui.mca_vie.registry.empty"), x, y, GRAY);
         }
+        Text hovered = null;
         for (int i = 0; i < REGISTRY_LINES; i++) {
             int index = page * REGISTRY_LINES + i;
             if (index >= entries.size()) {
                 break;
             }
             com.maitreyoshi.mcavie.village.CivilRegistry.Entry e = entries.get(index);
-            MutableText line = Text.empty().append(com.maitreyoshi.mcavie.tree.client.TreeTexts.date(e.day())).append(" : ");
+            Text date = Text.empty().append(com.maitreyoshi.mcavie.tree.client.TreeTexts.date(e.day())).append(" : ");
+            MutableText line = Text.empty();
             int color;
             switch (e.kind()) {
                 case com.maitreyoshi.mcavie.village.CivilRegistry.BIRTH -> {
@@ -418,10 +455,18 @@ public final class BlueprintPanels {
                     line.append(com.maitreyoshi.mcavie.village.CivilRegistry.ZOMBIE.equals(e.other()) ? Text.translatable("gui.mca_vie.registry.zombie", e.name())
                             : e.age() < 0 ? Text.translatable("gui.mca_vie.registry.death", e.name())
                             : Text.translatable("gui.mca_vie.registry.death_age", e.name(), e.age()));
-                    color = GRAY;
+                    color = WHITE;
                 }
             }
-            context.drawTextWithShadow(text, net.minecraft.util.Language.getInstance().reorder(text.trimToWidth(line, width)), x, y + i * LINE, color);
+            int rowY = y + i * LINE;
+            int dateWidth = Math.min(text.getWidth(date), width / 2);
+            context.drawTextWithShadow(text, net.minecraft.util.Language.getInstance().reorder(text.trimToWidth(date, dateWidth)), x, rowY, GRAY);
+            int rest = width - dateWidth;
+            context.drawTextWithShadow(text, net.minecraft.util.Language.getInstance().reorder(text.trimToWidth(line, rest)), x + dateWidth, rowY, color);
+            if ((text.getWidth(line) > rest || text.getWidth(date) > dateWidth)
+                    && mouseX >= x && mouseX < x + width && mouseY >= rowY - 1 && mouseY < rowY + LINE - 1) {
+                hovered = Text.empty().append(date).append(line);
+            }
         }
         int year = com.maitreyoshi.mcavie.calendar.WorldCalendar.displayYearOfDay(today);
         int[] counts = new int[3];
@@ -434,6 +479,7 @@ public final class BlueprintPanels {
                 x + 46, y + REGISTRY_LINES * LINE + 18, WHITE);
         context.drawTextWithShadow(text, Text.translatable("gui.mca_vie.registry.page", page + 1, registryPages(village, filter)),
                 x + 46, y + REGISTRY_LINES * LINE + 7, GRAY);
+        return hovered;
     }
 
     public static void renderTaxRoll(DrawContext context, TextRenderer text, Village village, int pageNumber, int x, int y) {
