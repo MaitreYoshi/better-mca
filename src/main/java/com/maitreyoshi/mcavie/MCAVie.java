@@ -44,6 +44,7 @@ public class MCAVie implements ModInitializer {
         com.maitreyoshi.mcavie.life.TombstonePortraits.register();
         com.maitreyoshi.mcavie.life.TombstoneBlocks.register();
         com.maitreyoshi.mcavie.aging.Aging.register();
+        com.maitreyoshi.mcavie.life.FamilyAges.register();
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
             DevTestCommand.register();
         }

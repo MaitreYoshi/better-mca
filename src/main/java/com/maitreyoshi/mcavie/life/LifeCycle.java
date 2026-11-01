@@ -104,7 +104,7 @@ public final class LifeCycle {
         int stage = stageIndex(AgeState.byCurrentAge(villager.getBreedingAge()));
         Random random = world.getRandom();
         int[] range = INITIAL_AGE_RANGES[stage];
-        int years = range[0] + random.nextInt(range[1] - range[0] + 1);
+        int years = FamilyAges.initialYears(world, villager.getUuid(), range[0], range[1], random);
         return WorldCalendar.gameDayOf(WorldCalendar.calendarDay(today) - (long) (years * DAYS_PER_YEAR) - random.nextInt(365));
     }
 
