@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie;
 
+import com.maitreyoshi.mcavie.tree.server.mixin.FamilyTreeAccessor;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.VillagerLike;
 import net.mca.network.s2c.PlayerDataMessage;
@@ -13,6 +14,8 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
 
 public final class Surnames {
     private static final int MAX_DEPTH = 16;
@@ -118,6 +121,22 @@ public final class Surnames {
         if (current == null || !surname.equals(SurnameText.display(current, villager.getGenetics().getGender()))) {
             registry.set(villager.getUuid(), surname);
         }
+    }
+
+    // Mondes créés avant l'addon : donne un nom de famille à toutes les personnes de l'arbre qui n'en ont pas.
+    public static int fillMissing(ServerWorld world) {
+        FamilyTree tree = FamilyTree.get(world);
+        SurnameRegistry registry = SurnameRegistry.get(world.getServer());
+        List<FamilyTreeNode> missing = ((FamilyTreeAccessor) tree).mcavie$getEntries().values().stream()
+                .filter(node -> !node.isPlayer() && registry.get(node.id()) == null)
+                .toList();
+        int filled = 0;
+        for (FamilyTreeNode node : missing) {
+            if (registry.get(node.id()) != null || resolve(tree, registry, node, SurnameLists.DEFAULT_REGION, 0) != null) {
+                filled++;
+            }
+        }
+        return filled;
     }
 
     public static void assign(ServerWorld world, FamilyTreeNode node) {

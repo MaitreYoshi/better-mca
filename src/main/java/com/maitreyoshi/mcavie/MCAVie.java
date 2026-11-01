@@ -52,6 +52,12 @@ public class MCAVie implements ModInitializer {
     private static void registerCommand() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(
                 CommandManager.literal("surname")
+                        .then(CommandManager.literal("fill").requires(s -> s.hasPermissionLevel(2))
+                                .executes(ctx -> {
+                                    int filled = Surnames.fillMissing(ctx.getSource().getServer().getOverworld());
+                                    ctx.getSource().sendFeedback(() -> Text.translatable("command.mca_vie.filled", filled), true);
+                                    return filled;
+                                }))
                         .executes(ctx -> {
                             ServerPlayerEntity player = ctx.getSource().getPlayerOrThrow();
                             String surname = SurnameRegistry.get(ctx.getSource().getServer()).get(player.getUuid());
