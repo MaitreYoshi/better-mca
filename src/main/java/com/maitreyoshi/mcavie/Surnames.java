@@ -105,6 +105,21 @@ public final class Surnames {
         }
     }
 
+    public static void onEditorRename(VillagerEntityMCA villager) {
+        if (!(villager.getWorld() instanceof ServerWorld world)) {
+            return;
+        }
+        String surname = existingSurname(villager.getTrackedValue(VillagerLike.VILLAGER_NAME));
+        if (surname == null) {
+            return;
+        }
+        SurnameRegistry registry = SurnameRegistry.get(world.getServer());
+        String current = registry.get(villager.getUuid());
+        if (current == null || !surname.equals(SurnameText.display(current, villager.getGenetics().getGender()))) {
+            registry.set(villager.getUuid(), surname);
+        }
+    }
+
     public static void assign(ServerWorld world, FamilyTreeNode node) {
         resolve(FamilyTree.get(world), SurnameRegistry.get(world.getServer()), node, SurnameLists.DEFAULT_REGION, 0);
     }

@@ -12,6 +12,7 @@
     "TimeCommandMixin",
     "TombstoneDataMixin",
     "VillagerEntityMCAMixin",
+    "VillagerEditorSyncRequestMixin",
     "VillagerTasksMCAMixin",
     "village.BuildingMixin",
     "village.EnterBuildingTaskMixin",
