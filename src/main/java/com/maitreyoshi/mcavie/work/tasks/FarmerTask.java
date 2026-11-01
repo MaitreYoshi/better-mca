@@ -79,10 +79,21 @@ public class FarmerTask extends AbstractJobTask {
     @Override
     protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
         super.finishRunning(world, villager, time);
+        clearBreaking(world, villager, target);
         target = null;
         targetKind = null;
         reach.reset();
         workTicks = 0;
+    }
+
+    @Override
+    protected boolean isSearching() {
+        return scan.running();
+    }
+
+    @Override
+    protected boolean altersBlocks() {
+        return true;
     }
 
     @Override
@@ -98,25 +109,25 @@ public class FarmerTask extends AbstractJobTask {
         holdTool(villager);
 
         BlockPos walkPos = walkPos(target, kind);
-        villager.moveTowards(walkPos);
-
         double distance = villager.squaredDistanceTo(Vec3d.ofCenter(walkPos));
         if (distance > WORK_DISTANCE_SQ) {
+            walkTo(villager, walkPos);
             if (reach.giveUp(world, target)) {
                 selectTarget(world, villager);
             }
             return;
         }
+        arrive(villager);
+        villager.lookAt(target);
 
         workTicks++;
-        if (workTicks % 5 == 0) {
-            villager.swingHand(Hand.MAIN_HAND);
-        }
+        hitBlock(world, villager, target, workTicks, WORK_TICKS);
         if (workTicks < WORK_TICKS) {
             return;
         }
 
         BlockPos done = target;
+        clearBreaking(world, villager, done);
         if (kind == Kind.HARVEST) {
             harvest(world, villager, done);
         } else {
@@ -127,6 +138,7 @@ public class FarmerTask extends AbstractJobTask {
     }
 
     private void selectTarget(ServerWorld world, VillagerEntityMCA villager) {
+        clearBreaking(world, villager, target);
         BlockPos next = findTarget(world, villager);
         target = next;
         targetKind = next == null ? null : classify(world, next);

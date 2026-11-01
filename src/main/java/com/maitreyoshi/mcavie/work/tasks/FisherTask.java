@@ -31,6 +31,7 @@ public class FisherTask extends AbstractJobTask {
     private static final int SCAN_COOLDOWN = 200;
     private static final int CATCH_MIN = 200;
     private static final int CATCH_RANDOM = 200;
+    private static final int BITE_TICKS = 30;
     private static final double ARRIVED_SQ = 2.25;
     private static final int REACH_TICKS = 200;
     private static final long BLACKLIST_TICKS = 2400;
@@ -90,7 +91,7 @@ public class FisherTask extends AbstractJobTask {
             return;
         }
         if (villager.squaredDistanceTo(Vec3d.ofBottomCenter(spot)) > ARRIVED_SQ) {
-            villager.moveTowards(spot);
+            walkTo(villager, spot);
             if (reach.giveUp(world, spot)) {
                 spot = null;
                 water = null;
@@ -98,22 +99,41 @@ public class FisherTask extends AbstractJobTask {
             return;
         }
         reach.reset();
-        villager.getNavigation().stop();
+        arrive(villager);
         villager.lookAt(water);
         holdTool(villager);
+        double wx = water.getX() + 0.5;
+        double wy = water.getY() + 1.0;
+        double wz = water.getZ() + 0.5;
         if (!cast) {
             villager.swingHand(Hand.MAIN_HAND);
+            world.playSound(null, villager.getBlockPos(), SoundEvents.ENTITY_FISHING_BOBBER_THROW, SoundCategory.NEUTRAL, 0.5F, 0.6F);
+            world.spawnParticles(ParticleTypes.SPLASH, wx, wy, wz, 6, 0.2, 0.05, 0.2, 0.1);
             cast = true;
+        }
+        // pas de vrai bouchon (réservé aux joueurs) : remous au point de pêche, puis la touche
+        if (catchTimer % 30 == 0) {
+            world.spawnParticles(ParticleTypes.FISHING, wx, wy, wz, 2, 0.1, 0.0, 0.1, 0.0);
+        }
+        if (catchTimer == BITE_TICKS) {
+            world.playSound(null, water, SoundEvents.ENTITY_FISHING_BOBBER_SPLASH, SoundCategory.NEUTRAL, 0.25F, 1.2F);
+        }
+        if (catchTimer < BITE_TICKS && catchTimer % 4 == 0) {
+            world.spawnParticles(ParticleTypes.FISHING, wx, wy, wz, 3, 0.15, 0.0, 0.15, 0.02);
+            world.spawnParticles(ParticleTypes.BUBBLE, wx, wy - 0.3, wz, 2, 0.15, 0.1, 0.15, 0.05);
         }
         if (--catchTimer > 0) {
             return;
         }
+        world.playSound(null, villager.getBlockPos(), SoundEvents.ENTITY_FISHING_BOBBER_RETRIEVE, SoundCategory.NEUTRAL, 0.5F, 1.0F);
+        cast = false;
         catchTimer = CATCH_MIN + world.random.nextInt(CATCH_RANDOM);
         catchFish(world, villager);
     }
 
     @Override
     protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+        super.finishRunning(world, villager, time);
         cast = false;
     }
 

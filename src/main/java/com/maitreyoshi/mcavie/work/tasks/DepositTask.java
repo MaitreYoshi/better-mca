@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
 import net.mca.entity.VillagerEntityMCA;
-import net.minecraft.entity.ai.brain.MemoryModuleState;
+import com.maitreyoshi.mcavie.work.WorkStatus;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.MultiTickTask;
 import net.minecraft.inventory.Inventory;
@@ -41,10 +41,7 @@ public class DepositTask extends MultiTickTask<VillagerEntityMCA> {
     private final AbstractJobTask.Reach<UUID> reach = new AbstractJobTask.Reach<>(REACH_TICKS, BLACKLIST_TICKS, UNREACHABLE);
 
     public DepositTask() {
-        super(ImmutableMap.of(
-                MemoryModuleType.LOOK_TARGET, MemoryModuleState.VALUE_ABSENT,
-                MemoryModuleType.WALK_TARGET, MemoryModuleState.VALUE_ABSENT
-        ), 600);
+        super(ImmutableMap.of(), 600);
     }
 
     public static boolean needsDeposit(VillagerEntityMCA villager) {
@@ -225,13 +222,20 @@ public class DepositTask extends MultiTickTask<VillagerEntityMCA> {
     }
 
     @Override
+    protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+        villager.getBrain().forget(MemoryModuleType.WALK_TARGET);
+        villager.getBrain().forget(MemoryModuleType.LOOK_TARGET);
+    }
+
+    @Override
     protected void keepRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
         BlockPos depot = AbstractJobTask.depotPos(villager);
         if (depot == null) {
             return;
         }
-        villager.moveTowards(depot);
         if (villager.squaredDistanceTo(Vec3d.ofCenter(depot)) <= 6.25) {
+            AbstractJobTask.arrive(villager, WorkStatus.DEPOSITING);
+            villager.lookAt(depot);
             reach.reset();
             Inventory chest = AbstractJobTask.depotInventory(world, villager);
             if (chest != null) {
@@ -239,6 +243,7 @@ public class DepositTask extends MultiTickTask<VillagerEntityMCA> {
                 villager.swingHand(net.minecraft.util.Hand.MAIN_HAND);
             }
         } else {
+            AbstractJobTask.walkTo(villager, depot);
             reach.giveUp(world, villager.getUuid());
         }
     }

@@ -3,10 +3,13 @@ package com.maitreyoshi.mcavie.work.tasks;
 import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.PlacedLogs;
 import com.maitreyoshi.mcavie.work.WorkManager;
+import com.maitreyoshi.mcavie.work.WorkRegistry;
 import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.LeavesBlock;
+import net.minecraft.item.Items;
+import net.minecraft.block.PillarBlock;
 import net.minecraft.entity.ItemEntity;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.BlockItem;
@@ -32,14 +35,18 @@ import java.util.Set;
 public class LumberjackTask extends AbstractJobTask {
     private static final long SCAN_INTERVAL = 1200;
     private static final int SCAN_HEIGHT = 8;
-    private static final double WORK_DISTANCE_SQ = 9.0;
-    private static final int CHOP_TICKS = 40;
+    private static final double WORK_DISTANCE_SQ = 12.25;
+    // durée de coupe par bûche selon le niveau (apprenti → maître), bornée pour les très grands arbres
+    private static final int[] TICKS_PER_LOG = {60, 50, 40, 30, 20};
+    private static final int MIN_CHOP_TICKS = 60;
+    private static final int MAX_CHOP_TICKS = 1100;
     private static final int REACH_TICKS = 240;
     private static final long BLACKLIST_TICKS = 2400;
-    private static final int MAX_LOGS = 64;
+    private static final int MAX_LOGS = 192;
     private static final int TRUNK_RADIUS = 6;
     private static final int LEAF_RADIUS = 3;
-    private static final int LEAF_HEIGHT = 9;
+    private static final int LEAF_HEIGHT = 16;
+    private static final String[] SOIL_WORDS = {"dirt", "grass", "soil", "podzol", "mycelium", "moss_block", "mud", "loam", "silt"};
     private static final int BRANCH_LEAF_RADIUS = 3;
     private static final int SAPLING_RADIUS = 8;
     private static final int RETRY_TICKS = 20;
@@ -53,9 +60,10 @@ public class LumberjackTask extends AbstractJobTask {
 
     private BlockPos target;
     private int chopTicks;
+    private int chopTotal;
 
     public LumberjackTask() {
-        super(Job.LUMBERJACK);
+        super(Job.LUMBERJACK, MAX_CHOP_TICKS + 300);
     }
 
     @Override
@@ -86,9 +94,20 @@ public class LumberjackTask extends AbstractJobTask {
     @Override
     protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
         super.finishRunning(world, villager, time);
+        clearBreaking(world, villager, target);
         target = null;
         reach.reset();
         chopTicks = 0;
+    }
+
+    @Override
+    protected boolean isSearching() {
+        return scan.running();
+    }
+
+    @Override
+    protected boolean altersBlocks() {
+        return true;
     }
 
     @Override
@@ -102,29 +121,42 @@ public class LumberjackTask extends AbstractJobTask {
         }
         holdTool(villager);
 
-        villager.moveTowards(target);
-        if (villager.squaredDistanceTo(Vec3d.ofCenter(target)) > WORK_DISTANCE_SQ) {
+        if (!nearTrunk(villager, target)) {
+            walkTo(villager, target);
             if (reach.giveUp(world, target)) {
                 selectTarget(world, villager);
             }
             return;
         }
+        arrive(villager);
+        villager.lookAt(target.up());
 
-        chopTicks++;
-        if (chopTicks % 5 == 0) {
-            villager.swingHand(Hand.MAIN_HAND);
+        if (chopTicks == 0) {
+            chopTotal = chopDuration(world, villager, target);
         }
-        if (chopTicks < CHOP_TICKS) {
+        chopTicks++;
+        hitBlock(world, villager, target, chopTicks, chopTotal);
+        if (chopTicks < chopTotal) {
             return;
         }
 
         BlockPos base = target;
+        clearBreaking(world, villager, base);
         chop(world, villager, base);
         candidates.remove(base);
         selectTarget(world, villager);
     }
 
+    // à portée de hache du tronc, même si des feuilles ou une pente l'empêchent de le toucher
+    private static boolean nearTrunk(VillagerEntityMCA villager, BlockPos base) {
+        double dx = villager.getX() - (base.getX() + 0.5);
+        double dz = villager.getZ() - (base.getZ() + 0.5);
+        double dy = villager.getY() - base.getY();
+        return dx * dx + dz * dz <= WORK_DISTANCE_SQ && dy >= -2 && dy <= 4;
+    }
+
     private void selectTarget(ServerWorld world, VillagerEntityMCA villager) {
+        clearBreaking(world, villager, target);
         target = findTarget(world, villager);
         reach.reset();
         chopTicks = 0;
@@ -169,7 +201,7 @@ public class LumberjackTask extends AbstractJobTask {
             WorkManager.Zone zone = zone(villager);
             PlacedLogs.get(world).removeIf(packed -> {
                 BlockPos pos = BlockPos.fromLong(packed);
-                return zone.contains(pos) && isLoaded(world, pos) && !world.getBlockState(pos).isIn(BlockTags.LOGS);
+                return zone.contains(pos) && isLoaded(world, pos) && !isLog(world.getBlockState(pos));
             });
             scan.start(zone);
         }
@@ -184,12 +216,42 @@ public class LumberjackTask extends AbstractJobTask {
         if (!isLoaded(world, pos)) {
             return false;
         }
-        return isNaturalLog(world.getBlockState(pos)) && world.getBlockState(pos.down()).isIn(BlockTags.DIRT)
+        return isNaturalLog(world.getBlockState(pos)) && isSoil(world.getBlockState(pos.down()))
                 && !PlacedLogs.get(world).contains(pos);
     }
 
+    // arbres des autres mods : tous ne remplissent pas les tags vanilla, on se rabat sur la classe ou le nom du bloc
+    public static boolean isLog(BlockState state) {
+        if (state.isIn(BlockTags.LOGS)) {
+            return true;
+        }
+        String path = Registries.BLOCK.getId(state.getBlock()).getPath();
+        return state.getBlock() instanceof PillarBlock && (path.endsWith("_log") || path.endsWith("_stem") || path.startsWith("log_"));
+    }
+
+    private static boolean isLeaves(BlockState state) {
+        if (state.isIn(BlockTags.LEAVES) || state.getBlock() instanceof LeavesBlock) {
+            return true;
+        }
+        String path = Registries.BLOCK.getId(state.getBlock()).getPath();
+        return path.endsWith("_leaves") || path.startsWith("leaves_");
+    }
+
+    private static boolean isSoil(BlockState state) {
+        if (state.isIn(BlockTags.DIRT)) {
+            return true;
+        }
+        String path = Registries.BLOCK.getId(state.getBlock()).getPath();
+        for (String soil : SOIL_WORDS) {
+            if (path.contains(soil)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean isNaturalLog(BlockState state) {
-        if (!state.isIn(BlockTags.LOGS)) {
+        if (!isLog(state)) {
             return false;
         }
         String path = Registries.BLOCK.getId(state.getBlock()).getPath();
@@ -217,7 +279,33 @@ public class LumberjackTask extends AbstractJobTask {
     private void chop(ServerWorld world, VillagerEntityMCA villager, BlockPos base) {
         Block baseBlock = world.getBlockState(base).getBlock();
         String family = family(baseBlock);
+        String namespace = Registries.BLOCK.getId(baseBlock).getNamespace();
 
+        Set<BlockPos> logs = treeLogs(world, villager, base, family);
+        for (BlockPos pos : logs) {
+            BlockState state = world.getBlockState(pos);
+            if (!mayAlter(world, pos) || !world.breakBlock(pos, false, villager)) {
+                continue;
+            }
+            for (ItemStack drop : blockDrops(world, villager, pos, state)) {
+                store(villager, drop);
+            }
+        }
+        gainExperience(villager, 1);
+
+        collectSaplings(world, villager, base);
+        replant(world, villager, base, namespace, family);
+    }
+
+    private int chopDuration(ServerWorld world, VillagerEntityMCA villager, BlockPos base) {
+        WorkRegistry.Record record = WorkManager.findRecord(villager);
+        int level = record == null ? 1 : record.level;
+        int perLog = TICKS_PER_LOG[Math.max(0, Math.min(TICKS_PER_LOG.length - 1, level - 1))];
+        int size = treeLogs(world, villager, base, family(world.getBlockState(base).getBlock())).size();
+        return Math.max(MIN_CHOP_TICKS, Math.min(MAX_CHOP_TICKS, size * perLog));
+    }
+
+    private Set<BlockPos> treeLogs(ServerWorld world, VillagerEntityMCA villager, BlockPos base, String family) {
         PlacedLogs placed = PlacedLogs.get(world);
         WorkManager.Zone zone = zone(villager);
         Set<BlockPos> logs = new HashSet<>();
@@ -227,7 +315,7 @@ public class LumberjackTask extends AbstractJobTask {
             for (int dz = -1; dz <= 1; dz++) {
                 BlockPos side = base.add(dx, 0, dz);
                 if (!logs.contains(side) && isTreeLog(world, placed, zone, base, side, family)
-                        && world.getBlockState(side.down()).isIn(BlockTags.DIRT)) {
+                        && isSoil(world.getBlockState(side.down()))) {
                     climb(world, placed, zone, base, side, family, logs, queue);
                 }
             }
@@ -250,20 +338,7 @@ public class LumberjackTask extends AbstractJobTask {
                 }
             }
         }
-
-        for (BlockPos pos : logs) {
-            BlockState state = world.getBlockState(pos);
-            if (!mayAlter(world, pos) || !world.breakBlock(pos, false, villager)) {
-                continue;
-            }
-            for (ItemStack drop : blockDrops(world, villager, pos, state)) {
-                store(villager, drop);
-            }
-        }
-        gainExperience(villager, 1);
-
-        collectSaplings(world, villager, base);
-        replant(world, villager, base, family);
+        return logs;
     }
 
     private void climb(ServerWorld world, PlacedLogs placed, WorkManager.Zone zone, BlockPos base, BlockPos start, String family,
@@ -288,7 +363,7 @@ public class LumberjackTask extends AbstractJobTask {
     private boolean isBranch(ServerWorld world, BlockPos pos) {
         BlockPos below = pos.down();
         BlockState under = world.getBlockState(below);
-        if (!under.isAir() && !under.isIn(BlockTags.LOGS) && !under.isIn(BlockTags.LEAVES) && under.isSolidBlock(world, below)) {
+        if (!under.isAir() && !isLog(under) && !isLeaves(under) && under.isSolidBlock(world, below)) {
             return false;
         }
         BlockPos.Mutable cursor = new BlockPos.Mutable();
@@ -306,7 +381,7 @@ public class LumberjackTask extends AbstractJobTask {
     }
 
     private static boolean isNaturalLeaf(BlockState state) {
-        return state.isIn(BlockTags.LEAVES) && !(state.contains(LeavesBlock.PERSISTENT) && state.get(LeavesBlock.PERSISTENT));
+        return isLeaves(state) && !(state.contains(LeavesBlock.PERSISTENT) && state.get(LeavesBlock.PERSISTENT));
     }
 
     private String family(Block block) {
@@ -318,6 +393,10 @@ public class LumberjackTask extends AbstractJobTask {
             path = path.substring(0, path.length() - "_log".length());
         } else if (path.endsWith("_wood")) {
             path = path.substring(0, path.length() - "_wood".length());
+        } else if (path.endsWith("_stem")) {
+            path = path.substring(0, path.length() - "_stem".length());
+        } else if (path.startsWith("log_")) {
+            path = path.substring("log_".length());
         }
         return path;
     }
@@ -330,8 +409,12 @@ public class LumberjackTask extends AbstractJobTask {
         }
     }
 
-    private void replant(ServerWorld world, VillagerEntityMCA villager, BlockPos base, String family) {
-        Item saplingItem = Registries.ITEM.get(new Identifier("minecraft", family.equals("mangrove") ? "mangrove_propagule" : family + "_sapling"));
+    private void replant(ServerWorld world, VillagerEntityMCA villager, BlockPos base, String namespace, String family) {
+        String name = family.equals("mangrove") ? "mangrove_propagule" : family + "_sapling";
+        Item saplingItem = Registries.ITEM.get(new Identifier(namespace, name));
+        if (saplingItem == Items.AIR) {
+            saplingItem = Registries.ITEM.get(new Identifier("minecraft", name));
+        }
         if (!(saplingItem instanceof BlockItem blockItem) || !world.getBlockState(base).isAir() || !mayAlter(world, base)) {
             return;
         }

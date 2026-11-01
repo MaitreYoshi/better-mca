@@ -43,6 +43,7 @@ public final class WorkManager {
     private static final String TOOL_KEY = "mca_vie_tool";
 
     private static final Map<UUID, Boolean> WORKING = new ConcurrentHashMap<>();
+    private static final Map<UUID, WorkStatus> STATUS = new ConcurrentHashMap<>();
     private static UUID cachedUuid;
     private static long cachedTime;
     private static WorkRegistry.Record cachedRecord;
@@ -57,6 +58,16 @@ public final class WorkManager {
 
     public static boolean isWorking(VillagerEntityMCA villager) {
         return WORKING.getOrDefault(villager.getUuid(), false);
+    }
+
+    public static WorkStatus getStatus(VillagerEntityMCA villager) {
+        return STATUS.getOrDefault(villager.getUuid(), WorkStatus.SEARCHING);
+    }
+
+    public static void setStatus(VillagerEntityMCA villager, WorkStatus status) {
+        if (STATUS.put(villager.getUuid(), status) != status) {
+            WorkNetwork.sendJobInfo(villager);
+        }
     }
 
     public static Job getJob(VillagerEntityMCA villager) {
@@ -142,6 +153,9 @@ public final class WorkManager {
                 && !villager.getVillagerBrain().isPanicking()
                 && !DepositTask.isBlocked(world, villager);
 
+        if (!shouldWork && job.isCraft()) {
+            setStatus(villager, DepositTask.isBlocked(world, villager) ? WorkStatus.INVENTORY_FULL : WorkStatus.SEARCHING);
+        }
         boolean wasWorking = isWorking(villager);
         if (shouldWork == wasWorking) {
             if (!shouldWork && isMarkedTool(villager.getMainHandStack())) {
@@ -150,6 +164,9 @@ public final class WorkManager {
             return;
         }
         WORKING.put(villager.getUuid(), shouldWork);
+        if (shouldWork) {
+            STATUS.put(villager.getUuid(), WorkStatus.SEARCHING);
+        }
         WorkNetwork.sendJobInfo(villager);
 
         if (shouldWork) {
@@ -385,6 +402,7 @@ public final class WorkManager {
 
     public static void forget(UUID uuid) {
         WORKING.remove(uuid);
+        STATUS.remove(uuid);
         DepositTask.forget(uuid);
     }
 
@@ -396,6 +414,7 @@ public final class WorkManager {
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             WORKING.clear();
+            STATUS.clear();
             cachedRecord = null;
             cachedUuid = null;
             DepositTask.clear();
