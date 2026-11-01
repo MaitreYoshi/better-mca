@@ -1,6 +1,7 @@
 {
   "gui.mca_vie.surname": "Surname",
   "command.mca_vie.none": "You don't have a surname yet. Use /surname <name> to choose one.",
+  "command.mca_vie.filled": "%s family tree member(s) received a surname.",
   "command.mca_vie.current": "Your surname is %s.",
   "command.mca_vie.set": "Your surname is now %s. Your children will inherit it.",
 
