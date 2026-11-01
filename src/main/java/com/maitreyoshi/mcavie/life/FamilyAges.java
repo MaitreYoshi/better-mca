@@ -55,13 +55,13 @@ public final class FamilyAges {
                     family.lo[i] = family.hi[i] = family.age[i];
                 } else if (i == s) {
                     family.lo[i] = lo;
-                    family.hi[i] = family.bornInGame[i] ? Math.max(lo, Math.min(hi, worldYears)) : hi;
+                    family.hi[i] = hi;
                 } else {
                     family.lo[i] = 0;
-                    family.hi[i] = family.bornInGame[i] ? Math.min(UNKNOWN_MAX, worldYears) : UNKNOWN_MAX;
+                    family.hi[i] = UNKNOWN_MAX;
                 }
             }
-            if (family.propagate()) {
+            if (family.capToWorld(worldYears)) {
                 return family.lo[s] + random.nextInt(family.hi[s] - family.lo[s] + 1);
             }
         }
@@ -114,7 +114,7 @@ public final class FamilyAges {
         return new int[]{18, Math.max(OLDEST, years)};
     }
 
-    private static final class Family {
+    static final class Family {
         final List<UUID> ids = new ArrayList<>();
         final Map<UUID, Integer> index = new HashMap<>();
         final List<int[]> parentEdges = new ArrayList<>();
@@ -178,6 +178,23 @@ public final class FamilyAges {
             return f;
         }
 
+        /** Famille construite à la main, pour les vérifications hors jeu. */
+        static Family of(int[] ages, boolean[] bornInGame, int[][] parentEdges, int[][] spouseEdges) {
+            Family f = new Family();
+            int n = ages.length;
+            for (int i = 0; i < n; i++) {
+                f.add(new UUID(0, i));
+            }
+            f.age = ages.clone();
+            f.birth = new long[n];
+            f.bornInGame = bornInGame.clone();
+            f.lo = new int[n];
+            f.hi = new int[n];
+            f.parentEdges.addAll(List.of(parentEdges));
+            f.spouseEdges.addAll(List.of(spouseEdges));
+            return f;
+        }
+
         private void add(UUID uuid) {
             index.put(uuid, ids.size());
             ids.add(uuid);
@@ -215,6 +232,22 @@ public final class FamilyAges {
                 }
             }
             return !changed;
+        }
+
+        /**
+         * Plafonne les PNJ nés en jeu à l'âge du monde, sans descendre sous le minimum imposé
+         * par leurs descendants : deux générations nées en jeu ne peuvent pas avoir toutes deux 18 ans.
+         */
+        boolean capToWorld(int worldYears) {
+            if (!propagate()) {
+                return false;
+            }
+            for (int i = 0; i < size(); i++) {
+                if (bornInGame[i]) {
+                    hi[i] = Math.max(lo[i], Math.min(hi[i], worldYears));
+                }
+            }
+            return propagate();
         }
 
         private boolean raise(int i, int value) {
@@ -260,14 +293,31 @@ public final class FamilyAges {
          * des aînés vers les cadets, sans changer le stade de croissance de chacun.
          */
         int fix(LifeRegistry life, int worldYears) {
+            int[] chosen = solve(worldYears);
+            if (chosen == null) {
+                MCAVie.LOGGER.warn("Âges de la famille de {} impossibles à rendre cohérents", ids.get(0));
+                return 0;
+            }
+            int changed = 0;
+            for (int i = 0; i < size(); i++) {
+                if (age[i] >= 0 && chosen[i] != age[i]) {
+                    long shift = Math.round((age[i] - chosen[i]) * LifeCycle.DAYS_PER_YEAR);
+                    life.setBirthDay(ids.get(i), WorldCalendar.gameDayOf(WorldCalendar.calendarDay(birth[i]) + shift));
+                    changed++;
+                }
+            }
+            return changed;
+        }
+
+        /** Nouveaux âges (-1 pour qui n'en a pas encore), ou null si la famille est insoluble. */
+        int[] solve(int worldYears) {
             for (int i = 0; i < size(); i++) {
                 int[] range = age[i] >= 0 ? stageRange(age[i]) : new int[]{0, UNKNOWN_MAX};
                 lo[i] = range[0];
-                hi[i] = bornInGame[i] ? Math.max(range[0], Math.min(range[1], worldYears)) : range[1];
+                hi[i] = range[1];
             }
-            if (!propagate()) {
-                MCAVie.LOGGER.warn("Âges de la famille de {} impossibles à rendre cohérents", ids.get(0));
-                return 0;
+            if (!capToWorld(worldYears)) {
+                return null;
             }
             int[] depth = new int[size()];
             for (int pass = 0; pass < size(); pass++) {
@@ -290,23 +340,15 @@ public final class FamilyAges {
             }
             order.sort(Comparator.<Integer>comparingInt(i -> depth[i]).thenComparingInt(i -> -age[i]));
             int[] chosen = new int[size()];
+            java.util.Arrays.fill(chosen, -1);
             for (int i : order) {
                 chosen[i] = Math.max(lo[i], Math.min(hi[i], age[i]));
                 lo[i] = hi[i] = chosen[i];
                 if (!propagate()) {
-                    MCAVie.LOGGER.warn("Correction des âges interrompue pour la famille de {}", ids.get(0));
-                    return 0;
+                    return null;
                 }
             }
-            int changed = 0;
-            for (int i : order) {
-                if (chosen[i] != age[i]) {
-                    long shift = Math.round((age[i] - chosen[i]) * LifeCycle.DAYS_PER_YEAR);
-                    life.setBirthDay(ids.get(i), WorldCalendar.gameDayOf(WorldCalendar.calendarDay(birth[i]) + shift));
-                    changed++;
-                }
-            }
-            return changed;
+            return chosen;
         }
     }
 }
