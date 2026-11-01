@@ -7,6 +7,8 @@ import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.entity.Entity;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.BlockPos;
@@ -77,20 +79,21 @@ public class DoctorTask extends AbstractJobTask {
         }
         BlockPos pos = patient.getBlockPos();
         if (villager.squaredDistanceTo(patient) > REACH_SQ) {
-            villager.moveTowards(pos);
+            walkTo(villager, pos);
             if (reach.giveUp(world, patientId)) {
                 patientId = null;
             }
             return;
         }
         reach.reset();
-        villager.getNavigation().stop();
+        arrive(villager);
         villager.lookAt(pos);
         holdTool(villager);
         treatTicks++;
         if (treatTicks % 10 == 1) {
             villager.swingHand(Hand.MAIN_HAND);
             world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, patient.getX(), patient.getBodyY(0.6), patient.getZ(), 4, 0.4, 0.5, 0.4, 0.02);
+            world.playSound(null, villager.getBlockPos(), SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.NEUTRAL, 0.4F, 1.2F);
         }
         if (treatTicks < TREAT_TICKS) {
             return;
@@ -107,6 +110,7 @@ public class DoctorTask extends AbstractJobTask {
 
     @Override
     protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+        super.finishRunning(world, villager, time);
         if (treated) {
             cooldownUntil = time + COOLDOWN;
         }

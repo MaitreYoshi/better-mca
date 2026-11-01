@@ -94,7 +94,7 @@ public class BlacksmithTask extends AbstractJobTask {
             return;
         }
         if (villager.squaredDistanceTo(Vec3d.ofCenter(pos)) > REACH_SQ) {
-            villager.moveTowards(pos);
+            walkTo(villager, pos);
             if (reach.giveUp(world, atDepot ? pos : targetId)) {
                 targetId = null;
                 atDepot = false;
@@ -102,7 +102,7 @@ public class BlacksmithTask extends AbstractJobTask {
             return;
         }
         reach.reset();
-        villager.getNavigation().stop();
+        arrive(villager);
         villager.lookAt(pos);
         holdTool(villager);
         workTicks++;
@@ -111,6 +111,7 @@ public class BlacksmithTask extends AbstractJobTask {
             world.playSound(null, villager.getBlockPos(), SoundEvents.BLOCK_ANVIL_USE, SoundCategory.NEUTRAL, 0.3F, 1.2F);
         } else if (workTicks % 10 == 0) {
             villager.swingHand(Hand.MAIN_HAND);
+            world.playSound(null, villager.getBlockPos(), SoundEvents.BLOCK_ANVIL_PLACE, SoundCategory.NEUTRAL, 0.15F, 1.6F);
             world.spawnParticles(ParticleTypes.CRIT, villager.getX(), villager.getBodyY(0.6), villager.getZ(), 5, 0.4, 0.3, 0.4, 0.1);
         }
         if (workTicks < WORK_TICKS) {
@@ -147,6 +148,7 @@ public class BlacksmithTask extends AbstractJobTask {
 
     @Override
     protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+        super.finishRunning(world, villager, time);
         targetId = null;
         atDepot = false;
         workTicks = 0;

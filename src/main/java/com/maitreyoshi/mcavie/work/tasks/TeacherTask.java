@@ -9,6 +9,8 @@ import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -83,13 +85,15 @@ public class TeacherTask extends AbstractJobTask {
         Vec3d group = new Vec3d(x / pupils.size(), y / pupils.size(), z / pupils.size());
         BlockPos groupPos = BlockPos.ofFloored(group);
         if (villager.squaredDistanceTo(group) > STAY_SQ) {
-            villager.moveTowards(groupPos);
+            walkTo(villager, groupPos);
         } else {
-            villager.getNavigation().stop();
+            arrive(villager);
             villager.lookAt(groupPos);
         }
-        if (lessonTicks % 60 == 1) {
+        if (lessonTicks % 40 == 1) {
             villager.swingHand(Hand.MAIN_HAND);
+            world.spawnParticles(ParticleTypes.ENCHANT, villager.getX(), villager.getBodyY(1.0), villager.getZ(), 8, 0.3, 0.3, 0.3, 0.3);
+            world.playSound(null, villager.getBlockPos(), SoundEvents.ITEM_BOOK_PAGE_TURN, SoundCategory.NEUTRAL, 0.6F, 1.0F);
         }
         long today = WorldCalendar.now(world).dayIndex();
         for (VillagerEntityMCA pupil : pupils) {
@@ -108,6 +112,7 @@ public class TeacherTask extends AbstractJobTask {
 
     @Override
     protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+        super.finishRunning(world, villager, time);
         lessonTicks = 0;
         nextScan = 0;
         pupils.clear();

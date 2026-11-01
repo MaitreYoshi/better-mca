@@ -76,14 +76,14 @@ public class BakerTask extends AbstractJobTask {
             return;
         }
         if (villager.squaredDistanceTo(Vec3d.ofCenter(depot)) > REACH_SQ) {
-            villager.moveTowards(depot);
+            walkTo(villager, depot);
             if (reach.giveUp(world, depot)) {
                 lastScan = false;
             }
             return;
         }
         reach.reset();
-        villager.getNavigation().stop();
+        arrive(villager);
         villager.lookAt(depot);
         holdTool(villager);
         if (!holdingWheat) {
@@ -111,6 +111,7 @@ public class BakerTask extends AbstractJobTask {
 
     @Override
     protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+        super.finishRunning(world, villager, time);
         if (holdingWheat) {
             ItemStack back = new ItemStack(Items.WHEAT, WHEAT_PER_BREAD);
             Inventory chest = depotInventory(world, villager);

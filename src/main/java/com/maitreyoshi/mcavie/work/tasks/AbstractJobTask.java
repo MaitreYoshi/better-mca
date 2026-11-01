@@ -9,7 +9,13 @@ import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ChestBlock;
 import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.ai.brain.MemoryModuleState;
+import com.maitreyoshi.mcavie.work.WorkStatus;
+import net.minecraft.sound.BlockSoundGroup;
+import net.minecraft.entity.ai.brain.WalkTarget;
+import net.minecraft.particle.BlockStateParticleEffect;
+import net.minecraft.particle.ParticleTypes;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.util.Hand;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.MultiTickTask;
 import net.minecraft.inventory.Inventory;
@@ -29,6 +35,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
     protected static final int MAX_RUN_TICKS = 400;
@@ -36,19 +43,90 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
     private final Job job;
 
     protected AbstractJobTask(Job job) {
-        super(ImmutableMap.of(
-                MemoryModuleType.LOOK_TARGET, MemoryModuleState.VALUE_ABSENT,
-                MemoryModuleType.WALK_TARGET, MemoryModuleState.VALUE_ABSENT
-        ), MAX_RUN_TICKS);
+        this(job, MAX_RUN_TICKS);
+    }
+
+    protected AbstractJobTask(Job job, int maxRunTicks) {
+        // pas d'exigence sur WALK_TARGET / LOOK_TARGET : un reste de balade ou de regard bloquait le démarrage
+        super(ImmutableMap.of(), maxRunTicks);
         this.job = job;
     }
 
     @Override
     protected boolean shouldRun(ServerWorld world, VillagerEntityMCA villager) {
-        return WorkManager.isWorking(villager)
-                && WorkManager.getJob(villager) == job
-                && !DepositTask.shouldDeposit(world, villager)
-                && canWork(world, villager);
+        if (!WorkManager.isWorking(villager) || WorkManager.getJob(villager) != job || DepositTask.shouldDeposit(world, villager)) {
+            return false;
+        }
+        if (canWork(world, villager)) {
+            return true;
+        }
+        WorkStatus status;
+        if (isSearching()) {
+            status = WorkStatus.SEARCHING;
+        } else if (altersBlocks() && !world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+            status = WorkStatus.NO_GRIEFING;
+        } else {
+            status = WorkStatus.NOTHING_TO_DO;
+        }
+        WorkManager.setStatus(villager, status);
+        return false;
+    }
+
+    @Override
+    protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+        villager.getBrain().forget(MemoryModuleType.WALK_TARGET);
+        villager.getBrain().forget(MemoryModuleType.LOOK_TARGET);
+    }
+
+    // vrai tant que le métier parcourt encore sa zone (le scan est étalé sur plusieurs ticks)
+    protected boolean isSearching() {
+        return false;
+    }
+
+    protected boolean altersBlocks() {
+        return false;
+    }
+
+    // ne relance pas le pathfinding à chaque tick si la destination n'a pas changé
+    static void walkTo(VillagerEntityMCA villager, BlockPos pos) {
+        WorkManager.setStatus(villager, WorkStatus.TRAVELING);
+        Optional<WalkTarget> current = villager.getBrain().getOptionalMemory(MemoryModuleType.WALK_TARGET);
+        if (current.isEmpty() || !current.get().getLookTarget().getBlockPos().equals(pos)) {
+            villager.moveTowards(pos);
+        }
+    }
+
+    static void arrive(VillagerEntityMCA villager, WorkStatus status) {
+        WorkManager.setStatus(villager, status);
+        villager.getBrain().forget(MemoryModuleType.WALK_TARGET);
+        villager.getNavigation().stop();
+    }
+
+    protected static void arrive(VillagerEntityMCA villager) {
+        arrive(villager, WorkStatus.WORKING);
+    }
+
+    // coup d'outil visible : bras, fissures sur le bloc, son et éclats du bloc
+    protected static void hitBlock(ServerWorld world, VillagerEntityMCA villager, BlockPos pos, int ticks, int total) {
+        if (ticks % 5 != 1) {
+            return;
+        }
+        villager.swingHand(Hand.MAIN_HAND);
+        BlockState state = world.getBlockState(pos);
+        if (state.isAir()) {
+            return;
+        }
+        world.setBlockBreakingInfo(villager.getId(), pos, Math.min(9, ticks * 10 / Math.max(1, total)));
+        BlockSoundGroup sounds = state.getSoundGroup();
+        world.playSound(null, pos, sounds.getHitSound(), SoundCategory.NEUTRAL, (sounds.getVolume() + 1.0F) / 4.0F, sounds.getPitch() * 0.8F);
+        world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, state),
+                pos.getX() + 0.5, pos.getY() + 0.6, pos.getZ() + 0.5, 6, 0.3, 0.3, 0.3, 0.05);
+    }
+
+    protected static void clearBreaking(ServerWorld world, VillagerEntityMCA villager, @Nullable BlockPos pos) {
+        if (pos != null) {
+            world.setBlockBreakingInfo(villager.getId(), pos, -1);
+        }
     }
 
     @Override

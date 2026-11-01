@@ -171,6 +171,7 @@ public final class WorkNetwork {
         buf.writeBoolean(WorkManager.isWorking(villager));
         buf.writeVarInt(record == null ? 1 : record.level);
         buf.writeBoolean(record != null && record.depot != null);
+        buf.writeVarInt(WorkManager.getStatus(villager).ordinal());
         ServerPlayNetworking.send(player, JOB_INFO, buf);
     }
 }

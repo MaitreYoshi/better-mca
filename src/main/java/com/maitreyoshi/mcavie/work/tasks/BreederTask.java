@@ -14,6 +14,8 @@ import net.minecraft.particle.ParticleTypes;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.DyeColor;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.Box;
@@ -80,14 +82,14 @@ public class BreederTask extends AbstractJobTask {
             return;
         }
         if (villager.squaredDistanceTo(first) > REACH_SQ) {
-            villager.moveTowards(first.getBlockPos());
+            walkTo(villager, first.getBlockPos());
             if (reach.giveUp(world, targetA)) {
                 action = null;
                 nextScan = Math.min(nextScan, time + AFTER_ACTION);
             }
             return;
         }
-        villager.getNavigation().stop();
+        arrive(villager);
         villager.lookAt(first.getBlockPos());
         villager.swingHand(Hand.MAIN_HAND);
 
@@ -95,6 +97,7 @@ public class BreederTask extends AbstractJobTask {
             case SHEAR -> {
                 if (first instanceof SheepEntity sheep) {
                     sheep.setSheared(true);
+                    world.playSound(null, sheep.getBlockPos(), SoundEvents.ENTITY_SHEEP_SHEAR, SoundCategory.NEUTRAL, 1.0F, 1.0F);
                     store(villager, new ItemStack(woolOf(sheep.getColor()), 1 + world.random.nextInt(3)));
                     gainExperience(villager, 1);
                 }
@@ -112,6 +115,7 @@ public class BreederTask extends AbstractJobTask {
                 if (first instanceof ItemEntity egg) {
                     store(villager, egg.getStack().copy(), false);
                     egg.discard();
+                    world.playSound(null, villager.getBlockPos(), SoundEvents.ENTITY_ITEM_PICKUP, SoundCategory.NEUTRAL, 0.3F, 1.4F);
                     gainExperience(villager, 1);
                 }
             }
@@ -121,6 +125,7 @@ public class BreederTask extends AbstractJobTask {
 
     @Override
     protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+        super.finishRunning(world, villager, time);
         if (done) {
             nextScan = Math.min(nextScan, time + AFTER_ACTION);
         }
