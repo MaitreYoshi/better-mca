@@ -31,12 +31,11 @@
   ],
   "client": [
     "client.AbstractDynamicScreenMixin",
-    "client.BlueprintScreenMixin",
+    "client.ClientInteractionManagerMixin",
     "client.CameraHudMixin",
     "client.CameraMouseMixin",
     "client.CameraZoomMixin",
     "client.CreateWorldGameTabMixin",
-    "client.ClickableWidgetAccessor",
     "client.DestinyScreenMixin",
     "client.EntityRendererMixin",
     "client.HairLayerMixin",
