@@ -6,11 +6,14 @@ import net.fabricmc.fabric.api.networking.v1.EntityTrackingEvents;
 import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.PlayerLookup;
 import net.mca.entity.VillagerEntityMCA;
+import net.mca.item.BabyItem;
 import net.mca.entity.ai.relationship.Gender;
 import net.mca.server.world.data.PlayerSaveData;
 import net.minecraft.entity.Entity;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.util.Identifier;
@@ -22,6 +25,7 @@ public final class SurnameNetwork {
     public static final Identifier RANDOM_SURNAME = MCAVie.id("random_surname");
     public static final Identifier OWN_SURNAME = MCAVie.id("own_surname");
     public static final Identifier RANDOM_SURNAME_RESULT = MCAVie.id("random_surname_result");
+    public static final Identifier BABY_SURNAME = MCAVie.id("baby_surname");
     public static final Identifier BIRTH_DAY_REQUEST = MCAVie.id("birth_day_request");
     public static final Identifier BIRTH_DAY_RESULT = MCAVie.id("birth_day_result");
     public static final Identifier HAPPINESS = MCAVie.id("happiness");
@@ -47,6 +51,26 @@ public final class SurnameNetwork {
                     out.writeString(SurnameText.display(Surnames.randomSurnameFor(player), gender));
                     ServerPlayNetworking.send(player, RANDOM_SURNAME_RESULT, out);
                 }));
+
+        // Écran « nommer le bébé » : pré-remplit le nom de famille avec celui que l'enfant aura.
+        ServerPlayNetworking.registerGlobalReceiver(BABY_SURNAME, (server, player, handler, buf, responseSender) -> {
+            int slot = buf.readVarInt();
+            server.execute(() -> {
+                ItemStack stack = slot >= 0 && slot < player.getInventory().size() ? player.getInventory().getStack(slot) : ItemStack.EMPTY;
+                if (!(stack.getItem() instanceof BabyItem baby)) {
+                    return;
+                }
+                NbtCompound nbt = BabyItem.getBabyNbt(stack);
+                String surname = Surnames.babySurname(player.getServerWorld(), player,
+                        nbt.containsUuid("father") ? nbt.getUuid("father") : null,
+                        nbt.containsUuid("mother") ? nbt.getUuid("mother") : null);
+                if (surname != null) {
+                    PacketByteBuf out = PacketByteBufs.create();
+                    out.writeString(SurnameText.display(surname, baby.getGender()));
+                    ServerPlayNetworking.send(player, RANDOM_SURNAME_RESULT, out);
+                }
+            });
+        });
 
         ServerPlayNetworking.registerGlobalReceiver(BIRTH_DAY_REQUEST, (server, player, handler, buf, responseSender) -> {
             UUID villager = buf.readUuid();
