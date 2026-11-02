@@ -34,6 +34,7 @@ public class MCAVie implements ModInitializer {
         com.maitreyoshi.mcavie.calendar.WorldCalendar.register();
         SurnameNetwork.registerServer();
         registerCommand();
+        com.maitreyoshi.mcavie.village.VillageTitleCommand.register();
         TreeServer.register();
         WorkNetwork.register();
         VillageConfig.load();

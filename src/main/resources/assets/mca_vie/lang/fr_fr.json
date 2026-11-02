@@ -1,4 +1,10 @@
 {
+  "command.mca_vie.title.set": "%s a désormais le titre %s à %s",
+  "command.mca_vie.title.reset": "%s retrouve le titre calculé normalement à %s",
+  "command.mca_vie.title.get": "%s a le titre %s à %s (calculé normalement)",
+  "command.mca_vie.title.get_forced": "%s a le titre %s à %s (donné par un opérateur)",
+  "command.mca_vie.title.unknown": "Titre inconnu : %s (outlaw, peasant, merchant, noble, mayor, monarch)",
+  "command.mca_vie.title.no_village": "%s n'est près d'aucun village",
   "gui.mca_vie.village.prestige_hint": "Chaque bâtiment reconnu (maison, forge, église…) rapporte des points. Assez de points et d'habitants font monter le village en rang.",
   "gui.mca_vie.village.residential_hint": "Les maisons ne peuvent pas dépasser %s %% du prestige : construisez des lieux publics ou de travail pour qu'elles comptent toutes.",
   "gui.mca_vie.catalog.count_one": "Un seul compte par village",
