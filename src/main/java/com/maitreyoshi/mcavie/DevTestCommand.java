@@ -369,7 +369,7 @@ final class DevTestCommand {
                                         inv.append(s.getCount()).append(' ').append(s.getItem()).append(", ");
                                     }
                                 }
-                                out.append(v.getName().getString()).append(" ").append(job).append(" travaille=").append(WorkManager.isWorking(v)).append(" état=").append(WorkManager.getStatus(v)).append(" centre=").append(String.valueOf(WorkManager.getRecord(v).center)).append(" poste=").append(String.valueOf(WorkManager.getRecord(v).depot))
+                                out.append(v.getName().getString()).append(" ").append(job).append(" travaille=").append(WorkManager.isWorking(v)).append(" état=").append(WorkManager.getStatus(v)).append(" geste=").append(WorkManager.getGesture(v)).append(" centre=").append(String.valueOf(WorkManager.getRecord(v).center)).append(" poste=").append(String.valueOf(WorkManager.getRecord(v).depot))
                                         .append(" activité=").append(v.getBrain().getFirstPossibleNonCoreActivity().map(Object::toString).orElse("?"))
                                         .append(" xp=").append(WorkManager.getRecord(v).experience)
                                         .append(" pos=").append(v.getBlockPos().toShortString())

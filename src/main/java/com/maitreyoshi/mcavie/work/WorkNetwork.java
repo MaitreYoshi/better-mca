@@ -210,6 +210,7 @@ public final class WorkNetwork {
         buf.writeBoolean(record != null && record.depot != null);
         buf.writeVarInt(WorkManager.getStatus(villager).ordinal());
         buf.writeVarInt(record == null ? 0 : record.experience);
+        buf.writeVarInt(WorkManager.getGesture(villager).ordinal());
         ServerPlayNetworking.send(player, JOB_INFO, buf);
     }
 }

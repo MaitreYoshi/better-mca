@@ -1,6 +1,7 @@
 package com.maitreyoshi.mcavie.work.tasks;
 
 import com.maitreyoshi.mcavie.work.Job;
+import com.maitreyoshi.mcavie.work.WorkGesture;
 import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
@@ -83,7 +84,7 @@ public class BakerTask extends AbstractJobTask {
             return;
         }
         reach.reset();
-        arrive(villager);
+        arrive(villager, WorkGesture.KNEAD);
         villager.lookAt(depot);
         holdTool(villager);
         if (!holdingWheat) {

@@ -5,6 +5,7 @@ import com.maitreyoshi.mcavie.life.LifeCycle;
 import com.maitreyoshi.mcavie.life.LifeRegistry;
 import com.maitreyoshi.mcavie.life.Wellbeing;
 import com.maitreyoshi.mcavie.work.Job;
+import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.particle.ParticleTypes;
@@ -87,7 +88,7 @@ public class TeacherTask extends AbstractJobTask {
         if (villager.squaredDistanceTo(group) > STAY_SQ) {
             walkTo(villager, groupPos);
         } else {
-            arrive(villager);
+            arrive(villager, WorkGesture.TEACH);
             villager.lookAt(groupPos);
         }
         if (lessonTicks % 40 == 1) {

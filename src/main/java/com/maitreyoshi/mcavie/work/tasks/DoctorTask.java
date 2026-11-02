@@ -2,6 +2,7 @@ package com.maitreyoshi.mcavie.work.tasks;
 
 import com.maitreyoshi.mcavie.life.Wellbeing;
 import com.maitreyoshi.mcavie.work.Job;
+import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.entity.Entity;
@@ -86,7 +87,7 @@ public class DoctorTask extends AbstractJobTask {
             return;
         }
         reach.reset();
-        arrive(villager);
+        arrive(villager, WorkGesture.HEAL);
         villager.lookAt(pos);
         holdTool(villager);
         treatTicks++;

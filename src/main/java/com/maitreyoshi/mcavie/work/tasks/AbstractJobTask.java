@@ -10,6 +10,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.block.ChestBlock;
 import net.minecraft.entity.ItemEntity;
 import com.maitreyoshi.mcavie.work.WorkStatus;
+import com.maitreyoshi.mcavie.work.WorkGesture;
 import net.minecraft.sound.BlockSoundGroup;
 import net.minecraft.entity.ai.brain.WalkTarget;
 import net.minecraft.particle.BlockStateParticleEffect;
@@ -74,6 +75,7 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
 
     @Override
     protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+        WorkManager.setGesture(villager, WorkGesture.NONE);
         villager.getBrain().forget(MemoryModuleType.WALK_TARGET);
         villager.getBrain().forget(MemoryModuleType.LOOK_TARGET);
     }
@@ -90,6 +92,7 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
     // ne relance pas le pathfinding à chaque tick si la destination n'a pas changé
     static void walkTo(VillagerEntityMCA villager, BlockPos pos) {
         WorkManager.setStatus(villager, WorkStatus.TRAVELING);
+        WorkManager.setGesture(villager, WorkGesture.NONE);
         Optional<WalkTarget> current = villager.getBrain().getOptionalMemory(MemoryModuleType.WALK_TARGET);
         if (current.isEmpty() || !current.get().getLookTarget().getBlockPos().equals(pos)) {
             villager.moveTowards(pos);
@@ -102,8 +105,10 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
         villager.getNavigation().stop();
     }
 
-    protected static void arrive(VillagerEntityMCA villager) {
+    // arrivé au travail : il s'arrête et joue le geste de son métier
+    protected static void arrive(VillagerEntityMCA villager, WorkGesture gesture) {
         arrive(villager, WorkStatus.WORKING);
+        WorkManager.setGesture(villager, gesture);
     }
 
     // coup d'outil visible : bras, fissures sur le bloc, son et éclats du bloc
