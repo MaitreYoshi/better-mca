@@ -39,7 +39,7 @@ public abstract class VillagerEntityMCAMixin implements AgeHolder {
     @Inject(method = "tick", at = @At("TAIL"))
     private void mcavie$checkSurname(CallbackInfo ci) {
         VillagerEntityMCA self = (VillagerEntityMCA) (Object) this;
-        if (self.getWorld().isClient) {
+        if (self.getWorld().isClient || self.isDead()) {
             return;
         }
         WorkManager.keepWorking(self);
