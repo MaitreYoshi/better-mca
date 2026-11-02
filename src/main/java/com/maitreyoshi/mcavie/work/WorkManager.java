@@ -302,6 +302,15 @@ public final class WorkManager {
         return crafts[random.nextInt(crafts.length)];
     }
 
+    // expérience totale à atteindre pour passer au niveau suivant, -1 au niveau maximum
+    public static int nextLevelExperience(int level) {
+        return level >= 1 && level < LEVEL_THRESHOLDS.length ? LEVEL_THRESHOLDS[level] : -1;
+    }
+
+    public static int levelExperience(int level) {
+        return LEVEL_THRESHOLDS[Math.max(0, Math.min(LEVEL_THRESHOLDS.length - 1, level - 1))];
+    }
+
     public static int levelFor(int experience) {
         int level = 1;
         for (int i = 1; i < LEVEL_THRESHOLDS.length; i++) {
