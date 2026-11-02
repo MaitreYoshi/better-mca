@@ -21,6 +21,8 @@ public class MCAVieClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlocks(net.minecraft.client.render.RenderLayer.getCutout(),
+                com.maitreyoshi.mcavie.work.block.WorkBlocks.all().toArray(new net.minecraft.block.Block[0]));
         CalendarHud.register();
         TreeClient.register();
         WorkClient.register();

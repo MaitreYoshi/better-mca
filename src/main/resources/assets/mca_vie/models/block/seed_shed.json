@@ -1,8 +1,865 @@
 {
-  "parent": "minecraft:block/cube_bottom_top",
   "textures": {
-    "bottom": "minecraft:block/oak_planks",
-    "side": "minecraft:block/hay_block_side",
-    "top": "minecraft:block/hay_block_top"
-  }
+    "particle": "mca_vie:block/workstation/seed_shed_crate",
+    "crate": "mca_vie:block/workstation/seed_shed_crate",
+    "seeds": "mca_vie:block/workstation/seed_shed_seeds",
+    "sack": "mca_vie:block/workstation/seed_shed_sack",
+    "hoe": "mca_vie:block/workstation/seed_shed_hoe"
+  },
+  "elements": [
+    {
+      "from": [
+        1,
+        0,
+        5
+      ],
+      "to": [
+        10,
+        9,
+        6
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            9,
+            9
+          ],
+          "texture": "#crate"
+        },
+        "south": {
+          "uv": [
+            9,
+            0,
+            16,
+            9
+          ],
+          "texture": "#crate"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            1,
+            9
+          ],
+          "texture": "#crate"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            1,
+            9
+          ],
+          "texture": "#crate"
+        },
+        "up": {
+          "uv": [
+            0,
+            9,
+            9,
+            10
+          ],
+          "texture": "#crate"
+        },
+        "down": {
+          "uv": [
+            1,
+            10,
+            10,
+            11
+          ],
+          "texture": "#crate",
+          "cullface": "down"
+        }
+      },
+      "name": "crate_front"
+    },
+    {
+      "from": [
+        1,
+        0,
+        13
+      ],
+      "to": [
+        10,
+        9,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            9,
+            0,
+            16,
+            9
+          ],
+          "texture": "#crate"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            9,
+            9
+          ],
+          "texture": "#crate"
+        },
+        "east": {
+          "uv": [
+            8,
+            0,
+            9,
+            9
+          ],
+          "texture": "#crate"
+        },
+        "west": {
+          "uv": [
+            8,
+            0,
+            9,
+            9
+          ],
+          "texture": "#crate"
+        },
+        "up": {
+          "uv": [
+            0,
+            9,
+            9,
+            10
+          ],
+          "texture": "#crate"
+        },
+        "down": {
+          "uv": [
+            1,
+            2,
+            10,
+            3
+          ],
+          "texture": "#crate",
+          "cullface": "down"
+        }
+      },
+      "name": "crate_back"
+    },
+    {
+      "from": [
+        1,
+        0,
+        6
+      ],
+      "to": [
+        2,
+        9,
+        13
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            9,
+            0,
+            16,
+            9
+          ],
+          "texture": "#crate"
+        },
+        "west": {
+          "uv": [
+            1,
+            0,
+            8,
+            9
+          ],
+          "texture": "#crate"
+        },
+        "up": {
+          "uv": [
+            2,
+            9,
+            3,
+            16
+          ],
+          "texture": "#crate"
+        },
+        "down": {
+          "uv": [
+            1,
+            3,
+            2,
+            10
+          ],
+          "texture": "#crate",
+          "cullface": "down"
+        }
+      },
+      "name": "crate_left"
+    },
+    {
+      "from": [
+        9,
+        0,
+        6
+      ],
+      "to": [
+        10,
+        9,
+        13
+      ],
+      "faces": {
+        "east": {
+          "uv": [
+            1,
+            0,
+            8,
+            9
+          ],
+          "texture": "#crate"
+        },
+        "west": {
+          "uv": [
+            9,
+            0,
+            16,
+            9
+          ],
+          "texture": "#crate"
+        },
+        "up": {
+          "uv": [
+            2,
+            9,
+            3,
+            16
+          ],
+          "texture": "#crate"
+        },
+        "down": {
+          "uv": [
+            9,
+            3,
+            10,
+            10
+          ],
+          "texture": "#crate",
+          "cullface": "down"
+        }
+      },
+      "name": "crate_right"
+    },
+    {
+      "from": [
+        2,
+        0,
+        6
+      ],
+      "to": [
+        9,
+        7.5,
+        13
+      ],
+      "faces": {
+        "up": {
+          "uv": [
+            2,
+            6,
+            9,
+            13
+          ],
+          "texture": "#seeds"
+        }
+      },
+      "name": "seeds"
+    },
+    {
+      "from": [
+        3,
+        7.5,
+        7
+      ],
+      "to": [
+        8,
+        8.5,
+        12
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            8,
+            7.5,
+            13,
+            8.5
+          ],
+          "texture": "#seeds"
+        },
+        "south": {
+          "uv": [
+            3,
+            7.5,
+            8,
+            8.5
+          ],
+          "texture": "#seeds"
+        },
+        "east": {
+          "uv": [
+            4,
+            7.5,
+            9,
+            8.5
+          ],
+          "texture": "#seeds"
+        },
+        "west": {
+          "uv": [
+            7,
+            7.5,
+            12,
+            8.5
+          ],
+          "texture": "#seeds"
+        },
+        "up": {
+          "uv": [
+            3,
+            7,
+            8,
+            12
+          ],
+          "texture": "#seeds"
+        }
+      },
+      "name": "seed_heap"
+    },
+    {
+      "from": [
+        4,
+        8.5,
+        8
+      ],
+      "to": [
+        6.5,
+        9.2,
+        10.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            9.5,
+            6.8,
+            12,
+            7.5
+          ],
+          "texture": "#seeds"
+        },
+        "south": {
+          "uv": [
+            4,
+            6.8,
+            6.5,
+            7.5
+          ],
+          "texture": "#seeds"
+        },
+        "east": {
+          "uv": [
+            5.5,
+            6.8,
+            8,
+            7.5
+          ],
+          "texture": "#seeds"
+        },
+        "west": {
+          "uv": [
+            8,
+            6.8,
+            10.5,
+            7.5
+          ],
+          "texture": "#seeds"
+        },
+        "up": {
+          "uv": [
+            4,
+            8,
+            6.5,
+            10.5
+          ],
+          "texture": "#seeds"
+        }
+      },
+      "name": "seed_heap_top"
+    },
+    {
+      "from": [
+        10.5,
+        0,
+        6.5
+      ],
+      "to": [
+        15.5,
+        4,
+        11
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1,
+            4,
+            6,
+            8
+          ],
+          "texture": "#sack"
+        },
+        "south": {
+          "uv": [
+            1,
+            4,
+            6,
+            8
+          ],
+          "texture": "#sack"
+        },
+        "east": {
+          "uv": [
+            1,
+            4,
+            5.5,
+            8
+          ],
+          "texture": "#sack"
+        },
+        "west": {
+          "uv": [
+            0,
+            4,
+            4.5,
+            8
+          ],
+          "texture": "#sack"
+        },
+        "up": {
+          "uv": [
+            0,
+            8,
+            5,
+            12.5
+          ],
+          "texture": "#sack"
+        },
+        "down": {
+          "uv": [
+            10.5,
+            5,
+            15.5,
+            9.5
+          ],
+          "texture": "#sack",
+          "cullface": "down"
+        }
+      },
+      "name": "sack"
+    },
+    {
+      "from": [
+        10.8,
+        4,
+        6.8
+      ],
+      "to": [
+        15.2,
+        5.4,
+        10.7
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1,
+            2.6,
+            5.4,
+            4
+          ],
+          "texture": "#sack"
+        },
+        "south": {
+          "uv": [
+            1,
+            2.6,
+            5.4,
+            4
+          ],
+          "texture": "#sack"
+        },
+        "east": {
+          "uv": [
+            1,
+            2.6,
+            4.9,
+            4
+          ],
+          "texture": "#sack"
+        },
+        "west": {
+          "uv": [
+            1,
+            2.6,
+            4.9,
+            4
+          ],
+          "texture": "#sack"
+        },
+        "up": {
+          "uv": [
+            0,
+            3,
+            4.4,
+            7
+          ],
+          "texture": "#sack"
+        }
+      },
+      "name": "sack_shoulder"
+    },
+    {
+      "from": [
+        11.3,
+        5.4,
+        7.3
+      ],
+      "to": [
+        14.7,
+        6.2,
+        10.2
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            2,
+            5.4,
+            2.8
+          ],
+          "texture": "#sack"
+        },
+        "south": {
+          "uv": [
+            2,
+            2,
+            5.4,
+            2.8
+          ],
+          "texture": "#sack"
+        },
+        "east": {
+          "uv": [
+            2,
+            2,
+            5.4,
+            2.8
+          ],
+          "texture": "#sack"
+        },
+        "west": {
+          "uv": [
+            2,
+            2,
+            5.4,
+            2.8
+          ],
+          "texture": "#sack"
+        }
+      },
+      "name": "sack_neck"
+    },
+    {
+      "from": [
+        10.9,
+        6.2,
+        6.9
+      ],
+      "to": [
+        15.1,
+        7,
+        10.6
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            4.2,
+            0.8
+          ],
+          "texture": "#sack"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            4.2,
+            0.8
+          ],
+          "texture": "#sack"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            4.2,
+            0.8
+          ],
+          "texture": "#sack"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            4.2,
+            0.8
+          ],
+          "texture": "#sack"
+        },
+        "up": {
+          "uv": [
+            8,
+            8,
+            13,
+            13
+          ],
+          "texture": "#sack"
+        },
+        "down": {
+          "uv": [
+            0,
+            0,
+            4,
+            4
+          ],
+          "texture": "#sack"
+        }
+      },
+      "name": "sack_lip"
+    },
+    {
+      "from": [
+        3.5,
+        0.2,
+        1.3
+      ],
+      "to": [
+        4.5,
+        11.2,
+        2.3
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            1,
+            11
+          ],
+          "texture": "#hoe"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            1,
+            11
+          ],
+          "texture": "#hoe"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            1,
+            11
+          ],
+          "texture": "#hoe"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            1,
+            11
+          ],
+          "texture": "#hoe"
+        },
+        "up": {
+          "uv": [
+            0,
+            0,
+            1,
+            1
+          ],
+          "texture": "#hoe"
+        },
+        "down": {
+          "uv": [
+            0,
+            15,
+            1,
+            16
+          ],
+          "texture": "#hoe"
+        }
+      },
+      "name": "hoe_handle",
+      "rotation": {
+        "origin": [
+          4,
+          0.2,
+          1.8
+        ],
+        "axis": "x",
+        "angle": 22.5
+      }
+    },
+    {
+      "from": [
+        2.75,
+        10.7,
+        0
+      ],
+      "to": [
+        5.25,
+        11.2,
+        2.3
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            3,
+            7,
+            4
+          ],
+          "texture": "#hoe"
+        },
+        "east": {
+          "uv": [
+            4,
+            0,
+            6,
+            1
+          ],
+          "texture": "#hoe"
+        },
+        "west": {
+          "uv": [
+            4,
+            0,
+            6,
+            1
+          ],
+          "texture": "#hoe"
+        },
+        "up": {
+          "uv": [
+            4,
+            0,
+            7,
+            2
+          ],
+          "texture": "#hoe"
+        },
+        "down": {
+          "uv": [
+            4,
+            1,
+            7,
+            3
+          ],
+          "texture": "#hoe"
+        }
+      },
+      "name": "hoe_blade",
+      "rotation": {
+        "origin": [
+          4,
+          0.2,
+          1.8
+        ],
+        "axis": "x",
+        "angle": 22.5
+      }
+    },
+    {
+      "from": [
+        2.75,
+        9.4,
+        0
+      ],
+      "to": [
+        5.25,
+        10.7,
+        0.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            1,
+            7,
+            4
+          ],
+          "texture": "#hoe"
+        },
+        "south": {
+          "uv": [
+            4,
+            0,
+            7,
+            2
+          ],
+          "texture": "#hoe"
+        },
+        "east": {
+          "uv": [
+            7,
+            1,
+            8,
+            4
+          ],
+          "texture": "#hoe"
+        },
+        "west": {
+          "uv": [
+            7,
+            1,
+            8,
+            4
+          ],
+          "texture": "#hoe"
+        },
+        "down": {
+          "uv": [
+            4,
+            3,
+            7,
+            4
+          ],
+          "texture": "#hoe"
+        }
+      },
+      "name": "hoe_edge",
+      "rotation": {
+        "origin": [
+          4,
+          0.2,
+          1.8
+        ],
+        "axis": "x",
+        "angle": 22.5
+      }
+    }
+  ]
 }

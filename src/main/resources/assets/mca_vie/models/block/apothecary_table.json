@@ -1,8 +1,1279 @@
 {
-  "parent": "minecraft:block/cube_bottom_top",
   "textures": {
-    "bottom": "minecraft:block/birch_planks",
-    "side": "minecraft:block/birch_planks",
-    "top": "minecraft:block/brewing_stand_base"
-  }
+    "particle": "mca_vie:block/workstation/apothecary_table_wood",
+    "wood": "mca_vie:block/workstation/apothecary_table_wood",
+    "frame": "mca_vie:block/workstation/apothecary_table_frame",
+    "parts": "mca_vie:block/workstation/apothecary_table_parts"
+  },
+  "elements": [
+    {
+      "name": "top",
+      "from": [
+        1,
+        9,
+        1
+      ],
+      "to": [
+        15,
+        11,
+        15
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1,
+            4,
+            15,
+            6
+          ],
+          "texture": "#wood"
+        },
+        "south": {
+          "uv": [
+            1,
+            9,
+            15,
+            11
+          ],
+          "texture": "#wood"
+        },
+        "west": {
+          "uv": [
+            1,
+            4,
+            15,
+            6
+          ],
+          "texture": "#wood"
+        },
+        "east": {
+          "uv": [
+            1,
+            10,
+            15,
+            12
+          ],
+          "texture": "#wood"
+        },
+        "up": {
+          "uv": [
+            1,
+            1,
+            15,
+            15
+          ],
+          "texture": "#wood"
+        },
+        "down": {
+          "uv": [
+            1,
+            1,
+            15,
+            15
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "apron",
+      "from": [
+        2,
+        6,
+        2
+      ],
+      "to": [
+        14,
+        9,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            13,
+            12,
+            16
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            2,
+            7,
+            14,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            2,
+            7,
+            14,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            2,
+            7,
+            14,
+            10
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            2,
+            2,
+            14,
+            14
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "leg",
+      "from": [
+        2,
+        0,
+        2
+      ],
+      "to": [
+        4,
+        6,
+        4
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            12,
+            10,
+            14,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            2,
+            10,
+            4,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            2,
+            10,
+            4,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            12,
+            10,
+            14,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            2,
+            12,
+            4,
+            14
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "leg",
+      "from": [
+        12,
+        0,
+        2
+      ],
+      "to": [
+        14,
+        6,
+        4
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            10,
+            4,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            12,
+            10,
+            14,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            2,
+            10,
+            4,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            12,
+            10,
+            14,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            12,
+            12,
+            14,
+            14
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "leg",
+      "from": [
+        2,
+        0,
+        12
+      ],
+      "to": [
+        4,
+        6,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            12,
+            10,
+            14,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            2,
+            10,
+            4,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            12,
+            10,
+            14,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            2,
+            10,
+            4,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            2,
+            2,
+            4,
+            4
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "leg",
+      "from": [
+        12,
+        0,
+        12
+      ],
+      "to": [
+        14,
+        6,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            2,
+            10,
+            4,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            12,
+            10,
+            14,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            12,
+            10,
+            14,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            2,
+            10,
+            4,
+            16
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            12,
+            2,
+            14,
+            4
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "shelf",
+      "from": [
+        4,
+        2,
+        3
+      ],
+      "to": [
+        12,
+        3,
+        13
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            13,
+            12,
+            14
+          ],
+          "texture": "#frame"
+        },
+        "south": {
+          "uv": [
+            4,
+            13,
+            12,
+            14
+          ],
+          "texture": "#frame"
+        },
+        "west": {
+          "uv": [
+            3,
+            13,
+            13,
+            14
+          ],
+          "texture": "#frame"
+        },
+        "east": {
+          "uv": [
+            3,
+            13,
+            13,
+            14
+          ],
+          "texture": "#frame"
+        },
+        "up": {
+          "uv": [
+            4,
+            3,
+            12,
+            13
+          ],
+          "texture": "#frame"
+        },
+        "down": {
+          "uv": [
+            4,
+            3,
+            12,
+            13
+          ],
+          "texture": "#frame"
+        }
+      }
+    },
+    {
+      "name": "jar",
+      "from": [
+        5,
+        3,
+        6
+      ],
+      "to": [
+        8,
+        6,
+        9
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            12,
+            4,
+            16,
+            8
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            12,
+            4,
+            16,
+            8
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            12,
+            4,
+            16,
+            8
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            12,
+            4,
+            16,
+            8
+          ],
+          "texture": "#parts"
+        },
+        "up": {
+          "uv": [
+            12,
+            8,
+            16,
+            12
+          ],
+          "texture": "#parts"
+        }
+      }
+    },
+    {
+      "name": "jar2",
+      "from": [
+        9,
+        3,
+        8
+      ],
+      "to": [
+        11,
+        5,
+        10
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            8,
+            8,
+            12,
+            12
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            8,
+            8,
+            12,
+            12
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            8,
+            8,
+            12,
+            12
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            8,
+            8,
+            12,
+            12
+          ],
+          "texture": "#parts"
+        },
+        "up": {
+          "uv": [
+            8,
+            11,
+            12,
+            12
+          ],
+          "texture": "#parts"
+        }
+      }
+    },
+    {
+      "name": "bottle",
+      "from": [
+        2.5,
+        11,
+        2.5
+      ],
+      "to": [
+        5.5,
+        14,
+        5.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            0,
+            4,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            0,
+            0,
+            4,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            0,
+            0,
+            4,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            0,
+            0,
+            4,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "up": {
+          "uv": [
+            1,
+            0,
+            3,
+            2
+          ],
+          "texture": "#parts"
+        }
+      }
+    },
+    {
+      "name": "neck",
+      "from": [
+        3.5,
+        14,
+        3.5
+      ],
+      "to": [
+        4.5,
+        15,
+        4.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            14,
+            0,
+            16,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            14,
+            0,
+            16,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            14,
+            0,
+            16,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            14,
+            0,
+            16,
+            4
+          ],
+          "texture": "#parts"
+        }
+      }
+    },
+    {
+      "name": "cork",
+      "from": [
+        3.25,
+        15,
+        3.25
+      ],
+      "to": [
+        4.75,
+        16,
+        4.75
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "up": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        }
+      }
+    },
+    {
+      "name": "bottle",
+      "from": [
+        3,
+        11,
+        7
+      ],
+      "to": [
+        5,
+        14,
+        9
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            0,
+            8,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            4,
+            0,
+            8,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            4,
+            0,
+            8,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            4,
+            0,
+            8,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "up": {
+          "uv": [
+            5,
+            0,
+            7,
+            2
+          ],
+          "texture": "#parts"
+        }
+      }
+    },
+    {
+      "name": "neck",
+      "from": [
+        3.5,
+        14,
+        7.5
+      ],
+      "to": [
+        4.5,
+        15,
+        8.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            14,
+            0,
+            16,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            14,
+            0,
+            16,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            14,
+            0,
+            16,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            14,
+            0,
+            16,
+            4
+          ],
+          "texture": "#parts"
+        }
+      }
+    },
+    {
+      "name": "cork",
+      "from": [
+        3.25,
+        15,
+        7.25
+      ],
+      "to": [
+        4.75,
+        16,
+        8.75
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "up": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        }
+      }
+    },
+    {
+      "name": "bottle",
+      "from": [
+        11.5,
+        11,
+        8
+      ],
+      "to": [
+        14.5,
+        13,
+        11
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            8,
+            0,
+            12,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            8,
+            0,
+            12,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            8,
+            0,
+            12,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            8,
+            0,
+            12,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "up": {
+          "uv": [
+            9,
+            0,
+            11,
+            2
+          ],
+          "texture": "#parts"
+        }
+      }
+    },
+    {
+      "name": "neck",
+      "from": [
+        12.5,
+        13,
+        9
+      ],
+      "to": [
+        13.5,
+        15,
+        10
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            14,
+            0,
+            16,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            14,
+            0,
+            16,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            14,
+            0,
+            16,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            14,
+            0,
+            16,
+            4
+          ],
+          "texture": "#parts"
+        }
+      }
+    },
+    {
+      "name": "cork",
+      "from": [
+        12.25,
+        15,
+        8.75
+      ],
+      "to": [
+        13.75,
+        16,
+        10.25
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        },
+        "up": {
+          "uv": [
+            12,
+            0,
+            14,
+            4
+          ],
+          "texture": "#parts"
+        }
+      }
+    },
+    {
+      "name": "mortar",
+      "from": [
+        9,
+        11,
+        3
+      ],
+      "to": [
+        13,
+        13,
+        7
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            4,
+            6,
+            7
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            0,
+            4,
+            6,
+            7
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            0,
+            4,
+            6,
+            7
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            0,
+            4,
+            6,
+            7
+          ],
+          "texture": "#parts"
+        },
+        "up": {
+          "uv": [
+            6,
+            4,
+            10,
+            8
+          ],
+          "texture": "#parts"
+        }
+      }
+    },
+    {
+      "name": "pestle",
+      "from": [
+        10.5,
+        12,
+        4.5
+      ],
+      "to": [
+        11.5,
+        16,
+        5.5
+      ],
+      "rotation": {
+        "angle": 22.5,
+        "axis": "z",
+        "origin": [
+          11,
+          12,
+          5
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            10,
+            4,
+            11,
+            8
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            10,
+            4,
+            11,
+            8
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            10,
+            4,
+            11,
+            8
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            10,
+            4,
+            11,
+            8
+          ],
+          "texture": "#parts"
+        },
+        "up": {
+          "uv": [
+            10,
+            4,
+            11,
+            5
+          ],
+          "texture": "#parts"
+        }
+      }
+    },
+    {
+      "name": "herbs",
+      "from": [
+        4,
+        11,
+        11
+      ],
+      "to": [
+        10,
+        12.5,
+        13
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "y",
+        "origin": [
+          7,
+          11,
+          12
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            8,
+            6,
+            10
+          ],
+          "texture": "#parts"
+        },
+        "south": {
+          "uv": [
+            0,
+            8,
+            6,
+            10
+          ],
+          "texture": "#parts"
+        },
+        "west": {
+          "uv": [
+            6,
+            8,
+            8,
+            10
+          ],
+          "texture": "#parts"
+        },
+        "east": {
+          "uv": [
+            4,
+            10,
+            6,
+            12
+          ],
+          "texture": "#parts"
+        },
+        "up": {
+          "uv": [
+            0,
+            10,
+            6,
+            12
+          ],
+          "texture": "#parts"
+        }
+      }
+    }
+  ]
 }
