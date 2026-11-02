@@ -30,6 +30,7 @@ public final class WorkNetwork {
     public static final Identifier PICK_DEPOT = MCAVie.id("pick_depot");
     public static final Identifier ZONE_HERE = MCAVie.id("zone_here");
     public static final Identifier JOB_INFO = MCAVie.id("job_info");
+    public static final Identifier SHOW_WORKSTATION = MCAVie.id("show_workstation");
 
     private static final double MAX_DISTANCE_SQ = 16 * 16;
     private static final Map<UUID, PendingDepot> PENDING_DEPOTS = new ConcurrentHashMap<>();
@@ -83,6 +84,11 @@ public final class WorkNetwork {
                 sendJobInfo(villager);
                 player.sendMessage(Text.translatable("job.mca_vie.zone_set", villager.getName()), true);
             }));
+        });
+
+        ServerPlayNetworking.registerGlobalReceiver(SHOW_WORKSTATION, (server, player, handler, buf, responseSender) -> {
+            UUID uuid = buf.readUuid();
+            server.execute(() -> findVillager(player, uuid).ifPresent(villager -> showWorkstation(player, villager)));
         });
 
         UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
@@ -148,6 +154,33 @@ public final class WorkNetwork {
         return villager;
     }
 
+    // fait briller le poste de travail et le contour de la zone, pour ce joueur seulement
+    private static void showWorkstation(ServerPlayerEntity player, VillagerEntityMCA villager) {
+        WorkRegistry.Record record = WorkManager.findRecord(villager);
+        if (record == null || record.depot == null) {
+            player.sendMessage(Text.translatable("job.mca_vie.show_none", villager.getName()).formatted(Formatting.GOLD), true);
+            return;
+        }
+        ServerWorld world = player.getServerWorld();
+        BlockPos depot = record.depot;
+        for (int i = 0; i < 12; i++) {
+            world.spawnParticles(player, net.minecraft.particle.ParticleTypes.END_ROD, true,
+                    depot.getX() + 0.5, depot.getY() + 1.0 + i * 0.4, depot.getZ() + 0.5, 2, 0.1, 0.1, 0.1, 0.0);
+        }
+        BlockPos center = record.center != null ? record.center : depot;
+        int radius = record.radius;
+        int points = Math.max(48, radius * 8);
+        for (int i = 0; i < points; i++) {
+            double angle = Math.PI * 2 * i / points;
+            double x = center.getX() + 0.5 + Math.cos(angle) * radius;
+            double z = center.getZ() + 0.5 + Math.sin(angle) * radius;
+            int y = world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(x), (int) Math.floor(z));
+            world.spawnParticles(player, net.minecraft.particle.ParticleTypes.HAPPY_VILLAGER, true, x, y + 0.2, z, 1, 0.0, 0.0, 0.0, 0.0);
+        }
+        player.sendMessage(Text.translatable("job.mca_vie.shown", villager.getName(),
+                depot.getX(), depot.getY(), depot.getZ()).formatted(Formatting.GREEN), false);
+    }
+
     public static boolean canManage(ServerPlayerEntity player, VillagerEntityMCA villager) {
         WorkRegistry.Record record = WorkManager.findRecord(villager);
         if (record == null || record.employer == null || record.employer.equals(player.getUuid()) || player.hasPermissionLevel(2)) {
@@ -176,6 +209,7 @@ public final class WorkNetwork {
         buf.writeVarInt(record == null ? 1 : record.level);
         buf.writeBoolean(record != null && record.depot != null);
         buf.writeVarInt(WorkManager.getStatus(villager).ordinal());
+        buf.writeVarInt(record == null ? 0 : record.experience);
         ServerPlayNetworking.send(player, JOB_INFO, buf);
     }
 }
