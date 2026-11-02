@@ -25,6 +25,7 @@ public class MCAVieClient implements ClientModInitializer {
         TreeClient.register();
         WorkClient.register();
         RelationsClient.register();
+        com.maitreyoshi.mcavie.social.client.SpeechBubbles.register();
         PhoneClient.register();
         com.maitreyoshi.mcavie.life.client.TombstoneClient.register();
         com.maitreyoshi.mcavie.aging.client.AgingClient.register();

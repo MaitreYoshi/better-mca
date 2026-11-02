@@ -33,6 +33,13 @@ public abstract class EntityRendererMixin {
     @Shadow
     public abstract TextRenderer getTextRenderer();
 
+    @Inject(method = "render", at = @At("TAIL"))
+    private void mcavie$drawSpeechBubble(Entity entity, float yaw, float tickDelta, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
+        if (entity instanceof VillagerEntityMCA) {
+            com.maitreyoshi.mcavie.social.client.SpeechBubbles.render(entity, dispatcher, getTextRenderer(), matrices, vertexConsumers, light);
+        }
+    }
+
     @Inject(method = "renderLabelIfPresent", at = @At("TAIL"))
     private void mcavie$drawHappinessBar(Entity entity, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
         if (!(entity instanceof VillagerEntityMCA) || dispatcher.getSquaredDistanceToCamera(entity) > 4096) {

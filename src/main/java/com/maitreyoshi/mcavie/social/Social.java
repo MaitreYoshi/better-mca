@@ -255,6 +255,9 @@ public final class Social {
                     || world.getEntity(resident) instanceof VillagerEntityMCA v && v.isGuard();
             change(world, resident, thief, guard ? THEFT_GUARD : THEFT, today, false);
         }
+        if (world.getEntity(thief) instanceof VillagerEntityMCA caught) {
+            SocialConversation.witness(world, caught, "theft", caught.getName(), thief);
+        }
     }
 
     public static void hit(ServerWorld world, UUID victim, UUID attacker) {
@@ -267,9 +270,17 @@ public final class Social {
         if (link != null) {
             link.hitDay = today;
         }
+        net.minecraft.entity.Entity victimEntity = world.getEntity(victim);
+        net.minecraft.entity.Entity attackerEntity = world.getEntity(attacker);
+        if (victimEntity != null && attackerEntity != null) {
+            SocialConversation.witness(world, victimEntity, "hit", attackerEntity.getName(), victim, attacker);
+        }
     }
 
     public static void died(ServerWorld world, UUID dead, boolean familyMourned) {
+        if (world.getEntity(dead) instanceof VillagerEntityMCA deceased) {
+            SocialConversation.witness(world, deceased, "death", deceased.getName(), dead);
+        }
         SocialRegistry registry = SocialRegistry.get(world.getServer());
         Optional<FamilyTreeNode> node = FamilyTree.get(world).getOrEmpty(dead);
         for (UUID owner : registry.owners()) {
