@@ -59,6 +59,17 @@ public class WorkRegistry extends PersistentState {
         return deceased ? former : RETIRED_PREFIX + former;
     }
 
+    public boolean isClaimed(Identifier dimension, BlockPos pos, UUID except) {
+        for (Map.Entry<UUID, Record> entry : records.entrySet()) {
+            Record record = entry.getValue();
+            if (!entry.getKey().equals(except) && pos.equals(record.depot)
+                    && (record.depotDimension == null || record.depotDimension.equals(dimension))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public Job getJob(UUID uuid) {
         Record record = records.get(uuid);
         return record == null ? Job.NONE : record.job;

@@ -58,7 +58,7 @@ public final class WorkClient {
     }
 
     public static MutableText statusText(Info info) {
-        if (info.status() == WorkStatus.INVENTORY_FULL || info.status() == WorkStatus.NO_GRIEFING) {
+        if (info.status() == WorkStatus.INVENTORY_FULL || info.status() == WorkStatus.NO_GRIEFING || info.status() == WorkStatus.NO_WORKSTATION) {
             return info.status().getText().copy().formatted(Formatting.RED);
         }
         if (!info.working()) {

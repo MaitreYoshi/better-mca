@@ -141,7 +141,13 @@ public final class WorkManager {
 
         Job job = WorkRegistry.get(world.getServer()).getJob(villager.getUuid());
         syncProfession(villager, job);
+        WorkRegistry.Record work = findRecord(villager);
+        boolean hasWorkstation = work != null && work.depot != null;
+        if (job.isCraft() && !hasWorkstation && (world.getTime() / 20 + villager.getId()) % 5 == 0) {
+            hasWorkstation = linkNearestWorkstation(villager, world, getRecord(villager));
+        }
         boolean shouldWork = job.isCraft()
+                && hasWorkstation
                 && (AgeState.byCurrentAge(villager.getBreedingAge()) == AgeState.ADULT || age >= APPRENTICE_AGE)
                 && isWorkTime(world)
                 && !com.maitreyoshi.mcavie.village.VillageMarket.isMarketDayFor(villager, world)
@@ -154,7 +160,8 @@ public final class WorkManager {
                 && !DepositTask.isBlocked(world, villager);
 
         if (!shouldWork && job.isCraft()) {
-            setStatus(villager, DepositTask.isBlocked(world, villager) ? WorkStatus.INVENTORY_FULL : WorkStatus.SEARCHING);
+            setStatus(villager, !hasWorkstation ? WorkStatus.NO_WORKSTATION
+                    : DepositTask.isBlocked(world, villager) ? WorkStatus.INVENTORY_FULL : WorkStatus.SEARCHING);
         }
         boolean wasWorking = isWorking(villager);
         if (shouldWork == wasWorking) {
@@ -321,20 +328,10 @@ public final class WorkManager {
                 || brain.hasActivity(Activity.RAID) || brain.hasActivity(Activity.PRE_RAID);
     }
 
-    // un seul métier : la profession vanilla suit celle de Better MCA (échanges), le nom affiché reste le nôtre
+    // un seul métier : la profession du PNJ est celle de Better MCA (échanges, tenue MCA)
     @Nullable
     private static VillagerProfession professionFor(Job job) {
-        return switch (job) {
-            case FARMER -> VillagerProfession.FARMER;
-            case LUMBERJACK -> VillagerProfession.FLETCHER;
-            case FISHER -> VillagerProfession.FISHERMAN;
-            case BREEDER -> VillagerProfession.SHEPHERD;
-            case DOCTOR -> VillagerProfession.CLERIC;
-            case BLACKSMITH -> VillagerProfession.TOOLSMITH;
-            case BAKER -> VillagerProfession.BUTCHER;
-            case TEACHER -> VillagerProfession.LIBRARIAN;
-            default -> null;
-        };
+        return JobProfessions.of(job);
     }
 
     private static boolean isSyncedProfession(VillagerEntityMCA villager, Job job) {
@@ -356,6 +353,49 @@ public final class WorkManager {
         }
     }
 
+    public static final int WORKSTATION_SEARCH_RADIUS = 32;
+
+    // lie le PNJ au poste de travail libre de son métier le plus proche ; le poste devient le centre de sa zone et son coffre
+    public static boolean linkNearestWorkstation(VillagerEntityMCA villager, ServerWorld world, WorkRegistry.Record record) {
+        com.maitreyoshi.mcavie.work.block.WorkstationBlock wanted = com.maitreyoshi.mcavie.work.block.WorkBlocks.forJob(record.job);
+        if (wanted == null) {
+            return false;
+        }
+        WorkRegistry registry = WorkRegistry.get(world.getServer());
+        net.minecraft.util.Identifier dimension = world.getRegistryKey().getValue();
+        BlockPos origin = villager.getBlockPos();
+        int chunkRadius = (WORKSTATION_SEARCH_RADIUS >> 4) + 1;
+        int cx = origin.getX() >> 4;
+        int cz = origin.getZ() >> 4;
+        BlockPos best = null;
+        double bestDistance = (double) WORKSTATION_SEARCH_RADIUS * WORKSTATION_SEARCH_RADIUS;
+        for (int dx = -chunkRadius; dx <= chunkRadius; dx++) {
+            for (int dz = -chunkRadius; dz <= chunkRadius; dz++) {
+                if (!world.isChunkLoaded(cx + dx, cz + dz)) {
+                    continue;
+                }
+                for (net.minecraft.block.entity.BlockEntity entity : world.getChunk(cx + dx, cz + dz).getBlockEntities().values()) {
+                    BlockPos pos = entity.getPos();
+                    double distance = pos.getSquaredDistance(origin);
+                    if (entity instanceof com.maitreyoshi.mcavie.work.block.WorkstationBlockEntity && distance <= bestDistance
+                            && entity.getCachedState().isOf(wanted) && !registry.isClaimed(dimension, pos, villager.getUuid())) {
+                        bestDistance = distance;
+                        best = pos;
+                    }
+                }
+            }
+        }
+        if (best == null) {
+            return false;
+        }
+        record.depot = best.toImmutable();
+        record.depotDimension = dimension;
+        record.center = record.depot;
+        registry.markDirty();
+        WorkNetwork.sendJobInfo(villager);
+        return true;
+    }
+
     public static void setJob(VillagerEntityMCA villager, Job job) {
         WorkRegistry.Record record = getRecord(villager);
         Job previous = record.job;
@@ -364,9 +404,15 @@ public final class WorkManager {
             record.experience = 0;
         }
         record.job = job;
-        record.center = villager.getBlockPos();
-        dropDepotOutsideZone(record);
+        if (previous != job) {
+            record.depot = null;
+            record.depotDimension = null;
+            record.center = villager.getBlockPos();
+        }
         record.apprenticeChosen = true;
+        if (job.isCraft() && record.depot == null && villager.getWorld() instanceof ServerWorld world) {
+            linkNearestWorkstation(villager, world, record);
+        }
         markDirty(villager);
         if (job == Job.GUARD) {
             villager.setProfession(ProfessionsMCA.GUARD.get());

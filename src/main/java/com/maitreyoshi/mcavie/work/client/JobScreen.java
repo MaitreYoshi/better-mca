@@ -64,12 +64,8 @@ public class JobScreen extends Screen {
             if (client != null) {
                 client.setScreen(null);
             }
-        }).dimensions(width / 2 - BUTTON_WIDTH - GAP / 2, bottom, BUTTON_WIDTH, BUTTON_HEIGHT)
+        }).dimensions(width / 2 - BUTTON_WIDTH / 2, bottom, BUTTON_WIDTH, BUTTON_HEIGHT)
                 .tooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.translatable("job.mca_vie.choose_depot.tooltip"))).build());
-        addDrawableChild(ButtonWidget.builder(Text.translatable("job.mca_vie.zone_here"), b -> {
-            WorkClient.zoneHere(villager.getUuid());
-        }).dimensions(width / 2 + GAP / 2, bottom, BUTTON_WIDTH, BUTTON_HEIGHT)
-                .tooltip(net.minecraft.client.gui.tooltip.Tooltip.of(Text.translatable("job.mca_vie.zone_here.tooltip"))).build());
 
         addDrawableChild(ButtonWidget.builder(Text.translatable("gui.back"), b -> close())
                 .dimensions(width / 2 - 50, bottom + BUTTON_HEIGHT + GAP + 6, 100, BUTTON_HEIGHT).build());
