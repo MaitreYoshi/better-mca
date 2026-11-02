@@ -3,6 +3,7 @@ package com.maitreyoshi.mcavie.work.client;
 import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkNetwork;
 import com.maitreyoshi.mcavie.work.WorkStatus;
+import com.maitreyoshi.mcavie.work.WorkGesture;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientEntityEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -20,7 +21,7 @@ import java.util.UUID;
 public final class WorkClient {
     private static final Map<Integer, Info> BY_ENTITY_ID = new HashMap<>();
 
-    public record Info(Job job, boolean working, int level, boolean hasDepot, WorkStatus status, int experience) {
+    public record Info(Job job, boolean working, int level, boolean hasDepot, WorkStatus status, int experience, WorkGesture gesture) {
     }
 
     private WorkClient() {
@@ -29,7 +30,7 @@ public final class WorkClient {
     public static void register() {
         ClientPlayNetworking.registerGlobalReceiver(WorkNetwork.JOB_INFO, (client, handler, buf, responseSender) -> {
             int entityId = buf.readVarInt();
-            Info info = new Info(Job.byId(buf.readVarInt()), buf.readBoolean(), buf.readVarInt(), buf.readBoolean(), WorkStatus.byId(buf.readVarInt()), buf.readVarInt());
+            Info info = new Info(Job.byId(buf.readVarInt()), buf.readBoolean(), buf.readVarInt(), buf.readBoolean(), WorkStatus.byId(buf.readVarInt()), buf.readVarInt(), WorkGesture.byId(buf.readVarInt()));
             client.execute(() -> BY_ENTITY_ID.put(entityId, info));
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> BY_ENTITY_ID.clear());

@@ -1,6 +1,7 @@
 package com.maitreyoshi.mcavie.work.tasks;
 
 import com.maitreyoshi.mcavie.work.Job;
+import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.block.BlockState;
@@ -99,7 +100,7 @@ public class FisherTask extends AbstractJobTask {
             return;
         }
         reach.reset();
-        arrive(villager);
+        arrive(villager, WorkGesture.FISH);
         villager.lookAt(water);
         holdTool(villager);
         double wx = water.getX() + 0.5;

@@ -1,6 +1,7 @@
 package com.maitreyoshi.mcavie.work.tasks;
 
 import com.maitreyoshi.mcavie.work.Job;
+import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.block.AttachedStemBlock;
@@ -117,7 +118,7 @@ public class FarmerTask extends AbstractJobTask {
             }
             return;
         }
-        arrive(villager);
+        arrive(villager, WorkGesture.HOE);
         villager.lookAt(target);
 
         workTicks++;

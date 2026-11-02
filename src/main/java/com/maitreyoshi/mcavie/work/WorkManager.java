@@ -44,6 +44,7 @@ public final class WorkManager {
 
     private static final Map<UUID, Boolean> WORKING = new ConcurrentHashMap<>();
     private static final Map<UUID, WorkStatus> STATUS = new ConcurrentHashMap<>();
+    private static final Map<UUID, WorkGesture> GESTURE = new ConcurrentHashMap<>();
     private static UUID cachedUuid;
     private static long cachedTime;
     private static WorkRegistry.Record cachedRecord;
@@ -66,6 +67,17 @@ public final class WorkManager {
 
     public static void setStatus(VillagerEntityMCA villager, WorkStatus status) {
         if (STATUS.put(villager.getUuid(), status) != status) {
+            WorkNetwork.sendJobInfo(villager);
+        }
+    }
+
+    public static WorkGesture getGesture(VillagerEntityMCA villager) {
+        return GESTURE.getOrDefault(villager.getUuid(), WorkGesture.NONE);
+    }
+
+    public static void setGesture(VillagerEntityMCA villager, WorkGesture gesture) {
+        if (GESTURE.getOrDefault(villager.getUuid(), WorkGesture.NONE) != gesture) {
+            GESTURE.put(villager.getUuid(), gesture);
             WorkNetwork.sendJobInfo(villager);
         }
     }
@@ -458,6 +470,7 @@ public final class WorkManager {
     public static void forget(UUID uuid) {
         WORKING.remove(uuid);
         STATUS.remove(uuid);
+        GESTURE.remove(uuid);
         DepositTask.forget(uuid);
     }
 
@@ -470,6 +483,7 @@ public final class WorkManager {
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             WORKING.clear();
             STATUS.clear();
+            GESTURE.clear();
             cachedRecord = null;
             cachedUuid = null;
             DepositTask.clear();

@@ -33,6 +33,7 @@
   ],
   "client": [
     "client.AbstractDynamicScreenMixin",
+    "client.BipedWorkPoseMixin",
     "client.ClientInteractionManagerMixin",
     "client.CameraHudMixin",
     "client.CameraMouseMixin",

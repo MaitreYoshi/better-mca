@@ -1,6 +1,7 @@
 package com.maitreyoshi.mcavie.work.tasks;
 
 import com.maitreyoshi.mcavie.work.Job;
+import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.entity.Entity;
@@ -102,7 +103,7 @@ public class BlacksmithTask extends AbstractJobTask {
             return;
         }
         reach.reset();
-        arrive(villager);
+        arrive(villager, WorkGesture.HAMMER);
         villager.lookAt(pos);
         holdTool(villager);
         workTicks++;

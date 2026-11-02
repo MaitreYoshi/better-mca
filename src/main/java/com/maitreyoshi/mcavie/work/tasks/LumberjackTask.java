@@ -1,6 +1,7 @@
 package com.maitreyoshi.mcavie.work.tasks;
 
 import com.maitreyoshi.mcavie.work.Job;
+import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.PlacedLogs;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
@@ -128,7 +129,7 @@ public class LumberjackTask extends AbstractJobTask {
             }
             return;
         }
-        arrive(villager);
+        arrive(villager, WorkGesture.CHOP);
         villager.lookAt(target.up());
 
         if (chopTicks == 0) {

@@ -1,6 +1,7 @@
 package com.maitreyoshi.mcavie.work.tasks;
 
 import com.maitreyoshi.mcavie.work.Job;
+import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.entity.Entity;
@@ -89,7 +90,7 @@ public class BreederTask extends AbstractJobTask {
             }
             return;
         }
-        arrive(villager);
+        arrive(villager, WorkGesture.TEND);
         villager.lookAt(first.getBlockPos());
         villager.swingHand(Hand.MAIN_HAND);
 
