@@ -176,6 +176,13 @@ public final class SocialConversation {
         }
     }
 
+    /** Un villageois dit une réplique seule, avec la même bulle que les témoins. */
+    public static void remark(ServerWorld world, VillagerEntityMCA speaker, Text text) {
+        if (SocialConfig.get().showChats && canSpeak(speaker) && !speaker.isSleeping()) {
+            PENDING.add(new Line(world, speaker, text, false, world.getTime() + 10L));
+        }
+    }
+
     private static void tick(ServerWorld world) {
         if (PENDING.isEmpty()) {
             return;

@@ -86,6 +86,17 @@ public final class TombstoneClient {
                 Text.translatable("block.mca_vie.tombstone.month." + date.getMonthValue()), WorldCalendar.displayYearOfDay(day));
     }
 
+    private static String lives(TombstoneDetails details) {
+        List<Long> past = details.pastLives();
+        StringBuilder out = new StringBuilder();
+        String start = details.birth() == null ? "?" : String.valueOf(WorldCalendar.displayYearOfDay(details.birth()));
+        for (int i = 0; i + 1 < past.size(); i += 2) {
+            out.append('(').append(start).append('-').append(WorldCalendar.displayYearOfDay(past.get(i))).append(") ");
+            start = String.valueOf(WorldCalendar.displayYearOfDay(past.get(i + 1)));
+        }
+        return out.append('(').append(start).append('-').append(WorldCalendar.displayYearOfDay(details.death())).append(')').toString();
+    }
+
     public static void render(TombstoneDetails details, TombstoneBlock block, TextRenderer text, MatrixStack matrices,
                               VertexConsumerProvider consumers, int light) {
         layout(details, TombstoneModels.Look.MCA, block.getLineWidth(), block.getMaxNameHeight() + 30, text, matrices, consumers, light);
@@ -124,7 +135,10 @@ public final class TombstoneClient {
         float gap = image == null ? 0 : 3;
         float available = height - medallion - gap;
 
-        if (born == null) {
+        if (!details.pastLives().isEmpty()) {
+            // ressuscité : une période par vie, (naissance-mort) (retour-mort)…
+            lines.add(Text.literal(lives(details)));
+        } else if (born == null) {
             lines.add(died);
         } else {
             Text both = Text.translatable("block.mca_vie.tombstone.dates", born, died);

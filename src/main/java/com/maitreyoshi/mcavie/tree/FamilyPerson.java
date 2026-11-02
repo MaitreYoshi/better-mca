@@ -24,8 +24,16 @@ public record FamilyPerson(
         @Nullable Long deathDay,
         int happiness,
         @Nullable UUID portrait,
-        @Nullable RelationInfo relationToViewer
+        @Nullable RelationInfo relationToViewer,
+        List<Long> pastLives
 ) {
+    public FamilyPerson(UUID id, String name, String surname, int gender, boolean player, boolean deceased, UUID father, UUID mother,
+                        List<UUID> spouses, List<UUID> children, String professionKey, @Nullable Long birthDay, @Nullable Long deathDay,
+                        int happiness, @Nullable UUID portrait, @Nullable RelationInfo relationToViewer) {
+        this(id, name, surname, gender, player, deceased, father, mother, spouses, children, professionKey, birthDay, deathDay,
+                happiness, portrait, relationToViewer, List.of());
+    }
+
     public boolean hasFather() {
         return !Util.NIL_UUID.equals(father);
     }
@@ -57,6 +65,8 @@ public record FamilyPerson(
         if (relationToViewer != null) {
             relationToViewer.write(buf);
         }
+        buf.writeVarInt(pastLives.size());
+        pastLives.forEach(buf::writeLong);
     }
 
     public static FamilyPerson read(PacketByteBuf buf) {
@@ -76,8 +86,18 @@ public record FamilyPerson(
                 readNullableLong(buf),
                 buf.readVarInt() - 1,
                 buf.readBoolean() ? buf.readUuid() : null,
-                buf.readBoolean() ? RelationInfo.read(buf) : null
+                buf.readBoolean() ? RelationInfo.read(buf) : null,
+                readLongs(buf)
         );
+    }
+
+    private static List<Long> readLongs(PacketByteBuf buf) {
+        int size = buf.readVarInt();
+        List<Long> list = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            list.add(buf.readLong());
+        }
+        return list;
     }
 
     static void writeUuids(PacketByteBuf buf, List<UUID> uuids) {
