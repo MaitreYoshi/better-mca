@@ -36,6 +36,8 @@ public class MCAVie implements ModInitializer {
         registerCommand();
         com.maitreyoshi.mcavie.village.VillageTitleCommand.register();
         TreeServer.register();
+        com.maitreyoshi.mcavie.work.block.WorkBlocks.register();
+        com.maitreyoshi.mcavie.work.JobProfessions.register();
         WorkNetwork.register();
         VillageConfig.load();
         SocialConfig.load();

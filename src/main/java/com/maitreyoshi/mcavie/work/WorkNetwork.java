@@ -12,8 +12,6 @@ import com.maitreyoshi.mcavie.village.VillageRights;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
-import net.minecraft.block.ChestBlock;
-import net.minecraft.inventory.Inventory;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -96,21 +94,27 @@ public final class WorkNetwork {
                 return ActionResult.PASS;
             }
             BlockPos pos = hit.getBlockPos();
-            boolean container = world.getBlockState(pos).getBlock() instanceof ChestBlock || world.getBlockEntity(pos) instanceof Inventory;
-            if (!container || world.getTime() > pending.expiresAt()) {
+            boolean workstation = world.getBlockState(pos).getBlock() instanceof com.maitreyoshi.mcavie.work.block.WorkstationBlock;
+            if (!workstation || world.getTime() > pending.expiresAt()) {
                 PENDING_DEPOTS.remove(player.getUuid());
                 return ActionResult.PASS;
             }
             PENDING_DEPOTS.remove(player.getUuid());
             if (((ServerWorld) world).getEntity(pending.villager()) instanceof VillagerEntityMCA villager && canManage(serverPlayer, villager)) {
-                if (!WorkManager.isInZone(villager, pos)) {
-                    serverPlayer.sendMessage(Text.translatableWithFallback("job.mca_vie.depot_out_of_zone",
-                            "Ce coffre est hors de la zone de travail de %s.", villager.getName()).formatted(Formatting.RED), false);
+                WorkRegistry.Record record = WorkManager.getRecord(villager);
+                Job stationJob = ((com.maitreyoshi.mcavie.work.block.WorkstationBlock) world.getBlockState(pos).getBlock()).job();
+                if (stationJob != record.job) {
+                    serverPlayer.sendMessage(Text.translatable("job.mca_vie.wrong_workstation", villager.getName(), record.job.getName()).formatted(Formatting.RED), false);
                     return ActionResult.SUCCESS;
                 }
-                WorkRegistry.Record record = WorkManager.getRecord(villager);
+                Identifier dimension = world.getRegistryKey().getValue();
+                if (WorkRegistry.get(serverPlayer.getServer()).isClaimed(dimension, pos, villager.getUuid())) {
+                    serverPlayer.sendMessage(Text.translatable("job.mca_vie.workstation_taken").formatted(Formatting.RED), false);
+                    return ActionResult.SUCCESS;
+                }
                 record.depot = pos.toImmutable();
-                record.depotDimension = world.getRegistryKey().getValue();
+                record.depotDimension = dimension;
+                record.center = record.depot;
                 WorkRegistry.get(serverPlayer.getServer()).markDirty();
                 sendJobInfo(villager);
                 serverPlayer.sendMessage(Text.translatable("job.mca_vie.depot_set", villager.getName()).formatted(Formatting.GREEN), false);
