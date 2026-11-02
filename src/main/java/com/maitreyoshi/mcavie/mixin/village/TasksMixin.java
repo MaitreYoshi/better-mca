@@ -17,6 +17,14 @@ public abstract class TasksMixin {
     @Unique
     private static Object mcavie$filtered;
 
+    @Inject(method = "getRank", at = @At("HEAD"), cancellable = true)
+    private static void mcavie$forcedTitle(Village village, ServerPlayerEntity player, CallbackInfoReturnable<Rank> cir) {
+        Rank forced = com.maitreyoshi.mcavie.village.VillageState.of(village).forcedTitles.get(player.getUuid());
+        if (forced != null) {
+            cir.setReturnValue(forced);
+        }
+    }
+
     @Inject(method = "getRank", at = @At("HEAD"))
     private static void mcavie$reputationOnly(Village village, ServerPlayerEntity player, CallbackInfoReturnable<Rank> cir) {
         Tasks tasks = Tasks.getInstance();

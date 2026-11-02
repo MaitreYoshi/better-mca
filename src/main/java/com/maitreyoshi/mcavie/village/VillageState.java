@@ -69,6 +69,8 @@ public final class VillageState {
     public boolean prisonActive;
     public final Set<UUID> pendingRelease = new HashSet<>();
     public final Map<UUID, Prisoner> prisoners = new java.util.LinkedHashMap<>();
+    /** Titres donnés par un opérateur (/villagetitle), prioritaires sur le calcul de MCA. */
+    public final Map<UUID, net.mca.resources.Rank> forcedTitles = new HashMap<>();
 
     public static final class Case {
         public UUID suspect;
@@ -256,6 +258,7 @@ public final class VillageState {
         cases.addAll(other.cases);
         prisoners.putAll(other.prisoners);
         pendingRelease.addAll(other.pendingRelease);
+        other.forcedTitles.forEach(forcedTitles::putIfAbsent);
         registry.sort(java.util.Comparator.comparingLong(CivilRegistry.Entry::day).reversed());
         trimRegistry();
         economyActive |= other.economyActive;
@@ -372,6 +375,9 @@ public final class VillageState {
             prisonerNbt.put(uuid.toString(), e);
         });
         nbt.put("prisoners", prisonerNbt);
+        NbtCompound titleNbt = new NbtCompound();
+        forcedTitles.forEach((uuid, title) -> titleNbt.putString(uuid.toString(), title.name()));
+        nbt.put("forcedTitles", titleNbt);
         return nbt;
     }
 
@@ -455,6 +461,15 @@ public final class VillageState {
         nbt.getList("registry", NbtElement.COMPOUND_TYPE).forEach(e -> registry.add(CivilRegistry.Entry.fromNbt((NbtCompound) e)));
         trimRegistry();
         prisonActive = nbt.getBoolean("prisonActive");
+        forcedTitles.clear();
+        NbtCompound titleNbt = nbt.getCompound("forcedTitles");
+        for (String key : titleNbt.getKeys()) {
+            try {
+                forcedTitles.put(UUID.fromString(key), net.mca.resources.Rank.valueOf(titleNbt.getString(key)));
+            } catch (IllegalArgumentException ignored) {
+                // entrée illisible : on l'ignore
+            }
+        }
         pendingRelease.clear();
         nbt.getList("pendingRelease", NbtElement.INT_ARRAY_TYPE).forEach(e -> pendingRelease.add(net.minecraft.nbt.NbtHelper.toUuid(e)));
         cases.clear();
