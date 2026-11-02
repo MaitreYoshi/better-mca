@@ -248,6 +248,7 @@
   "gui.mca_vie.plan.hint.market": "Shift + click: order 5 lots",
   "gui.mca_vie.plan.hint.title": "Your title is your own, in this village",
   "gui.mca_vie.plan.hint.scroll": "Scroll wheel: scroll",
+  "gui.mca_vie.first_name": "First name",
   "gui.mca_vie.surname": "Surname",
   "command.mca_vie.none": "You don't have a surname yet. Use /surname <name> to choose one.",
   "command.mca_vie.filled": "%s family tree member(s) received a surname.",

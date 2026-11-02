@@ -248,6 +248,7 @@
   "gui.mca_vie.plan.hint.market": "Maj + clic : commander 5 lots",
   "gui.mca_vie.plan.hint.title": "Ton titre est propre à toi, dans ce village",
   "gui.mca_vie.plan.hint.scroll": "Molette : faire défiler",
+  "gui.mca_vie.first_name": "Prénom",
   "gui.mca_vie.surname": "Nom de famille",
   "command.mca_vie.none": "Tu n'as pas encore de nom de famille. Utilise /surname <nom> pour en choisir un.",
   "command.mca_vie.filled": "%s personne(s) de l'arbre ont reçu un nom de famille.",

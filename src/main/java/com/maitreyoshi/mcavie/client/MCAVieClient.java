@@ -105,4 +105,10 @@ public class MCAVieClient implements ClientModInitializer {
     public static void requestRandomSurname() {
         ClientPlayNetworking.send(SurnameNetwork.RANDOM_SURNAME, PacketByteBufs.empty());
     }
+
+    public static void requestBabySurname(int slot) {
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeVarInt(slot);
+        ClientPlayNetworking.send(SurnameNetwork.BABY_SURNAME, buf);
+    }
 }

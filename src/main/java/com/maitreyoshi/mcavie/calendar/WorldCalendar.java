@@ -201,6 +201,11 @@ public final class WorldCalendar {
         return fromTicks(world.getTimeOfDay(), true);
     }
 
+    /** Date et heure d'un instant passé telles que la montre les affichait, vitesse du temps comprise. */
+    public static CalendarDate flowingFromTicks(long ticks) {
+        return fromTicks(ticks, true);
+    }
+
     private static CalendarDate fromTicks(long ticks, boolean flowing) {
         long shifted = Math.max(0, ticks + TICKS_OFFSET);
         long dayIndex = shifted / TICKS_PER_DAY;

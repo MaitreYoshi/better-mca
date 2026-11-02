@@ -95,7 +95,7 @@ public class PhotoItem extends Item {
         if (!nbt.getString("author").isEmpty()) {
             tooltip.add(Text.translatable("item.mca_vie.photo.author", nbt.getString("author")).formatted(Formatting.GRAY));
         }
-        CalendarDate date = WorldCalendar.fromTicks(nbt.getLong("date"));
+        CalendarDate date = WorldCalendar.flowingFromTicks(nbt.getLong("date"));
         tooltip.add(Text.translatable("item.mca_vie.photo.date", date.day() + "/" + date.month() + "/" + date.year()).formatted(Formatting.GRAY));
         tooltip.add(Text.translatable("item.mca_vie.photo.hint").formatted(Formatting.DARK_GRAY));
     }
