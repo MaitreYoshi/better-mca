@@ -1,7 +1,23 @@
 {
   "variants": {
-    "": {
-      "model": "mca_vie:block/apothecary_table"
+    "facing=north": {
+      "model": "mca_vie:block/apothecary_table",
+      "uvlock": false
+    },
+    "facing=east": {
+      "model": "mca_vie:block/apothecary_table",
+      "y": 90,
+      "uvlock": false
+    },
+    "facing=south": {
+      "model": "mca_vie:block/apothecary_table",
+      "y": 180,
+      "uvlock": false
+    },
+    "facing=west": {
+      "model": "mca_vie:block/apothecary_table",
+      "y": 270,
+      "uvlock": false
     }
   }
 }

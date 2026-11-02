@@ -1,7 +1,23 @@
 {
   "variants": {
-    "": {
-      "model": "mca_vie:block/seed_shed"
+    "facing=north": {
+      "model": "mca_vie:block/seed_shed",
+      "uvlock": false
+    },
+    "facing=east": {
+      "model": "mca_vie:block/seed_shed",
+      "y": 90,
+      "uvlock": false
+    },
+    "facing=south": {
+      "model": "mca_vie:block/seed_shed",
+      "y": 180,
+      "uvlock": false
+    },
+    "facing=west": {
+      "model": "mca_vie:block/seed_shed",
+      "y": 270,
+      "uvlock": false
     }
   }
 }
