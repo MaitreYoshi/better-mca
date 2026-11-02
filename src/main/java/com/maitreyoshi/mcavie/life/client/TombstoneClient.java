@@ -81,20 +81,29 @@ public final class TombstoneClient {
     }
 
     private static Text date(long day) {
-        LocalDate date = WorldCalendar.dateOfDay(day);
+        return date(WorldCalendar.dateOfDay(day));
+    }
+
+    private static Text calendarDate(@Nullable Long exact, long day) {
+        return exact != null ? date(WorldCalendar.dateOfCalendarDay(exact)) : date(day);
+    }
+
+    private static Text date(LocalDate date) {
         return Text.translatable("block.mca_vie.tombstone.date", date.getDayOfMonth(),
-                Text.translatable("block.mca_vie.tombstone.month." + date.getMonthValue()), WorldCalendar.displayYearOfDay(day));
+                Text.translatable("block.mca_vie.tombstone.month." + date.getMonthValue()), date.getYear() <= 0 ? date.getYear() - 1 : date.getYear());
     }
 
     private static String lives(TombstoneDetails details) {
         List<Long> past = details.pastLives();
         StringBuilder out = new StringBuilder();
-        String start = details.birth() == null ? "?" : String.valueOf(WorldCalendar.displayYearOfDay(details.birth()));
+        String start = details.birth() == null ? "?" : String.valueOf(details.exactBirth() != null
+                ? WorldCalendar.displayYearOfCalendarDay(details.exactBirth()) : WorldCalendar.displayYearOfDay(details.birth()));
         for (int i = 0; i + 1 < past.size(); i += 2) {
-            out.append('(').append(start).append('-').append(WorldCalendar.displayYearOfDay(past.get(i))).append(") ");
-            start = String.valueOf(WorldCalendar.displayYearOfDay(past.get(i + 1)));
+            out.append('(').append(start).append('-').append(WorldCalendar.displayYearOfCalendarDay(past.get(i))).append(") ");
+            start = String.valueOf(WorldCalendar.displayYearOfCalendarDay(past.get(i + 1)));
         }
-        return out.append('(').append(start).append('-').append(WorldCalendar.displayYearOfDay(details.death())).append(')').toString();
+        int end = details.exactDeath() != null ? WorldCalendar.displayYearOfCalendarDay(details.exactDeath()) : WorldCalendar.displayYearOfDay(details.death());
+        return out.append('(').append(start).append('-').append(end).append(')').toString();
     }
 
     public static void render(TombstoneDetails details, TombstoneBlock block, TextRenderer text, MatrixStack matrices,
@@ -128,8 +137,8 @@ public final class TombstoneClient {
         if (details.job() != null) {
             lines.add(Text.translatable(details.job()));
         }
-        Text born = details.birth() == null ? null : Text.translatable("block.mca_vie.tombstone.born", date(details.birth()));
-        Text died = Text.translatable("block.mca_vie.tombstone.died", date(details.death()));
+        Text born = details.birth() == null ? null : Text.translatable("block.mca_vie.tombstone.born", calendarDate(details.exactBirth(), details.birth()));
+        Text died = Text.translatable("block.mca_vie.tombstone.died", calendarDate(details.exactDeath(), details.death()));
 
         float medallion = image == null ? 0 : Math.max(14, Math.min(36, Math.round(height * 0.4f)));
         float gap = image == null ? 0 : 3;

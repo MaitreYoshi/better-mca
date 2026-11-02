@@ -1047,23 +1047,23 @@ public class TreeScreen extends Screen {
             boolean dead = person.deceased() || death != null;
             List<Long> lives = person.pastLives();
             if (birth != null) {
-                add(Text.translatable("tree.mca_vie.born." + g, TreeTexts.date(birth)), 0xFFFFFF);
+                add(Text.translatable("tree.mca_vie.born." + g, TreeTexts.date(person.exactBirth(), birth)), 0xFFFFFF);
             } else {
                 add(Text.translatable("tree.mca_vie.born_unknown"), 0x909090);
             }
             for (int i = 0; i + 1 < lives.size(); i += 2) {
-                add(Text.translatable("tree.mca_vie.died." + g, TreeTexts.date(lives.get(i))), 0xC0C0C0);
-                add(Text.translatable("tree.mca_vie.resurrected." + g, TreeTexts.date(lives.get(i + 1))), 0xB48CFF);
+                add(Text.translatable("tree.mca_vie.died." + g, TreeTexts.calendarDate(lives.get(i))), 0xC0C0C0);
+                add(Text.translatable("tree.mca_vie.resurrected." + g, TreeTexts.calendarDate(lives.get(i + 1))), 0xB48CFF);
             }
             if (birth != null && !dead) {
                 add(Text.translatable("tree.mca_vie.details.age", TreeTexts.age(LifeCycle.ageInYears(birth, today))), 0xFFFFFF);
             }
             if (death != null) {
                 if (birth != null) {
-                    add(Text.translatable("tree.mca_vie.died_age." + g, TreeTexts.date(death),
+                    add(Text.translatable("tree.mca_vie.died_age." + g, TreeTexts.date(person.exactDeath(), death),
                             TreeTexts.age(LifeCycle.ageInYears(birth, death))), 0xC0C0C0);
                 } else {
-                    add(Text.translatable("tree.mca_vie.died." + g, TreeTexts.date(death)), 0xC0C0C0);
+                    add(Text.translatable("tree.mca_vie.died." + g, TreeTexts.date(person.exactDeath(), death)), 0xC0C0C0);
                 }
             } else if (dead) {
                 add(Text.translatable("tree.mca_vie.dead." + g), 0xC0C0C0);

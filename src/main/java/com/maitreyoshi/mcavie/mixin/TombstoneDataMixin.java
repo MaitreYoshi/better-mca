@@ -56,7 +56,7 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
         if (death == null) {
             death = WorldCalendar.now(world).dayIndex();
             if (birth != null) {
-                registry.setDeathDay(entity.getUuid(), death);
+                registry.recordDeath(entity.getUuid(), death, WorldCalendar.exactCalendarDay(world));
             }
         }
         mcavie$details = TombstoneDetails.of(entity, world, birth, death);

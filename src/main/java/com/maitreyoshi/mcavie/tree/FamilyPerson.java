@@ -25,13 +25,15 @@ public record FamilyPerson(
         int happiness,
         @Nullable UUID portrait,
         @Nullable RelationInfo relationToViewer,
-        List<Long> pastLives
+        List<Long> pastLives,
+        @Nullable Long exactBirth,
+        @Nullable Long exactDeath
 ) {
     public FamilyPerson(UUID id, String name, String surname, int gender, boolean player, boolean deceased, UUID father, UUID mother,
                         List<UUID> spouses, List<UUID> children, String professionKey, @Nullable Long birthDay, @Nullable Long deathDay,
                         int happiness, @Nullable UUID portrait, @Nullable RelationInfo relationToViewer) {
         this(id, name, surname, gender, player, deceased, father, mother, spouses, children, professionKey, birthDay, deathDay,
-                happiness, portrait, relationToViewer, List.of());
+                happiness, portrait, relationToViewer, List.of(), null, null);
     }
 
     public boolean hasFather() {
@@ -67,6 +69,8 @@ public record FamilyPerson(
         }
         buf.writeVarInt(pastLives.size());
         pastLives.forEach(buf::writeLong);
+        writeNullableLong(buf, exactBirth);
+        writeNullableLong(buf, exactDeath);
     }
 
     public static FamilyPerson read(PacketByteBuf buf) {
@@ -87,7 +91,9 @@ public record FamilyPerson(
                 buf.readVarInt() - 1,
                 buf.readBoolean() ? buf.readUuid() : null,
                 buf.readBoolean() ? RelationInfo.read(buf) : null,
-                readLongs(buf)
+                readLongs(buf),
+                readNullableLong(buf),
+                readNullableLong(buf)
         );
     }
 

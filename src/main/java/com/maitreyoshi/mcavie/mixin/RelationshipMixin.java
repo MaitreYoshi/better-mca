@@ -51,7 +51,7 @@ public abstract class RelationshipMixin {
             return;
         }
         if (life.getBirthDay(entity.getUuid()) != null) {
-            life.setDeathDay(entity.getUuid(), WorldCalendar.now(world).dayIndex());
+            life.recordDeath(entity.getUuid(), WorldCalendar.now(world).dayIndex(), WorldCalendar.exactCalendarDay(world));
         }
         FamilyTreeNode node = getFamilyEntry();
         if (FamilyTreeNode.isValid(node.partner())) {

@@ -54,7 +54,11 @@ public final class LifeCycle {
         if (birth == null) {
             boolean newborn = isNewborn(villager, world);
             birth = newborn ? today : initialBirthDay(villager, world, today);
-            registry.setBirthDay(villager.getUuid(), birth);
+            if (newborn) {
+                registry.recordBirth(villager.getUuid(), birth, WorldCalendar.exactCalendarDay(world));
+            } else {
+                registry.setBirthDay(villager.getUuid(), birth);
+            }
             if (newborn) {
                 VillageDecrees.onBirth(villager);
                 if (villager.getBreedingAge() <= -net.mca.entity.ai.relationship.AgeState.getMaxAge() + 2400) {
@@ -65,7 +69,7 @@ public final class LifeCycle {
         Long death = registry.getDeathDay(villager.getUuid());
         if (death != null) {
             // vivant avec une date de décès : il vient d'être ressuscité (faux ou bâton de vie)
-            registry.resurrected(villager.getUuid(), death, today, world.getTime());
+            registry.resurrected(villager.getUuid(), WorldCalendar.exactCalendarDay(world), world.getTime());
             Resurrection.returned(villager, world);
         }
         Resurrection.update(villager, world);

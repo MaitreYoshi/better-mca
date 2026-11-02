@@ -18,8 +18,13 @@ public class LifeRegistry extends PersistentState {
     private final Map<UUID, Long> births = new HashMap<>();
     private final Map<UUID, Long> deaths = new HashMap<>();
     private final Map<UUID, Long> zombies = new HashMap<>();
-    /** Vies passées des ressuscités : jours de mort et de résurrection à la suite (mort, retour, mort, retour…). */
+    /** Dates exactes (jours du calendrier) des naissances et morts vues en direct, à la montre. */
+    private final Map<UUID, Long> exactBirths = new HashMap<>();
+    private final Map<UUID, Long> exactDeaths = new HashMap<>();
+    /** Vies passées des ressuscités, en jours du calendrier : mort, retour, mort, retour… */
     private final Map<UUID, long[]> pastLives = new HashMap<>();
+    /** Ancien format (jours Minecraft), converti à la première lecture. */
+    private final Map<UUID, long[]> legacyLives = new HashMap<>();
     /** Heure de jeu (ticks) de la dernière résurrection, pour que l'étonnement des villageois s'estompe. */
     private final Map<UUID, Long> resurrectedAt = new HashMap<>();
 
@@ -33,15 +38,21 @@ public class LifeRegistry extends PersistentState {
         read(nbt.getCompound("deaths"), registry.deaths);
         read(nbt.getCompound("zombies"), registry.zombies);
         read(nbt.getCompound("resurrected_at"), registry.resurrectedAt);
-        NbtCompound lives = nbt.getCompound("past_lives");
-        for (String key : lives.getKeys()) {
+        read(nbt.getCompound("exact_births"), registry.exactBirths);
+        read(nbt.getCompound("exact_deaths"), registry.exactDeaths);
+        readLives(nbt.getCompound("lives"), registry.pastLives);
+        readLives(nbt.getCompound("past_lives"), registry.legacyLives);
+        return registry;
+    }
+
+    private static void readLives(NbtCompound entries, Map<UUID, long[]> into) {
+        for (String key : entries.getKeys()) {
             try {
-                registry.pastLives.put(UUID.fromString(key), lives.getLongArray(key));
+                into.put(UUID.fromString(key), entries.getLongArray(key));
             } catch (IllegalArgumentException e) {
                 MCAVie.LOGGER.warn("UUID invalide dans le registre des âges : {}", key);
             }
         }
-        return registry;
     }
 
     private static void read(NbtCompound entries, Map<UUID, Long> into) {
@@ -66,9 +77,14 @@ public class LifeRegistry extends PersistentState {
         nbt.put("deaths", write(deaths));
         nbt.put("zombies", write(zombies));
         nbt.put("resurrected_at", write(resurrectedAt));
+        nbt.put("exact_births", write(exactBirths));
+        nbt.put("exact_deaths", write(exactDeaths));
         NbtCompound lives = new NbtCompound();
         pastLives.forEach((uuid, days) -> lives.putLongArray(uuid.toString(), days));
-        nbt.put("past_lives", lives);
+        nbt.put("lives", lives);
+        NbtCompound legacy = new NbtCompound();
+        legacyLives.forEach((uuid, days) -> legacy.putLongArray(uuid.toString(), days));
+        nbt.put("past_lives", legacy);
         return nbt;
     }
 
@@ -79,6 +95,7 @@ public class LifeRegistry extends PersistentState {
 
     public void setBirthDay(UUID uuid, long day) {
         births.put(uuid, day);
+        exactBirths.remove(uuid);
         markDirty();
     }
 
@@ -89,10 +106,12 @@ public class LifeRegistry extends PersistentState {
 
     public void setDeathDay(UUID uuid, long day) {
         deaths.put(uuid, day);
+        exactDeaths.remove(uuid);
         markDirty();
     }
 
     public void clearDeathDay(UUID uuid) {
+        exactDeaths.remove(uuid);
         if (deaths.remove(uuid) != null) {
             markDirty();
         }
@@ -122,26 +141,68 @@ public class LifeRegistry extends PersistentState {
         long elapsed = WorldCalendar.calendarDay(today) - WorldCalendar.calendarDay(since);
         if (birth != null && elapsed > 0) {
             births.put(uuid, WorldCalendar.gameDayOf(WorldCalendar.calendarDay(birth) + elapsed));
+            exactBirths.computeIfPresent(uuid, (k, exact) -> exact + elapsed);
         }
         markDirty();
     }
 
+    /** Naissance vue en direct : le jour Minecraft et la date exacte de la montre. */
+    public void recordBirth(UUID uuid, long day, long exactCalendarDay) {
+        setBirthDay(uuid, day);
+        exactBirths.put(uuid, exactCalendarDay);
+    }
+
+    /** Mort vue en direct : le jour Minecraft et la date exacte de la montre. */
+    public void recordDeath(UUID uuid, long day, long exactCalendarDay) {
+        setDeathDay(uuid, day);
+        exactDeaths.put(uuid, exactCalendarDay);
+    }
+
+    /** Date de naissance en jour du calendrier : l'exacte si elle a été vue, sinon un jour stable dans la journée Minecraft. */
+    @Nullable
+    public Long exactBirth(UUID uuid) {
+        Long exact = exactBirths.get(uuid);
+        Long birth = births.get(uuid);
+        return exact != null || birth == null ? exact : WorldCalendar.spreadCalendarDay(birth, uuid.getMostSignificantBits());
+    }
+
+    @Nullable
+    public Long exactDeath(UUID uuid) {
+        Long exact = exactDeaths.get(uuid);
+        Long death = deaths.get(uuid);
+        return exact != null || death == null ? exact : WorldCalendar.spreadCalendarDay(death, uuid.getLeastSignificantBits());
+    }
+
     /** Enregistre un retour à la vie : la mort précédente et le jour du retour s'ajoutent aux vies passées. */
-    public void resurrected(UUID uuid, long death, long today, long gameTime) {
-        long[] previous = pastLives.getOrDefault(uuid, new long[0]);
+    public void resurrected(UUID uuid, long exactToday, long gameTime) {
+        Long death = exactDeath(uuid);
+        long[] previous = lives(uuid);
         long[] lives = java.util.Arrays.copyOf(previous, previous.length + 2);
-        lives[previous.length] = death;
-        lives[previous.length + 1] = today;
+        lives[previous.length] = death == null ? exactToday : death;
+        lives[previous.length + 1] = exactToday;
         pastLives.put(uuid, lives);
         resurrectedAt.put(uuid, gameTime);
         deaths.remove(uuid);
+        exactDeaths.remove(uuid);
         markDirty();
     }
 
-    /** Jours de mort et de résurrection à la suite, vide pour quelqu'un qui n'est jamais revenu. */
+    private long[] lives(UUID uuid) {
+        long[] legacy = legacyLives.remove(uuid);
+        if (legacy != null) {
+            long[] converted = new long[legacy.length];
+            for (int i = 0; i < legacy.length; i++) {
+                converted[i] = WorldCalendar.spreadCalendarDay(legacy[i], uuid.getLeastSignificantBits() + i);
+            }
+            pastLives.put(uuid, converted);
+            markDirty();
+        }
+        return pastLives.getOrDefault(uuid, new long[0]);
+    }
+
+    /** Jours du calendrier de mort et de résurrection à la suite, vide pour quelqu'un qui n'est jamais revenu. */
     public List<Long> pastLives(UUID uuid) {
-        long[] lives = pastLives.get(uuid);
-        return lives == null ? List.of() : java.util.Arrays.stream(lives).boxed().toList();
+        return java.util.Arrays.stream(lives(uuid)).boxed().toList();
     }
 
     @Nullable
@@ -156,13 +217,13 @@ public class LifeRegistry extends PersistentState {
     @Nullable
     public Long getBodyBirthDay(UUID uuid) {
         Long birth = births.get(uuid);
-        long[] lives = pastLives.get(uuid);
-        if (birth == null || lives == null) {
+        long[] lives = lives(uuid);
+        if (birth == null || lives.length == 0) {
             return birth;
         }
         long buried = 0;
         for (int i = 0; i + 1 < lives.length; i += 2) {
-            buried += Math.max(0, WorldCalendar.calendarDay(lives[i + 1]) - WorldCalendar.calendarDay(lives[i]));
+            buried += Math.max(0, lives[i + 1] - lives[i]);
         }
         return buried == 0 ? birth : WorldCalendar.gameDayOf(WorldCalendar.calendarDay(birth) + buried);
     }
