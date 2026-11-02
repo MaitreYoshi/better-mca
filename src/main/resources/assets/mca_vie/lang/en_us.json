@@ -590,9 +590,9 @@
   "gamerule.category.mca_vie": "Better MCA",
   "gamerule.mcaVieTimeSpeed": "Calendar speed",
   "gamerule.mcaVieTimeSpeed.description": "Calendar time that passes during one Minecraft day. Ages and dates follow this speed.",
-  "gamerule.mcaVieTimeSpeed.jour": "1 day",
-  "gamerule.mcaVieTimeSpeed.semaine": "1 week",
-  "gamerule.mcaVieTimeSpeed.mois": "1 month",
-  "gamerule.mcaVieTimeSpeed.saison": "1 season",
-  "gamerule.mcaVieTimeSpeed.an": "1 year"
+  "gamerule.mcaVieTimeSpeed.day": "1 day",
+  "gamerule.mcaVieTimeSpeed.week": "1 week",
+  "gamerule.mcaVieTimeSpeed.month": "1 month",
+  "gamerule.mcaVieTimeSpeed.season": "1 season",
+  "gamerule.mcaVieTimeSpeed.year": "1 year"
 }
