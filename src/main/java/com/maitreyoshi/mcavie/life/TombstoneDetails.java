@@ -15,9 +15,11 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.world.ServerWorld;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.UUID;
 
-public record TombstoneDetails(UUID person, String firstName, String lastName, @Nullable String job, @Nullable Long birth, long death, int tier) {
+public record TombstoneDetails(UUID person, String firstName, String lastName, @Nullable String job, @Nullable Long birth, long death, int tier,
+                               List<Long> pastLives) {
     public static final String KEY = "mca_vie:tombstone";
     public static final int LEGACY = -1;
     public static final int POOR = 0;
@@ -42,7 +44,8 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
             first = name.trim();
             surname = "";
         }
-        return new TombstoneDetails(entity.getUuid(), first, surname, jobOf(entity, world), birth, death, tierOf(entity, world));
+        return new TombstoneDetails(entity.getUuid(), first, surname, jobOf(entity, world), birth, death, tierOf(entity, world),
+                LifeRegistry.get(world.getServer()).pastLives(entity.getUuid()));
     }
 
     public static int tierOf(Entity entity, ServerWorld world) {
@@ -102,7 +105,8 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
                 nbt.contains("job") ? nbt.getString("job") : null,
                 nbt.contains("birth") ? nbt.getLong("birth") : null,
                 nbt.getLong("death"),
-                nbt.contains("tier") ? nbt.getInt("tier") : LEGACY
+                nbt.contains("tier") ? nbt.getInt("tier") : LEGACY,
+                java.util.Arrays.stream(nbt.getLongArray("lives")).boxed().toList()
         );
     }
 
@@ -120,6 +124,9 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
         nbt.putLong("death", death);
         if (tier != LEGACY) {
             nbt.putInt("tier", tier);
+        }
+        if (!pastLives.isEmpty()) {
+            nbt.putLongArray("lives", pastLives);
         }
         parent.put(KEY, nbt);
     }

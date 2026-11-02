@@ -175,7 +175,8 @@ public final class FamilyGraph {
                 node.isDeceased() ? life.getDeathDay(id) : null,
                 record == null ? -1 : Math.round(record.happiness),
                 portraits.get(id),
-                relationToViewer
+                relationToViewer,
+                life.pastLives(id)
         );
     }
 

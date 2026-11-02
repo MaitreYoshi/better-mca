@@ -252,7 +252,7 @@ public final class History {
         Map<UUID, FamilyTreeNode> entries = ((FamilyTreeAccessor) FamilyTree.get(world)).mcavie$getEntries();
         for (FamilyTreeNode node : new ArrayList<>(entries.values())) {
             UUID uuid = node.id();
-            Long birth = life.getBirthDay(uuid);
+            Long birth = life.getBodyBirthDay(uuid);
             if (birth == null || node.isDeceased() || node.isPlayer() || life.getDeathDay(uuid) != null || history.pendingDeath(uuid) != null
                     || life.isZombie(uuid)) {
                 continue;

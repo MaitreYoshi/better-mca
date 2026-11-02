@@ -236,7 +236,7 @@ public final class WorkManager {
     }
 
     private static int ageInYears(VillagerEntityMCA villager, ServerWorld world) {
-        Long birth = LifeRegistry.get(world.getServer()).getBirthDay(villager.getUuid());
+        Long birth = LifeRegistry.get(world.getServer()).getBodyBirthDay(villager.getUuid());
         return birth == null ? -1 : LifeCycle.ageInYears(birth, WorldCalendar.now(world).dayIndex());
     }
 

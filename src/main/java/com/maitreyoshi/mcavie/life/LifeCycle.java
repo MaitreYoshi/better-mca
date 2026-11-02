@@ -62,10 +62,17 @@ public final class LifeCycle {
                 }
             }
         }
-        registry.clearDeathDay(villager.getUuid());
+        Long death = registry.getDeathDay(villager.getUuid());
+        if (death != null) {
+            // vivant avec une date de décès : il vient d'être ressuscité (faux ou bâton de vie)
+            registry.resurrected(villager.getUuid(), death, today, world.getTime());
+            Resurrection.returned(villager, world);
+        }
+        Resurrection.update(villager, world);
 
-        applyGrowth(villager, WorldCalendar.yearsBetween(birth, today));
-        Aging.update(villager, world, ageInYears(birth, today));
+        long body = registry.getBodyBirthDay(villager.getUuid());
+        applyGrowth(villager, WorldCalendar.yearsBetween(body, today));
+        Aging.update(villager, world, ageInYears(body, today));
     }
 
     public static void forgetDead(ServerWorld world, UUID uuid) {
@@ -88,7 +95,7 @@ public final class LifeCycle {
                 || !(villager.getWorld() instanceof ServerWorld world)) {
             return false;
         }
-        Long birth = LifeRegistry.get(world.getServer()).getBirthDay(villager.getUuid());
+        Long birth = LifeRegistry.get(world.getServer()).getBodyBirthDay(villager.getUuid());
         return birth != null && ageInYears(birth, WorldCalendar.now(world).dayIndex()) >= MENOPAUSE_AGE;
     }
 
