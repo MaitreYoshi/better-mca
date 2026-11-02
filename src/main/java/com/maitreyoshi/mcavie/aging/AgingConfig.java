@@ -15,17 +15,20 @@ import java.nio.file.Path;
 public final class AgingConfig {
     private static final String FILE = "mca_vie_aging.json";
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final int VERSION = 2;
 
     private static AgingConfig instance;
 
+    public int version;
+
     public boolean greyHair = true;
-    public int greyStartAge = 50;
-    public int whiteAge = 70;
+    public int greyStartAge = 45;
+    public int whiteAge = 65;
     public float greyStrength = 1.0f;
 
     public boolean wrinkles = true;
     public int lightWrinklesAge = 50;
-    public int strongWrinklesAge = 70;
+    public int strongWrinklesAge = 65;
 
     public int greyBeardAge = 55;
     public float greyBeardChance = 0.5f;
@@ -42,13 +45,13 @@ public final class AgingConfig {
     public float healthMaxLoss = 0.20f;
 
     public boolean stoop = true;
-    public int stoopStartAge = 70;
-    public int stoopFullAge = 90;
+    public int stoopStartAge = 65;
+    public int stoopFullAge = 85;
     public float stoopDegrees = 14f;
     public float shrinkMax = 0.05f;
 
     public boolean cane = true;
-    public int caneAge = 75;
+    public int caneAge = 70;
 
     public int retirementAge = 65;
     public boolean stayHome = true;
@@ -85,7 +88,9 @@ public final class AgingConfig {
         }
         if (config == null) {
             config = new AgingConfig();
+            config.version = VERSION;
         }
+        config.migrate();
         config.clamp();
         instance = config;
         if (!readable) {
@@ -113,6 +118,34 @@ public final class AgingConfig {
 
     public String toJson() {
         return GSON.toJson(this);
+    }
+
+    // version 1 : seuils trop tardifs (canne à 75 ans alors que les âges de départ s'arrêtent à 75),
+    // on n'avance que les valeurs encore à leur ancien défaut pour garder les réglages du joueur
+    private void migrate() {
+        if (version >= VERSION) {
+            return;
+        }
+        AgingConfig defaults = new AgingConfig();
+        if (greyStartAge == 50) {
+            greyStartAge = defaults.greyStartAge;
+        }
+        if (whiteAge == 70) {
+            whiteAge = defaults.whiteAge;
+        }
+        if (strongWrinklesAge == 70) {
+            strongWrinklesAge = defaults.strongWrinklesAge;
+        }
+        if (stoopStartAge == 70) {
+            stoopStartAge = defaults.stoopStartAge;
+        }
+        if (stoopFullAge == 90) {
+            stoopFullAge = defaults.stoopFullAge;
+        }
+        if (caneAge == 75) {
+            caneAge = defaults.caneAge;
+        }
+        version = VERSION;
     }
 
     private void clamp() {
