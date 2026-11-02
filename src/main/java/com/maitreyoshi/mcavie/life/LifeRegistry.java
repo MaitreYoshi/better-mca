@@ -163,14 +163,20 @@ public class LifeRegistry extends PersistentState {
     public Long exactBirth(UUID uuid) {
         Long exact = exactBirths.get(uuid);
         Long birth = births.get(uuid);
-        return exact != null || birth == null ? exact : WorldCalendar.spreadCalendarDay(birth, uuid.getMostSignificantBits());
+        if (exact != null || birth == null) {
+            return exact;
+        }
+        return WorldCalendar.spreadCalendarDay(birth, uuid.getMostSignificantBits());
     }
 
     @Nullable
     public Long exactDeath(UUID uuid) {
         Long exact = exactDeaths.get(uuid);
         Long death = deaths.get(uuid);
-        return exact != null || death == null ? exact : WorldCalendar.spreadCalendarDay(death, uuid.getLeastSignificantBits());
+        if (exact != null || death == null) {
+            return exact;
+        }
+        return WorldCalendar.spreadCalendarDay(death, uuid.getLeastSignificantBits());
     }
 
     /** Enregistre un retour à la vie : la mort précédente et le jour du retour s'ajoutent aux vies passées. */
