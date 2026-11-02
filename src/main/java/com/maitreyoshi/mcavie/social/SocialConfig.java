@@ -21,7 +21,8 @@ public final class SocialConfig {
     public boolean showChats = true;
     public int chatRadius = 12;
     public int lookSeconds = 3;
-    public int chatCooldownSeconds = 20;
+    /** Recopie aussi les répliques dans le chat (les bulles restent l'affichage principal). */
+    public boolean chatCopy = false;
 
     public static SocialConfig get() {
         if (instance == null) {
@@ -47,7 +48,6 @@ public final class SocialConfig {
         }
         config.chatRadius = Math.max(1, Math.min(64, config.chatRadius));
         config.lookSeconds = Math.max(0, Math.min(30, config.lookSeconds));
-        config.chatCooldownSeconds = Math.max(0, config.chatCooldownSeconds);
         instance = config;
         if (!readable) {
             return;

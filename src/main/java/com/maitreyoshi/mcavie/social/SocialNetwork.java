@@ -54,10 +54,8 @@ public final class SocialNetwork {
                 }
             });
         });
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> server.execute(() -> {
-            LAST_REQUEST.remove(handler.player.getUuid());
-            SocialChat.forgetPlayer(handler.player.getUuid());
-        }));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> server.execute(() -> LAST_REQUEST.remove(handler.player.getUuid())));
+        SocialConversation.register();
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             LAST_REQUEST.clear();
             SocialChat.clear();
