@@ -43,7 +43,7 @@ public final class WorldCalendar {
     public static void register() {
         TIME_SPEED = GameRuleRegistry.register("mcaVieTimeSpeed",
                 new CustomGameRuleCategory(MCAVie.id("calendar"), Text.translatable("gamerule.category.mca_vie")),
-                GameRuleFactory.createEnumRule(TimeSpeed.JOUR, WorldCalendar::onSpeedChanged));
+                GameRuleFactory.createEnumRule(TimeSpeed.DAY, WorldCalendar::onSpeedChanged));
         ServerWorldEvents.LOAD.register((s, world) -> {
             if (world.getRegistryKey() == World.OVERWORLD) {
                 server = s;
@@ -52,6 +52,16 @@ public final class WorldCalendar {
                     state.setSegments(List.of(new Segment(0, 0, s.getGameRules().get(TIME_SPEED).get().calendarDaysPerGameDay())));
                 }
                 serverSegments = state.segments();
+                // Les anciennes valeurs (jour, mois…) ne se relisent plus : on recale la règle sur la vitesse réellement enregistrée.
+                double speed = serverSegments.get(serverSegments.size() - 1).speed();
+                EnumRule<TimeSpeed> rule = s.getGameRules().get(TIME_SPEED);
+                if (rule.get().calendarDaysPerGameDay() != speed) {
+                    for (TimeSpeed value : TimeSpeed.values()) {
+                        if (value.calendarDaysPerGameDay() == speed) {
+                            rule.set(value, s);
+                        }
+                    }
+                }
             }
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(s -> {
