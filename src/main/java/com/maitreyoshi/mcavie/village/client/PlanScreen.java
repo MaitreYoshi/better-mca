@@ -399,15 +399,28 @@ public class PlanScreen extends BlueprintScreen {
         int labelW = 50;
         int y = cy + ch - 38;
         int x = cx + labelW;
-        button(Text.literal("1"), b -> withdraw(1), x, y, 30, 18, VillageRights.WITHDRAW, null);
-        button(Text.literal("10"), b -> withdraw(10), x + 32, y, 30, 18, VillageRights.WITHDRAW, null);
-        button(Text.translatable("gui.mca_vie.treasury.all"), b -> withdraw((int) Math.min(Integer.MAX_VALUE,
-                VillageEconomy.availableShare(VillageState.of(village)))), x + 64, y, 44, 18, VillageRights.WITHDRAW, null);
+        // la part retirable se calcule à la levée du dimanche ; sans elle, on explique au lieu de laisser cliquer dans le vide
+        boolean nothing = VillageEconomy.availableShare(VillageState.of(village)) <= 0;
+        Text empty = nothing ? withdrawNone() : null;
+        ButtonWidget[] withdraws = {
+                button(Text.literal("1"), b -> withdraw(1), x, y, 30, 18, VillageRights.WITHDRAW, empty),
+                button(Text.literal("10"), b -> withdraw(10), x + 32, y, 30, 18, VillageRights.WITHDRAW, empty),
+                button(Text.translatable("gui.mca_vie.treasury.all"), b -> withdraw((int) Math.min(Integer.MAX_VALUE,
+                        VillageEconomy.availableShare(VillageState.of(village)))), x + 64, y, 44, 18, VillageRights.WITHDRAW, empty)};
+        if (nothing) {
+            for (ButtonWidget w : withdraws) {
+                w.active = false;
+            }
+        }
         y += 20;
         button(Text.literal("1"), b -> send(VillageNetwork.DEPOSIT, 1), x, y, 30, 18, VillageRights.DEPOSIT, null);
         button(Text.literal("10"), b -> send(VillageNetwork.DEPOSIT, 10), x + 32, y, 30, 18, VillageRights.DEPOSIT, null);
         button(Text.translatable("gui.mca_vie.treasury.all"), b -> send(VillageNetwork.DEPOSIT, 64 * 36), x + 64, y, 44, 18, VillageRights.DEPOSIT,
                 Text.translatable("gui.mca_vie.plan.deposit_all"));
+    }
+
+    private static Text withdrawNone() {
+        return Text.translatable("gui.mca_vie.plan.withdraw_none", com.maitreyoshi.mcavie.village.VillageConfig.get().playerSharePercent);
     }
 
     private void withdraw(int amount) {
@@ -985,10 +998,13 @@ public class PlanScreen extends BlueprintScreen {
             context.fill(cx - 2, by - 4, cx + cw + 2, by - 3, 0x30ffffff);
             context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.treasury.withdraw"), cx, by + 5, allowed(VillageRights.WITHDRAW) ? WHITE : DIM);
             context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.treasury.deposit"), cx, by + 25, allowed(VillageRights.DEPOSIT) ? WHITE : DIM);
+            int x = cx + 50 + 112;
             if (!allowed(VillageRights.WITHDRAW)) {
                 Text why = locked(VillageRights.WITHDRAW);
-                int x = cx + 50 + 112;
                 context.drawTextWithShadow(textRenderer, Language.getInstance().reorder(textRenderer.trimToWidth(why, cx + cw - x)), x, by + 5, RED);
+            } else if (VillageEconomy.availableShare(VillageState.of(village)) <= 0) {
+                context.drawTextWithShadow(textRenderer, Language.getInstance().reorder(textRenderer.trimToWidth(
+                        Text.translatable("gui.mca_vie.plan.withdraw_empty"), cx + cw - x)), x, by + 5, GRAY);
             }
         }
         return scrollMax > 0 ? Text.translatable("gui.mca_vie.plan.hint.scroll") : Text.translatable("gui.mca_vie.plan.hint.treasury");
