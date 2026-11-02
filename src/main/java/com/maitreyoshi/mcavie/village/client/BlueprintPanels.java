@@ -79,8 +79,17 @@ public final class BlueprintPanels {
         y = wrapped(context, text, Text.translatable("gui.mca_vie.village.rank", state.rank.getName()), x, y, width, GOLD);
         y += 2;
         y = wrapped(context, text, Text.translatable("gui.mca_vie.village.prestige", format(result.prestige())), x, y, width, WHITE);
-        y = wrapped(context, text, Text.translatable("gui.mca_vie.village.residential",
-                format(Math.min(result.residential(), result.residentialCap())), format(result.residentialCap())), x + 6, y, width - 6, GRAY);
+        y = wrapped(context, text, Text.translatable("gui.mca_vie.village.prestige_hint"), x + 6, y, width - 6, GRAY);
+        if (result.residential() > 0) {
+            int share = (int) Math.round(Math.max(0, Math.min(0.99, VillageConfig.get().residentialShare)) * 100);
+            boolean capped = result.residential() > result.residentialCap();
+            y = wrapped(context, text, Text.translatable("gui.mca_vie.village.residential",
+                    format(Math.min(result.residential(), result.residentialCap())), format(result.residential())), x + 6, y, width - 6, capped ? RED : GRAY);
+            if (capped) {
+                y = wrapped(context, text, Text.translatable("gui.mca_vie.village.residential_hint", share), x + 6, y, width - 6, GRAY);
+            }
+        }
+        y += 2;
         y = wrapped(context, text, Text.translatable("gui.mca_vie.village.population", result.population()), x, y, width, WHITE);
 
         if (state.descentDaysLeft >= 0) {
@@ -199,22 +208,19 @@ public final class BlueprintPanels {
         if (rule == null || rule.points <= 0) {
             return wrapped(context, text, Text.translatable("gui.mca_vie.building.not_rated"), x, y, width, GRAY);
         }
-        context.drawTextWithShadow(text, Text.translatable("gui.mca_vie.building.rank", rule.requiredRank().getName()), x, y, GOLD);
-        y += LINE;
-        context.drawTextWithShadow(text, Text.translatable("gui.mca_vie.catalog.points", rule.points, rule.maxCount), x, y, WHITE);
-        y += LINE;
+        y = wrapped(context, text, Text.translatable("gui.mca_vie.catalog.points", rule.points), x, y, width, GOLD);
+        y = wrapped(context, text, rule.maxCount <= 1 ? Text.translatable("gui.mca_vie.catalog.count_one")
+                : Text.translatable("gui.mca_vie.catalog.count_many", rule.maxCount), x, y, width, GRAY);
+        y = wrapped(context, text, Text.translatable("gui.mca_vie.catalog.rank", rule.requiredRank().getName()), x, y, width, GRAY);
         if (rule.minSurface > 0) {
-            context.drawTextWithShadow(text, Text.translatable("gui.mca_vie.catalog.surface", rule.minSurface), x, y, WHITE);
-            y += LINE;
+            y = wrapped(context, text, Text.translatable("gui.mca_vie.catalog.surface", rule.minSurface), x, y, width, WHITE);
             if (!type.grouped()) {
                 VillageConfig config = VillageConfig.get();
-                context.drawTextWithShadow(text, Text.translatable("gui.mca_vie.catalog.quality",
-                        (int) Math.ceil(config.beautifulSurface * rule.minSurface), (int) Math.ceil(config.magnificentSurface * rule.minSurface)), x, y, GRAY);
-                y += LINE;
+                y = wrapped(context, text, Text.translatable("gui.mca_vie.catalog.quality",
+                        (int) Math.ceil(config.beautifulSurface * rule.minSurface), (int) Math.ceil(config.magnificentSurface * rule.minSurface)), x, y, width, GRAY);
             }
         }
-        context.drawTextWithShadow(text, Text.translatable("gui.mca_vie.building.upkeep", rule.upkeep), x, y, WHITE);
-        return y + LINE;
+        return wrapped(context, text, Text.translatable("gui.mca_vie.building.upkeep", rule.upkeep), x, y, width, WHITE);
     }
 
     /** Texte du trésor (les boutons sont placés par l'écran) ; renvoie le bas du texte. */
