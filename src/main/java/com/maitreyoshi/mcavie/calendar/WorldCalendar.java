@@ -225,6 +225,31 @@ public final class WorldCalendar {
         );
     }
 
+    /** Jour du calendrier affiché par la montre en ce moment, même quand une journée Minecraft vaut un mois ou plus. */
+    public static long exactCalendarDay(World world) {
+        long shifted = Math.max(0, world.getTimeOfDay() + TICKS_OFFSET);
+        return Math.floorDiv(flowingCalendarTicks(shifted / TICKS_PER_DAY, shifted % TICKS_PER_DAY), TICKS_PER_DAY);
+    }
+
+    /**
+     * Jour du calendrier pour un événement dont on ne connaît que la journée Minecraft : un jour stable (tiré de
+     * la graine) parmi ceux que cette journée couvre, au lieu de toujours le premier.
+     */
+    public static long spreadCalendarDay(long gameDay, long seed) {
+        long start = calendarDay(gameDay);
+        long span = calendarDay(gameDay + 1) - start;
+        return span <= 1 ? start : start + Math.floorMod(seed, span);
+    }
+
+    public static LocalDate dateOfCalendarDay(long calendarDay) {
+        return FIRST_DAY.plusDays(calendarDay);
+    }
+
+    public static int displayYearOfCalendarDay(long calendarDay) {
+        int year = dateOfCalendarDay(calendarDay).getYear();
+        return year <= 0 ? year - 1 : year;
+    }
+
     public static LocalDate dateOfDay(long dayIndex) {
         return FIRST_DAY.plusDays(calendarDay(dayIndex));
     }

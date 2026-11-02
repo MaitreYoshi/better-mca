@@ -119,14 +119,26 @@ public final class TreeTexts {
     }
 
     public static Text date(long day) {
-        LocalDate date = WorldCalendar.dateOfDay(day);
+        return dateOf(WorldCalendar.dateOfDay(day));
+    }
+
+    /** Date exacte en jour du calendrier (celle de la montre), sinon la date du jour Minecraft. */
+    public static Text date(@Nullable Long calendarDay, long day) {
+        return calendarDay != null ? dateOf(WorldCalendar.dateOfCalendarDay(calendarDay)) : date(day);
+    }
+
+    public static Text calendarDate(long calendarDay) {
+        return dateOf(WorldCalendar.dateOfCalendarDay(calendarDay));
+    }
+
+    private static Text dateOf(LocalDate date) {
         Text dayOfMonth = date.getDayOfMonth() == 1
                 ? Text.translatable("calendar.mca_vie.first_day")
                 : Text.literal(String.valueOf(date.getDayOfMonth()));
         return Text.translatable(PREFIX + "date",
                 dayOfMonth,
                 Text.translatable("calendar.mca_vie.month." + date.getMonthValue()),
-                WorldCalendar.displayYearOfDay(day));
+                date.getYear() <= 0 ? date.getYear() - 1 : date.getYear());
     }
 
     public static String profession(FamilyPerson person) {

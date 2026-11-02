@@ -176,7 +176,9 @@ public final class FamilyGraph {
                 record == null ? -1 : Math.round(record.happiness),
                 portraits.get(id),
                 relationToViewer,
-                life.pastLives(id)
+                life.pastLives(id),
+                life.exactBirth(id),
+                node.isDeceased() ? life.exactDeath(id) : null
         );
     }
 
