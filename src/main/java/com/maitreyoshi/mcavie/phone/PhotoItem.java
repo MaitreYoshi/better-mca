@@ -16,6 +16,7 @@ import net.minecraft.util.Hand;
 import net.minecraft.util.TypedActionResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,33 +58,55 @@ public class PhotoItem extends Item {
         return TypedActionResult.success(stack, world.isClient());
     }
 
+    public interface Placer {
+        void open(BlockPos clicked, Direction side, Hand hand, UUID photo, Direction top);
+    }
+
+    @Nullable
+    public static Placer placer;
+
     @Override
     public ActionResult useOnBlock(ItemUsageContext context) {
         Direction side = context.getSide();
         ItemStack stack = context.getStack();
         UUID photo = photoOf(stack);
         PlayerEntity player = context.getPlayer();
-        if (side.getAxis().isVertical() || photo == null || player == null) {
+        if (photo == null || player == null) {
             return ActionResult.PASS;
         }
-        BlockPos pos = context.getBlockPos().offset(side);
-        if (!player.canPlaceOn(pos, side, stack)) {
+        if (!player.canPlaceOn(context.getBlockPos().offset(side), side, stack)) {
             return ActionResult.FAIL;
         }
-        World world = context.getWorld();
+        if (context.getWorld().isClient) {
+            if (placer != null) {
+                placer.open(context.getBlockPos(), side, context.getHand(), photo, PhotoFrameEntity.topFor(side, player.getHorizontalFacing()));
+            }
+            return ActionResult.SUCCESS;
+        }
+        return ActionResult.CONSUME;
+    }
+
+    public static void place(ServerPlayerEntity player, BlockPos clicked, Direction side, Hand hand, int size) {
+        ItemStack stack = player.getStackInHand(hand);
+        UUID photo = photoOf(stack);
+        BlockPos pos = clicked.offset(side);
+        World world = player.getWorld();
+        if (photo == null || player.squaredDistanceTo(Vec3d.ofCenter(pos)) > 64 || !player.canPlaceOn(pos, side, stack)
+                || !world.canPlayerModifyAt(player, clicked)) {
+            return;
+        }
         NbtCompound nbt = stack.getSubNbt(PHOTO_KEY);
-        PhotoFrameEntity frame = new PhotoFrameEntity(world, pos, side, photo, nbt.getString("author"), nbt.getLong("date"));
+        Direction top = PhotoFrameEntity.topFor(side, player.getHorizontalFacing());
+        PhotoFrameEntity frame = new PhotoFrameEntity(world, pos, side, top, size, photo, nbt.getString("author"), nbt.getLong("date"));
         if (!frame.canStayAttached()) {
-            return ActionResult.FAIL;
+            player.sendMessage(Text.translatable("msg.mca_vie.photo.no_room"), true);
+            return;
         }
-        if (!world.isClient) {
-            frame.onPlace();
-            world.spawnEntity(frame);
-        }
+        frame.onPlace();
+        world.spawnEntity(frame);
         if (!player.getAbilities().creativeMode) {
             stack.decrement(1);
         }
-        return ActionResult.success(world.isClient);
     }
 
     @Override

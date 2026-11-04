@@ -2,6 +2,9 @@ package com.maitreyoshi.mcavie.phone.client;
 
 import com.maitreyoshi.mcavie.phone.PhoneNetwork;
 import com.maitreyoshi.mcavie.phone.PhoneServer;
+import com.maitreyoshi.mcavie.phone.PhotoFrameEntity;
+import com.maitreyoshi.mcavie.phone.PhotoItem;
+import net.minecraft.client.MinecraftClient;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.BuiltinItemRendererRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityRendererRegistry;
@@ -131,6 +134,15 @@ public final class PhoneClient {
             client.execute(() -> {
                 if (client.currentScreen == null) {
                     client.setScreen(PhotoViewerScreen.print(id));
+                }
+            });
+        });
+        PhotoItem.placer = (clicked, side, hand, photo, top) -> MinecraftClient.getInstance().setScreen(PhotoSizeScreen.place(clicked, side, hand, photo, top));
+        ClientPlayNetworking.registerGlobalReceiver(PhoneNetwork.PHOTO_RESIZE_OPEN, (client, handler, buf, responseSender) -> {
+            int id = buf.readVarInt();
+            client.execute(() -> {
+                if (client.currentScreen == null && client.world != null && client.world.getEntityById(id) instanceof PhotoFrameEntity frame) {
+                    client.setScreen(PhotoSizeScreen.resize(frame));
                 }
             });
         });

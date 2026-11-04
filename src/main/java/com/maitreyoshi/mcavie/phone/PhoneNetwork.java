@@ -14,6 +14,9 @@ public final class PhoneNetwork {
     public static final Identifier PRINT_VIEW = MCAVie.id("photo_print_view");
     public static final Identifier PRINTED = MCAVie.id("photo_printed");
     public static final Identifier PORTRAIT_REQUEST = MCAVie.id("portrait_request");
+    public static final Identifier PHOTO_PLACE = MCAVie.id("photo_place");
+    public static final Identifier PHOTO_RESIZE = MCAVie.id("photo_resize");
+    public static final Identifier PHOTO_RESIZE_OPEN = MCAVie.id("photo_resize_open");
 
     public static final int OP_REFRESH = 0;
     public static final int OP_UNLOCK = 1;
