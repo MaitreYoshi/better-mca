@@ -6,6 +6,7 @@ import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
 import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.block.BlockState;
+import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.registry.tag.TagKey;
@@ -18,11 +19,16 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-// carrière : il extrait la pierre et les minerais à découvert sous le niveau de son chariot, sans toucher au-dessus
+// carrière autour du chariot :
+// - minerais à découvert d'abord, sous le chariot ou jusqu'à ORE_ABOVE blocs au-dessus ;
+// - sinon la pierre à découvert, uniquement sous le niveau du chariot (le village au-dessus n'est pas touché) ;
+// - jamais le bloc sous ses pieds ;
+// - le butin va directement dans le chariot (son inventaire seulement si le chariot est plein ou absent).
 public class MinerTask extends AbstractJobTask {
     private static final long SCAN_INTERVAL = 1200;
-    private static final int SCAN_HEIGHT = 8;
+    private static final int SCAN_HEIGHT = 12;
     private static final int MAX_DEPTH = 8;
+    private static final int ORE_ABOVE = 3;
     private static final double WORK_DISTANCE_SQ = 12.25;
     // durée d'un bloc de pierre selon le niveau (apprenti → maître), multipliée par la dureté
     private static final int[] TICKS_PER_BLOCK = {50, 42, 34, 26, 18};
@@ -30,6 +36,7 @@ public class MinerTask extends AbstractJobTask {
     private static final long BLACKLIST_TICKS = 2400;
     private static final int RETRY_TICKS = 20;
     private static final int SCAN_JITTER = 100;
+    private static final Direction[] EXPOSED_STONE = {Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST};
     private static final List<TagKey<net.minecraft.block.Block>> ORES = List.of(BlockTags.COAL_ORES, BlockTags.IRON_ORES, BlockTags.COPPER_ORES,
             BlockTags.GOLD_ORES, BlockTags.REDSTONE_ORES, BlockTags.LAPIS_ORES, BlockTags.DIAMOND_ORES, BlockTags.EMERALD_ORES);
 
@@ -42,6 +49,8 @@ public class MinerTask extends AbstractJobTask {
     private BlockPos target;
     private int mineTicks;
     private int mineTotal;
+    // niveau de référence : celui du chariot, ou le centre de la zone sans chariot
+    private int baseY;
 
     public MinerTask() {
         super(Job.MINER);
@@ -52,6 +61,7 @@ public class MinerTask extends AbstractJobTask {
         if (world.getTime() < nextTry) {
             return false;
         }
+        baseY = baseLevel(villager);
         refreshScan(world, villager);
         if (findTarget(world, villager) != null) {
             return true;
@@ -77,6 +87,7 @@ public class MinerTask extends AbstractJobTask {
 
     @Override
     protected void run(ServerWorld world, VillagerEntityMCA villager, long time) {
+        baseY = baseLevel(villager);
         holdTool(villager);
         selectTarget(world, villager);
     }
@@ -101,6 +112,10 @@ public class MinerTask extends AbstractJobTask {
         }
         holdTool(villager);
         if (!inReach(villager, target)) {
+            if (mineTicks > 0) {
+                clearBreaking(world, villager, target);
+                mineTicks = 0;
+            }
             walkTo(villager, target);
             if (reach.giveUp(world, target)) {
                 selectTarget(world, villager);
@@ -136,8 +151,20 @@ public class MinerTask extends AbstractJobTask {
         if (!mayAlter(world, pos) || !world.breakBlock(pos, false, villager)) {
             return;
         }
+        Inventory cart = depotInventory(world, villager);
         for (ItemStack drop : blockDrops(world, villager, pos, state)) {
-            store(villager, drop);
+            if (cart == null) {
+                store(villager, drop);
+                continue;
+            }
+            addBonus(villager, drop);
+            ItemStack rest = DepositTask.insert(cart, drop);
+            if (!rest.isEmpty()) {
+                store(villager, rest, false);
+            }
+        }
+        if (cart != null) {
+            cart.markDirty();
         }
         gainExperience(villager, isOre(state) ? 2 : 1);
     }
@@ -154,7 +181,7 @@ public class MinerTask extends AbstractJobTask {
         double dx = villager.getX() - (pos.getX() + 0.5);
         double dz = villager.getZ() - (pos.getZ() + 0.5);
         double dy = villager.getY() - pos.getY();
-        return dx * dx + dz * dz <= WORK_DISTANCE_SQ && dy >= -2 && dy <= 3;
+        return dx * dx + dz * dz <= WORK_DISTANCE_SQ && dy >= -3 && dy <= 3;
     }
 
     private void selectTarget(ServerWorld world, VillagerEntityMCA villager) {
@@ -164,13 +191,15 @@ public class MinerTask extends AbstractJobTask {
         mineTicks = 0;
     }
 
-    // minerais d'abord, puis la pierre la plus proche
+    // le minerai le plus proche s'il y en a un d'accessible, sinon la pierre la plus proche
     @Nullable
     private BlockPos findTarget(ServerWorld world, VillagerEntityMCA villager) {
         reach.prune(world);
         BlockPos from = villager.getBlockPos();
-        BlockPos best = null;
-        double bestScore = Double.MAX_VALUE;
+        BlockPos bestOre = null;
+        BlockPos bestStone = null;
+        double oreDistance = Double.MAX_VALUE;
+        double stoneDistance = Double.MAX_VALUE;
         Iterator<BlockPos> it = candidates.iterator();
         while (it.hasNext()) {
             BlockPos pos = it.next();
@@ -181,13 +210,18 @@ public class MinerTask extends AbstractJobTask {
             if (reach.isBlacklisted(world, pos)) {
                 continue;
             }
-            double score = from.getSquaredDistance(pos) * (isOre(world.getBlockState(pos)) ? 0.25 : 1.0);
-            if (score < bestScore) {
-                bestScore = score;
-                best = pos;
+            double distance = from.getSquaredDistance(pos);
+            if (isOre(world.getBlockState(pos))) {
+                if (distance < oreDistance) {
+                    oreDistance = distance;
+                    bestOre = pos;
+                }
+            } else if (distance < stoneDistance) {
+                stoneDistance = distance;
+                bestStone = pos;
             }
         }
-        return best;
+        return bestOre != null ? bestOre : bestStone;
     }
 
     private void refreshScan(ServerWorld world, VillagerEntityMCA villager) {
@@ -208,18 +242,26 @@ public class MinerTask extends AbstractJobTask {
         }
     }
 
+    private static int baseLevel(VillagerEntityMCA villager) {
+        BlockPos cart = depotPos(villager);
+        if (cart != null && WorkManager.isInZone(villager, cart)) {
+            return cart.getY();
+        }
+        return WorkManager.getCenter(villager).getY();
+    }
+
     private boolean isMineable(ServerWorld world, VillagerEntityMCA villager, BlockPos pos) {
-        BlockPos station = WorkManager.getCenter(villager);
-        if (pos.getY() >= station.getY() || pos.getY() < station.getY() - MAX_DEPTH || !isLoaded(world, pos)
+        if (pos.getY() < baseY - MAX_DEPTH || pos.getY() > baseY + ORE_ABOVE || !isLoaded(world, pos)
                 || !inZone(villager, pos) || pos.equals(villager.getBlockPos().down())) {
             return false;
         }
         BlockState state = world.getBlockState(pos);
-        if (!state.isIn(BlockTags.BASE_STONE_OVERWORLD) && !isOre(state)) {
+        boolean ore = isOre(state);
+        if (!ore && (pos.getY() >= baseY || !state.isIn(BlockTags.BASE_STONE_OVERWORLD))) {
             return false;
         }
-        // à découvert : de l'air au-dessus ou sur un côté, sinon il creuserait dans le vide
-        for (Direction direction : new Direction[]{Direction.UP, Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
+        // à découvert, sinon il creuserait dans le vide ; un minerai peut aussi être visible par-dessous (plafond de grotte)
+        for (Direction direction : ore ? Direction.values() : EXPOSED_STONE) {
             BlockPos side = pos.offset(direction);
             if (isLoaded(world, side) && world.getBlockState(side).isAir()) {
                 return mayAlter(world, pos);
