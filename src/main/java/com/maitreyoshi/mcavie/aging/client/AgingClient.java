@@ -99,7 +99,8 @@ public final class AgingClient {
         float stoop = stoopAmount(villager);
         boolean free = !villager.isSleeping() && !villager.hasVehicle() && !villager.isInSneakingPose()
                 && !villager.isSwimming() && !villager.isFallFlying();
-        float angle = free ? stoop * AgingConfig.get().stoopDegrees * MathHelper.RADIANS_PER_DEGREE : 0;
+        float angle = free ? stoop * AgingConfig.get().stoopDegrees * MathHelper.RADIANS_PER_DEGREE
+                + com.maitreyoshi.mcavie.work.client.WorkPoses.lean(villager) : 0;
         float sin = MathHelper.sin(angle);
         float cos = MathHelper.cos(angle);
         model.head.pivotZ = -4 * sin;
