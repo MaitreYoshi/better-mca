@@ -1108,6 +1108,6 @@
   "entity.minecraft.villager.mca_vie.cook": "Cook",
   "block.mca_vie.miner_cart": "Miner's Cart",
   "block.mca_vie.cooking_pot": "Cooking Pot",
-  "job.mca_vie.desc.miner": "Digs a branch mine behind their cart: staircase, main tunnel and side tunnels, ore veins first. Tools: put pickaxes in the cart (enchanted or not), no pickaxe means no work; they use the best one, wear it out, and only break what it can (iron for gold and diamond, diamond for obsidian). Torches: taken from the cart to light the mine. Mined items go into the cart.",
+  "job.mca_vie.desc.miner": "Digs a mine behind their cart, ore first. Put pickaxes and torches in the cart: no pickaxe, no work.",
   "job.mca_vie.desc.cook": "Cooks with what is stored in their pot: soups and stews (beetroot, mushroom, rabbit), then meat, fish and potatoes."
 }
