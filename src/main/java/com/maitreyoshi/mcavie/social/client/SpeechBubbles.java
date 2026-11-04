@@ -20,8 +20,8 @@ import java.util.Map;
 
 /** Bulles de dialogue au-dessus des villageois, reçues du serveur (seuls les joueurs proches les reçoivent). */
 public final class SpeechBubbles {
-    private static final int MAX_WIDTH = 150;
-    private static final double MAX_DISTANCE_SQ = 24 * 24;
+    private static final int MAX_WIDTH = 200;
+    private static final double MAX_DISTANCE_SQ = 64 * 64;
 
     private record Bubble(Text text, boolean angry, long expires) {
     }
@@ -62,8 +62,8 @@ public final class SpeechBubbles {
         int background = bubble.angry ? 0xa0400000 : 0xa0000000;
 
         matrices.push();
-        // au-dessus du nom et de la barre de bonheur
-        matrices.translate(0.0F, entity.getHeight() + 0.85F, 0.0F);
+        // juste au-dessus du nom : la bulle reste dans le champ de vision sans lever la tête
+        matrices.translate(0.0F, entity.getNameLabelHeight() + 0.05F, 0.0F);
         matrices.multiply(dispatcher.getRotation());
         matrices.scale(-0.025F, -0.025F, 0.025F);
         Matrix4f matrix = matrices.peek().getPositionMatrix();

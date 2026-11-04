@@ -18,8 +18,11 @@ public final class SocialConfig {
 
     private static SocialConfig instance;
 
+    /** Version du fichier : sert à recaler les anciennes valeurs par défaut. */
+    public int version;
     public boolean showChats = true;
-    public int chatRadius = 12;
+    /** Distance (en blocs) à laquelle un joueur voit les bulles. */
+    public int chatRadius = 24;
     public int lookSeconds = 3;
     /** Recopie aussi les répliques dans le chat (les bulles restent l'affichage principal). */
     public boolean chatCopy = false;
@@ -45,6 +48,13 @@ public final class SocialConfig {
         }
         if (config == null) {
             config = new SocialConfig();
+        }
+        if (config.version < 2) {
+            // ancienne valeur par défaut, trop courte : il fallait être collé aux PNJ pour voir les bulles
+            if (config.chatRadius == 12) {
+                config.chatRadius = 24;
+            }
+            config.version = 2;
         }
         config.chatRadius = Math.max(1, Math.min(64, config.chatRadius));
         config.lookSeconds = Math.max(0, Math.min(30, config.lookSeconds));
