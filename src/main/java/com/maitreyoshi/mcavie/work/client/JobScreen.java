@@ -63,12 +63,12 @@ public class JobScreen extends Screen {
     @Override
     protected void init() {
         panelWidth = Math.min(MAX_WIDTH, width - 20);
-        panelHeight = Math.min(MAX_HEIGHT, height - 40);
+        panelHeight = Math.min(MAX_HEIGHT, height - 52);
         left = (width - panelWidth) / 2;
         top = Math.max(26, (height - panelHeight) / 2);
         rebuildActions();
         addDrawableChild(ButtonWidget.builder(Text.translatable("gui.back"), b -> close())
-                .dimensions(width / 2 - 50, Math.min(height - BUTTON_HEIGHT - 4, top + panelHeight + 4), 100, BUTTON_HEIGHT).build());
+                .dimensions(width / 2 - 50, Math.min(height - BUTTON_HEIGHT - 2, top + panelHeight + 10), 100, BUTTON_HEIGHT).build());
     }
 
     private Job currentJob() {
