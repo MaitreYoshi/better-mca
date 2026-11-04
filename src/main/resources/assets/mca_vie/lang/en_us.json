@@ -1055,6 +1055,7 @@
   "gamerule.mcaVieTimeSpeed.year": "1 year",
 
   "job.mca_vie.status.no_workstation": "no workstation",
+  "job.mca_vie.status.no_tool": "no tool: put a pickaxe in their workstation",
   "job.mca_vie.wrong_workstation": "This is not a %2$s workstation: %1$s can't work there.",
   "job.mca_vie.workstation_taken": "This workstation is already taken by someone else.",
   "entity.minecraft.villager.mca_vie.farmer": "Farmer",
@@ -1107,6 +1108,6 @@
   "entity.minecraft.villager.mca_vie.cook": "Cook",
   "block.mca_vie.miner_cart": "Miner's Cart",
   "block.mca_vie.cooking_pot": "Cooking Pot",
-  "job.mca_vie.desc.miner": "Works a quarry: digs exposed stone and ores below the level of their cart, ores first. Never digs above it.",
+  "job.mca_vie.desc.miner": "Digs a branch mine behind their cart: staircase, main tunnel and side tunnels, ore veins first. Tools: put pickaxes in the cart (enchanted or not), no pickaxe means no work; they use the best one, wear it out, and only break what it can (iron for gold and diamond, diamond for obsidian). Torches: taken from the cart to light the mine. Mined items go into the cart.",
   "job.mca_vie.desc.cook": "Cooks with what is stored in their pot: soups and stews (beetroot, mushroom, rabbit), then meat, fish and potatoes."
 }
