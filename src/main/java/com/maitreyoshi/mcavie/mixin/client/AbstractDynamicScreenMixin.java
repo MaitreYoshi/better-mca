@@ -29,6 +29,17 @@ public abstract class AbstractDynamicScreenMixin extends Screen {
         if (!"main".equals(guiKey) || !((Object) this instanceof InteractScreenHolder holder)) {
             return;
         }
+        // « Travailler » (corvées MCA) fait doublon avec le bouton Métier : retiré, sauf pour les mercenaires
+        boolean mercenary = holder.mcavie$getVillagerEntity() instanceof net.mca.entity.VillagerEntityMCA villager
+                && villager.getProfession() == net.mca.ProfessionsMCA.MERCENARY.get();
+        if (!mercenary) {
+            for (Element element : new ArrayList<>(children())) {
+                if (element instanceof ClickableWidget widget && widget.getMessage().getContent() instanceof TranslatableTextContent content
+                        && content.getKey().equals("gui.button.work")) {
+                    remove(widget);
+                }
+            }
+        }
         ClickableWidget lowest = null;
         for (Element element : new ArrayList<>(children())) {
             if (element instanceof ClickableWidget widget && isMcaButton(widget)
