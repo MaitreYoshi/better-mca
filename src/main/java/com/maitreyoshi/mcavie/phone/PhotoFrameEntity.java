@@ -31,34 +31,37 @@ import java.util.UUID;
 
 public class PhotoFrameEntity extends AbstractDecorationEntity {
     public static final int MIN_SIZE = 1;
-    public static final int MAX_SIZE = 8;
+    public static final int MAX_SIZE = 64;
     private static final TrackedData<Optional<UUID>> PHOTO = DataTracker.registerData(PhotoFrameEntity.class, TrackedDataHandlerRegistry.OPTIONAL_UUID);
-    private static final TrackedData<Integer> SIZE = DataTracker.registerData(PhotoFrameEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> WIDTH = DataTracker.registerData(PhotoFrameEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final TrackedData<Integer> HEIGHT = DataTracker.registerData(PhotoFrameEntity.class, TrackedDataHandlerRegistry.INTEGER);
     private static final TrackedData<Integer> TOP = DataTracker.registerData(PhotoFrameEntity.class, TrackedDataHandlerRegistry.INTEGER);
 
     private String author = "";
     private long date;
-    @Nullable
-    private Entity ignored;
 
     public PhotoFrameEntity(EntityType<? extends PhotoFrameEntity> type, World world) {
         super(type, world);
     }
 
-    public PhotoFrameEntity(World world, BlockPos pos, Direction facing, Direction top, int size, @Nullable UUID photo, String author, long date) {
+    public PhotoFrameEntity(World world, BlockPos pos, Direction facing, Direction top, int width, int height, @Nullable UUID photo, String author, long date) {
         super(PhoneServer.PHOTO_FRAME, world, pos);
         this.dataTracker.set(PHOTO, Optional.ofNullable(photo));
-        this.dataTracker.set(SIZE, clamp(size));
+        this.dataTracker.set(WIDTH, clamp(width));
+        this.dataTracker.set(HEIGHT, clamp(height));
         this.dataTracker.set(TOP, top.getAxis().isHorizontal() ? top.getHorizontal() : 0);
         this.author = author;
         this.date = date;
         setFacing(facing);
     }
 
-    public static boolean fits(World world, BlockPos pos, Direction facing, Direction top, int size, @Nullable Entity ignored) {
-        PhotoFrameEntity probe = new PhotoFrameEntity(world, pos, facing, top, size, null, "", 0);
-        probe.ignored = ignored;
-        return probe.canStayAttached();
+    public static boolean fits(World world, BlockPos pos, Direction facing) {
+        return supported(world, pos, facing);
+    }
+
+    private static boolean supported(World world, BlockPos pos, Direction facing) {
+        BlockState state = world.getBlockState(pos.offset(facing.getOpposite()));
+        return state.isSolid() || facing.getAxis().isHorizontal() && AbstractRedstoneGateBlock.isRedstoneGate(state);
     }
 
     public static Direction topFor(Direction facing, Direction look) {
@@ -72,13 +75,14 @@ public class PhotoFrameEntity extends AbstractDecorationEntity {
     @Override
     protected void initDataTracker() {
         this.dataTracker.startTracking(PHOTO, Optional.empty());
-        this.dataTracker.startTracking(SIZE, 2);
+        this.dataTracker.startTracking(WIDTH, 4);
+        this.dataTracker.startTracking(HEIGHT, 2);
         this.dataTracker.startTracking(TOP, 0);
     }
 
     @Override
     public void onTrackedDataSet(TrackedData<?> data) {
-        if ((SIZE.equals(data) || TOP.equals(data)) && this.facing != null && this.attachmentPos != null) {
+        if ((WIDTH.equals(data) || HEIGHT.equals(data) || TOP.equals(data)) && this.facing != null && this.attachmentPos != null) {
             updateAttachmentPosition();
         }
         super.onTrackedDataSet(data);
@@ -89,8 +93,12 @@ public class PhotoFrameEntity extends AbstractDecorationEntity {
         return this.dataTracker.get(PHOTO).orElse(null);
     }
 
-    public int size() {
-        return this.dataTracker.get(SIZE);
+    public int widthHalves() {
+        return this.dataTracker.get(WIDTH);
+    }
+
+    public int heightHalves() {
+        return this.dataTracker.get(HEIGHT);
     }
 
     public Direction facing() {
@@ -107,12 +115,12 @@ public class PhotoFrameEntity extends AbstractDecorationEntity {
 
     @Override
     public int getWidthPixels() {
-        return 16 * size();
+        return 8 * widthHalves();
     }
 
     @Override
     public int getHeightPixels() {
-        return Math.max(9, Math.round(size() * 9f));
+        return 8 * heightHalves();
     }
 
     @Override
@@ -130,14 +138,6 @@ public class PhotoFrameEntity extends AbstractDecorationEntity {
         updateAttachmentPosition();
     }
 
-    private static int blocks(int pixels) {
-        return Math.max(1, pixels / 16);
-    }
-
-    private static double offset(int pixels) {
-        return blocks(pixels) % 2 == 0 ? 0.5 : 0.0;
-    }
-
     @Override
     protected void updateAttachmentPosition() {
         if (this.facing == null || this.attachmentPos == null) {
@@ -145,11 +145,9 @@ public class PhotoFrameEntity extends AbstractDecorationEntity {
         }
         Direction right = right();
         Direction up = top();
-        double ow = offset(getWidthPixels());
-        double oh = offset(getHeightPixels());
-        double x = this.attachmentPos.getX() + 0.5 - this.facing.getOffsetX() * 0.46875 + right.getOffsetX() * ow + up.getOffsetX() * oh;
-        double y = this.attachmentPos.getY() + 0.5 - this.facing.getOffsetY() * 0.46875 + right.getOffsetY() * ow + up.getOffsetY() * oh;
-        double z = this.attachmentPos.getZ() + 0.5 - this.facing.getOffsetZ() * 0.46875 + right.getOffsetZ() * ow + up.getOffsetZ() * oh;
+        double x = this.attachmentPos.getX() + 0.5 - this.facing.getOffsetX() * 0.46875;
+        double y = this.attachmentPos.getY() + 0.5 - this.facing.getOffsetY() * 0.46875;
+        double z = this.attachmentPos.getZ() + 0.5 - this.facing.getOffsetZ() * 0.46875;
         setPos(x, y, z);
         double hw = getWidthPixels() / 32.0;
         double hh = getHeightPixels() / 32.0;
@@ -162,26 +160,7 @@ public class PhotoFrameEntity extends AbstractDecorationEntity {
 
     @Override
     public boolean canStayAttached() {
-        World world = getWorld();
-        if (!world.isSpaceEmpty(this)) {
-            return false;
-        }
-        int columns = blocks(getWidthPixels());
-        int rows = blocks(getHeightPixels());
-        Direction right = right();
-        Direction up = top();
-        BlockPos base = this.attachmentPos.offset(this.facing.getOpposite());
-        BlockPos.Mutable mutable = new BlockPos.Mutable();
-        for (int k = 0; k < columns; k++) {
-            for (int l = 0; l < rows; l++) {
-                mutable.set(base).move(right, k + (columns - 1) / -2).move(up, l + (rows - 1) / -2);
-                BlockState state = world.getBlockState(mutable);
-                if (!state.isSolid() && !(this.facing.getAxis().isHorizontal() && AbstractRedstoneGateBlock.isRedstoneGate(state))) {
-                    return false;
-                }
-            }
-        }
-        return world.getOtherEntities(this, getBoundingBox(), entity -> entity != this.ignored && PREDICATE.test(entity)).isEmpty();
+        return supported(getWorld(), this.attachmentPos, this.facing);
     }
 
     @Override
@@ -202,21 +181,13 @@ public class PhotoFrameEntity extends AbstractDecorationEntity {
         return ActionResult.CONSUME;
     }
 
-    public void resize(ServerPlayerEntity player, int size) {
-        int original = size();
-        int next = clamp(size);
-        if (next == original) {
+    public void resize(int width, int height) {
+        if (clamp(width) == widthHalves() && clamp(height) == heightHalves()) {
             return;
         }
-        this.dataTracker.set(SIZE, next);
-        updateAttachmentPosition();
-        if (canStayAttached()) {
-            playSound(SoundEvents.ENTITY_ITEM_FRAME_ROTATE_ITEM, 1.0f, 1.0f);
-            return;
-        }
-        this.dataTracker.set(SIZE, original);
-        updateAttachmentPosition();
-        player.sendMessage(Text.translatable("msg.mca_vie.photo.no_room"), true);
+        this.dataTracker.set(WIDTH, clamp(width));
+        this.dataTracker.set(HEIGHT, clamp(height));
+        playSound(SoundEvents.ENTITY_ITEM_FRAME_ROTATE_ITEM, 1.0f, 1.0f);
     }
 
     @Override
@@ -253,7 +224,8 @@ public class PhotoFrameEntity extends AbstractDecorationEntity {
         if (photo != null) {
             nbt.putUuid("photo", photo);
         }
-        nbt.putInt("size", size());
+        nbt.putInt("w", widthHalves());
+        nbt.putInt("h", heightHalves());
         nbt.putString("author", author);
         nbt.putLong("date", date);
         nbt.putByte("dir", (byte) this.facing.getId());
@@ -265,7 +237,14 @@ public class PhotoFrameEntity extends AbstractDecorationEntity {
         if (nbt.containsUuid("photo")) {
             this.dataTracker.set(PHOTO, Optional.of(nbt.getUuid("photo")));
         }
-        this.dataTracker.set(SIZE, clamp(nbt.getInt("size")));
+        if (nbt.contains("w")) {
+            this.dataTracker.set(WIDTH, clamp(nbt.getInt("w")));
+            this.dataTracker.set(HEIGHT, clamp(nbt.getInt("h")));
+        } else {
+            int size = Math.max(1, nbt.getInt("size"));
+            this.dataTracker.set(WIDTH, clamp(2 * size));
+            this.dataTracker.set(HEIGHT, clamp(Math.round(size * 9f / 8f)));
+        }
         this.dataTracker.set(TOP, nbt.getByte("top") & 3);
         this.author = nbt.getString("author");
         this.date = nbt.getLong("date");

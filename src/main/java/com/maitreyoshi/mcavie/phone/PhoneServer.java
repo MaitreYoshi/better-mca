@@ -145,15 +145,17 @@ public final class PhoneServer {
             BlockPos clicked = buf.readBlockPos();
             Direction side = buf.readEnumConstant(Direction.class);
             Hand hand = buf.readEnumConstant(Hand.class);
-            int size = buf.readVarInt();
-            server.execute(() -> PhotoItem.place(player, clicked, side, hand, size));
+            int width = buf.readVarInt();
+            int height = buf.readVarInt();
+            server.execute(() -> PhotoItem.place(player, clicked, side, hand, width, height));
         });
         ServerPlayNetworking.registerGlobalReceiver(PhoneNetwork.PHOTO_RESIZE, (server, player, handler, buf, responseSender) -> {
             int id = buf.readVarInt();
-            int size = buf.readVarInt();
+            int width = buf.readVarInt();
+            int height = buf.readVarInt();
             server.execute(() -> {
-                if (player.getServerWorld().getEntityById(id) instanceof PhotoFrameEntity frame && player.squaredDistanceTo(frame) <= 64) {
-                    frame.resize(player, size);
+                if (player.getServerWorld().getEntityById(id) instanceof PhotoFrameEntity frame && frame.getBoundingBox().expand(8).contains(player.getPos())) {
+                    frame.resize(width, height);
                 }
             });
         });
