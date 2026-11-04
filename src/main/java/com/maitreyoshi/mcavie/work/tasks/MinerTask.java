@@ -46,7 +46,7 @@ public class MinerTask extends AbstractJobTask {
     // durée d'un bloc de pierre selon le niveau (apprenti → maître), multipliée par la dureté
     private static final int[] TICKS_PER_BLOCK = {50, 42, 34, 26, 18};
     private static final int REACH_TICKS = 240;
-    private static final long BLACKLIST_TICKS = 2400;
+    private static final long BLACKLIST_TICKS = 600;
     private static final int RETRY_TICKS = 100;
     private static final long ORE_SCAN_INTERVAL = 200;
     private static final List<TagKey<net.minecraft.block.Block>> ORES = List.of(BlockTags.COAL_ORES, BlockTags.IRON_ORES, BlockTags.COPPER_ORES,
@@ -134,7 +134,9 @@ public class MinerTask extends AbstractJobTask {
                 clearBreaking(world, villager, target);
                 mineTicks = 0;
             }
-            walkTo(villager, target);
+            // on marche vers une case libre de la galerie à côté du bloc : le bloc lui-même est plein,
+            // et viser un bloc plein au fond d'un escalier laisse le pathfinding sans chemin
+            walkTo(villager, standPos(world, target));
             if (reach.giveUp(world, target)) {
                 selectTarget(world, villager);
             }
@@ -217,6 +219,21 @@ public class MinerTask extends AbstractJobTask {
         double dz = villager.getZ() - (pos.getZ() + 0.5);
         double dy = villager.getY() - pos.getY();
         return dx * dx + dz * dz <= WORK_DISTANCE_SQ && dy >= -3 && dy <= 3;
+    }
+
+    // la case de galerie déjà creusée (avec un sol) la plus proche du bloc visé
+    private BlockPos standPos(ServerWorld world, BlockPos goal) {
+        BlockPos best = goal;
+        double bestDistance = Double.MAX_VALUE;
+        for (BlockPos pos : feet) {
+            double distance = pos.getSquaredDistance(goal);
+            if (distance < bestDistance && isLoaded(world, pos) && isPassable(world, pos) && isPassable(world, pos.up())
+                    && hasFloor(world, pos)) {
+                bestDistance = distance;
+                best = pos;
+            }
+        }
+        return best;
     }
 
     private void selectTarget(ServerWorld world, VillagerEntityMCA villager) {
