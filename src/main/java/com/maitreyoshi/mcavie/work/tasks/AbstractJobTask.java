@@ -169,14 +169,21 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
     }
 
     protected void store(VillagerEntityMCA villager, ItemStack stack, boolean bonus) {
-        WorkRegistry.Record record = WorkManager.findRecord(villager);
-        int level = record == null ? 1 : record.level;
-        if (bonus && !stack.isEmpty() && stack.getCount() < stack.getMaxCount() && villager.getRandom().nextFloat() < (level - 1) * 0.1f) {
-            stack.increment(1);
+        if (bonus) {
+            addBonus(villager, stack);
         }
         ItemStack rest = villager.getInventory().addStack(stack);
         if (!rest.isEmpty()) {
             villager.getWorld().spawnEntity(new ItemEntity(villager.getWorld(), villager.getX(), villager.getY() + 0.5, villager.getZ(), rest));
+        }
+    }
+
+    // un objet en plus de temps en temps, d'autant plus souvent que le PNJ est expérimenté
+    protected static void addBonus(VillagerEntityMCA villager, ItemStack stack) {
+        WorkRegistry.Record record = WorkManager.findRecord(villager);
+        int level = record == null ? 1 : record.level;
+        if (!stack.isEmpty() && stack.getCount() < stack.getMaxCount() && villager.getRandom().nextFloat() < (level - 1) * 0.1f) {
+            stack.increment(1);
         }
     }
 
