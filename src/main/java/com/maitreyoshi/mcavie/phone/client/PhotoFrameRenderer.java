@@ -10,6 +10,7 @@ import net.minecraft.client.render.entity.EntityRenderer;
 import net.minecraft.client.render.entity.EntityRendererFactory;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.RotationAxis;
 import org.joml.Matrix3f;
 import org.joml.Matrix4f;
@@ -26,7 +27,16 @@ public class PhotoFrameRenderer extends EntityRenderer<PhotoFrameEntity> {
     @Override
     public void render(PhotoFrameEntity entity, float yaw, float tickDelta, MatrixStack matrices, VertexConsumerProvider consumers, int light) {
         matrices.push();
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - entity.getYaw()));
+        Direction facing = entity.facing();
+        if (facing == Direction.UP) {
+            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-entity.top().asRotation()));
+            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(90.0f));
+        } else if (facing == Direction.DOWN) {
+            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - entity.top().asRotation()));
+            matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(-90.0f));
+        } else {
+            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180.0f - entity.getYaw()));
+        }
         float w = entity.getWidthPixels() / 16f;
         float h = entity.getHeightPixels() / 16f;
         MatrixStack.Entry entry = matrices.peek();
