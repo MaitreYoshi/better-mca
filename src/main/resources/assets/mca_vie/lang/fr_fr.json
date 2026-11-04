@@ -713,7 +713,7 @@
   "job.mca_vie.status.no_griefing": "bloqué : règle mobGriefing désactivée",
   "job.mca_vie.status.depositing": "range sa production",
   "job.mca_vie.status.full": "inventaire plein",
-  "job.mca_vie.choose_depot": "Lier un poste de travail",
+  "job.mca_vie.choose_depot": "Lier un poste",
   "job.mca_vie.choose_depot.tooltip": "Clique ensuite sur un poste de travail de son métier : sa zone de travail sera centrée dessus et il y rangera ce qu'il produit.",
   "job.mca_vie.zone_here": "Zone de travail ici",
   "job.mca_vie.zone_here.tooltip": "Centre sa zone de travail (24 blocs autour) là où tu te trouves.",
