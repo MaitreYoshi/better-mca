@@ -11,7 +11,8 @@ public enum WorkStatus {
     NO_GRIEFING("no_griefing"),
     DEPOSITING("depositing"),
     INVENTORY_FULL("full"),
-    NO_WORKSTATION("no_workstation");
+    NO_WORKSTATION("no_workstation"),
+    NO_TOOL("no_tool");
 
     private static final WorkStatus[] VALUES = values();
 

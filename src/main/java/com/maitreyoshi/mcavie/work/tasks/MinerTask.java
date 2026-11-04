@@ -4,14 +4,18 @@ import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
+import com.maitreyoshi.mcavie.work.WorkStatus;
 import com.maitreyoshi.mcavie.work.block.WorkstationBlock;
 import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.Blocks;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.enchantment.Enchantments;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.registry.tag.BlockTags;
+import net.minecraft.registry.tag.ItemTags;
 import net.minecraft.registry.tag.TagKey;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -32,7 +36,7 @@ import java.util.Set;
 // - un escalier descend de DEPTH blocs, puis une galerie principale de 2 de haut part tout droit,
 //   avec une galerie latérale de chaque côté tous les 3 blocs ;
 // - un minerai visible depuis les galeries passe avant tout, et il suit le filon ;
-// - il s'arrête devant l'eau, la lave, le vide, les blocs durs ou à inventaire, et ne sort pas de sa zone ;
+// - il s'arrête devant l'eau, la lave, le vide, les blocs trop durs pour ses pioches ou à inventaire, et ne sort pas de sa zone ;
 // - torches prises dans le chariot, butin déposé dans le chariot.
 // Le plan se déduit du chariot et l'avancement se lit dans le monde : rien à sauvegarder, il reprend où il en était.
 public class MinerTask extends AbstractJobTask {
@@ -41,7 +45,7 @@ public class MinerTask extends AbstractJobTask {
     private static final int BRANCH_EVERY = 3;
     private static final int BRANCH_LENGTH = 8;
     private static final int TORCH_EVERY = 8;
-    private static final float MAX_HARDNESS = 10F;
+    private static final float MAX_HARDNESS = 50F;
     private static final double WORK_DISTANCE_SQ = 12.25;
     // durée d'un bloc de pierre selon le niveau (apprenti → maître), multipliée par la dureté
     private static final int[] TICKS_PER_BLOCK = {50, 42, 34, 26, 18};
@@ -97,6 +101,45 @@ public class MinerTask extends AbstractJobTask {
     @Override
     protected boolean keepWorking(ServerWorld world, VillagerEntityMCA villager) {
         return target != null;
+    }
+
+    @Override
+    @Nullable
+    protected WorkStatus idleStatus(ServerWorld world, VillagerEntityMCA villager) {
+        return depotPos(villager) != null && bestPickaxe(world, villager, null) == null ? WorkStatus.NO_TOOL : null;
+    }
+
+    // il tient en main une copie de la meilleure pioche du chariot
+    @Override
+    protected void holdTool(VillagerEntityMCA villager) {
+        ItemStack pickaxe = villager.getWorld() instanceof ServerWorld world ? bestPickaxe(world, villager, null) : null;
+        if (pickaxe == null) {
+            super.holdTool(villager);
+        } else {
+            WorkManager.giveTool(villager, pickaxe.copyWithCount(1));
+        }
+    }
+
+    // la meilleure pioche du chariot capable de casser ce bloc (n'importe quel bloc si state est null) ; c'est la vraie, dans le chariot
+    @Nullable
+    private static ItemStack bestPickaxe(ServerWorld world, VillagerEntityMCA villager, @Nullable BlockState state) {
+        Inventory cart = depotInventory(world, villager);
+        BlockState reference = state == null ? Blocks.STONE.getDefaultState() : state;
+        ItemStack best = null;
+        float bestSpeed = 0F;
+        for (int i = 0; cart != null && i < cart.size(); i++) {
+            ItemStack stack = cart.getStack(i);
+            if (stack.isEmpty() || !stack.isIn(ItemTags.PICKAXES)
+                    || (state != null && state.isToolRequired() && !stack.isSuitableFor(state))) {
+                continue;
+            }
+            float speed = stack.getMiningSpeedMultiplier(reference);
+            if (best == null || speed > bestSpeed) {
+                best = stack;
+                bestSpeed = speed;
+            }
+        }
+        return best;
     }
 
     @Override
@@ -170,7 +213,14 @@ public class MinerTask extends AbstractJobTask {
             return;
         }
         Inventory cart = depotInventory(world, villager);
-        for (ItemStack drop : blockDrops(world, villager, pos, state)) {
+        ItemStack pickaxe = bestPickaxe(world, villager, state);
+        List<ItemStack> drops = pickaxe == null ? List.of() : blockDrops(world, villager, pos, state, pickaxe);
+        if (pickaxe != null && pickaxe.damage(1, world.random, null)) {
+            // pioche usée jusqu'au bout : elle se casse dans le chariot
+            pickaxe.decrement(1);
+            world.playSound(null, villager.getBlockPos(), SoundEvents.ENTITY_ITEM_BREAK, SoundCategory.NEUTRAL, 0.8F, 1.0F);
+        }
+        for (ItemStack drop : drops) {
             if (cart == null) {
                 store(villager, drop);
                 continue;
@@ -210,8 +260,16 @@ public class MinerTask extends AbstractJobTask {
         WorkRegistry.Record record = WorkManager.findRecord(villager);
         int level = record == null ? 1 : record.level;
         int perBlock = TICKS_PER_BLOCK[Math.max(0, Math.min(TICKS_PER_BLOCK.length - 1, level - 1))];
-        float hardness = Math.max(0.5F, world.getBlockState(pos).getHardness(world, pos));
-        return Math.max(20, Math.round(perBlock * hardness / 1.5F));
+        BlockState state = world.getBlockState(pos);
+        float hardness = Math.max(0.5F, state.getHardness(world, pos));
+        // vitesse de la pioche : bois 2, pierre 4, fer 6 (référence), diamant 8, netherite 9, or 12, plus Efficacité
+        ItemStack pickaxe = bestPickaxe(world, villager, state);
+        float speed = pickaxe == null ? 1F : pickaxe.getMiningSpeedMultiplier(state);
+        int efficiency = pickaxe == null ? 0 : EnchantmentHelper.getLevel(Enchantments.EFFICIENCY, pickaxe);
+        if (speed > 1F && efficiency > 0) {
+            speed += efficiency * efficiency + 1;
+        }
+        return Math.max(10, Math.round(perBlock * hardness / 1.5F * 6F / Math.max(1F, speed)));
     }
 
     private static boolean inReach(VillagerEntityMCA villager, BlockPos pos) {
@@ -407,7 +465,7 @@ public class MinerTask extends AbstractJobTask {
             return false;
         }
         float hardness = state.getHardness(world, pos);
-        if (hardness < 0 || hardness > MAX_HARDNESS) {
+        if (hardness < 0 || hardness > MAX_HARDNESS || bestPickaxe(world, villager, state) == null) {
             return false;
         }
         // ni eau ni lave autour : la creuser ouvrirait une brèche

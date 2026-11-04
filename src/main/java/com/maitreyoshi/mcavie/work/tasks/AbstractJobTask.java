@@ -61,8 +61,10 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
         if (canWork(world, villager)) {
             return true;
         }
-        WorkStatus status;
-        if (isSearching()) {
+        WorkStatus status = idleStatus(world, villager);
+        if (status != null) {
+            // raison propre au métier (outil manquant…)
+        } else if (isSearching()) {
             status = WorkStatus.SEARCHING;
         } else if (altersBlocks() && !world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
             status = WorkStatus.NO_GRIEFING;
@@ -81,6 +83,12 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
     }
 
     // vrai tant que le métier parcourt encore sa zone (le scan est étalé sur plusieurs ticks)
+    // statut affiché quand il ne peut pas travailler, si le métier a une raison précise ; null sinon
+    @Nullable
+    protected WorkStatus idleStatus(ServerWorld world, VillagerEntityMCA villager) {
+        return null;
+    }
+
     protected boolean isSearching() {
         return false;
     }
@@ -196,9 +204,14 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
     }
 
     protected List<ItemStack> blockDrops(ServerWorld world, VillagerEntityMCA villager, BlockPos pos, BlockState state) {
+        return blockDrops(world, villager, pos, state, job.tool());
+    }
+
+    // butin calculé avec cet outil : ses enchantements (fortune, toucher de soie) comptent
+    protected List<ItemStack> blockDrops(ServerWorld world, VillagerEntityMCA villager, BlockPos pos, BlockState state, ItemStack tool) {
         LootContextParameterSet.Builder builder = new LootContextParameterSet.Builder(world)
                 .add(LootContextParameters.ORIGIN, Vec3d.ofCenter(pos))
-                .add(LootContextParameters.TOOL, job.tool())
+                .add(LootContextParameters.TOOL, tool)
                 .add(LootContextParameters.THIS_ENTITY, villager)
                 .add(LootContextParameters.BLOCK_STATE, state)
                 .luck(0);

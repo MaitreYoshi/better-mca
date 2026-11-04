@@ -199,8 +199,18 @@ public final class WorkManager {
 
     public static void giveTool(VillagerEntityMCA villager, Job job) {
         ItemStack hand = villager.getMainHandStack();
-        ItemStack tool = job.tool();
-        if (tool.isEmpty() || hand.isOf(tool.getItem())) {
+        // le mineur montre la vraie pioche de son chariot : ne pas la remplacer par l'outil par défaut
+        if (job == Job.MINER && isMarkedTool(hand) && hand.isIn(net.minecraft.registry.tag.ItemTags.PICKAXES)) {
+            return;
+        }
+        giveTool(villager, job.tool());
+    }
+
+    // montre une copie de cet outil en main (marquée, rendue à la fin du travail)
+    public static void giveTool(VillagerEntityMCA villager, ItemStack tool) {
+        ItemStack hand = villager.getMainHandStack();
+        if (tool.isEmpty() || (hand.isOf(tool.getItem())
+                && net.minecraft.enchantment.EnchantmentHelper.get(hand).equals(net.minecraft.enchantment.EnchantmentHelper.get(tool)))) {
             return;
         }
         ItemStack original = ItemStack.EMPTY;
