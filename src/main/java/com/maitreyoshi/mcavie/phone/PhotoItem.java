@@ -86,7 +86,7 @@ public class PhotoItem extends Item {
         return ActionResult.CONSUME;
     }
 
-    public static void place(ServerPlayerEntity player, BlockPos clicked, Direction side, Hand hand, int size) {
+    public static void place(ServerPlayerEntity player, BlockPos clicked, Direction side, Hand hand, int width, int height) {
         ItemStack stack = player.getStackInHand(hand);
         UUID photo = photoOf(stack);
         BlockPos pos = clicked.offset(side);
@@ -97,9 +97,9 @@ public class PhotoItem extends Item {
         }
         NbtCompound nbt = stack.getSubNbt(PHOTO_KEY);
         Direction top = PhotoFrameEntity.topFor(side, player.getHorizontalFacing());
-        PhotoFrameEntity frame = new PhotoFrameEntity(world, pos, side, top, size, photo, nbt.getString("author"), nbt.getLong("date"));
+        PhotoFrameEntity frame = new PhotoFrameEntity(world, pos, side, top, width, height, photo, nbt.getString("author"), nbt.getLong("date"));
         if (!frame.canStayAttached()) {
-            player.sendMessage(Text.translatable("msg.mca_vie.photo.no_room"), true);
+            player.sendMessage(Text.translatable("msg.mca_vie.photo.no_support"), true);
             return;
         }
         frame.onPlace();
