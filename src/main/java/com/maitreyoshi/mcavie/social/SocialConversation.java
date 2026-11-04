@@ -38,9 +38,9 @@ import java.util.UUID;
 public final class SocialConversation {
     public static final Identifier BUBBLE = MCAVie.id("speech_bubble");
     /** Écart entre deux répliques, en ticks. */
-    public static final int GAP = 50;
+    public static final int GAP = 60;
     /** Durée d'affichage d'une bulle, en ticks. */
-    public static final int BUBBLE_TICKS = 70;
+    public static final int BUBBLE_TICKS = 90;
     private static final int OPEN_VARIANTS = 3;
     private static final int ANSWER_VARIANTS = 2;
     private static final int WITNESS_VARIANTS = 3;
