@@ -16,11 +16,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.UUID;
 
-/**
- * MCA ne connaît la position que des villageois à qui on a déjà parlé, et seulement toutes les 10 secondes :
- * pour les autres le traqueur restait muet. Si la cible est chargée (n'importe quelle dimension), on prend sa
- * position réelle chaque seconde et on la mémorise pour quand elle sera hors de portée.
- */
 @Mixin(VillagerTrackerItem.class)
 public abstract class VillagerTrackerItemMixin {
     @Inject(method = "inventoryTick", at = @At("TAIL"))

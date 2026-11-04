@@ -25,17 +25,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Conversations entre villageois : un sujet tiré de ce qui se passe vraiment (météo, travail, impôts, Registre…),
- * une ouverture, une réponse (d'accord ou non selon l'issue de la rencontre), une conclusion.
- * Chaque réplique part dans le chat des joueurs proches, avec la tête du PNJ devant son nom ; les témoins réagissent aussi aux événements marquants.
- */
 public final class SocialConversation {
-    /** Repère placé (en « insertion ») sur l'espace où le client dessine la tête du PNJ : préfixe, id réseau, UUID. */
     public static final String HEAD_MARKER = "mca_vie:head:";
-    /** Écart entre deux répliques, en ticks. */
     public static final int GAP = 60;
-    /** Temps laissé à la dernière réplique avant de relâcher les PNJ, en ticks. */
     public static final int BUBBLE_TICKS = 90;
     private static final int OPEN_VARIANTS = 3;
     private static final int ANSWER_VARIANTS = 2;
@@ -62,7 +54,6 @@ public final class SocialConversation {
         PENDING.clear();
     }
 
-    /** Lance une conversation ; renvoie sa durée en ticks (0 si personne ne parle). */
     public static int start(ServerWorld world, VillagerEntityMCA a, VillagerEntityMCA b, boolean quarrel, int score, boolean family) {
         if (!canSpeak(a) || !canSpeak(b)) {
             return 0;
@@ -96,7 +87,6 @@ public final class SocialConversation {
         WorkRegistry.Record work = registry.get(a.getUuid());
         if (work != null && work.job != Job.NONE) {
             topics.add(new Topic("work", work.job.getName()));
-            // chaque métier a ses propres répliques : on en parle plus souvent que de la météo
             topics.add(new Topic("job." + work.job.id(), work.job.getName()));
             topics.add(new Topic("job." + work.job.id(), work.job.getName()));
         }
@@ -115,7 +105,6 @@ public final class SocialConversation {
             }
             Topic news = news(world, village.get());
             if (news != null) {
-                // les nouvelles fraîches passent avant le reste
                 topics.add(news);
                 topics.add(news);
             }
@@ -162,7 +151,6 @@ public final class SocialConversation {
         return null;
     }
 
-    /** Les villageois proches réagissent à un événement (au plus deux, l'un après l'autre). */
     public static void witness(ServerWorld world, Entity source, String event, Text subject, UUID... involved) {
         if (!SocialConfig.get().showChats) {
             return;
@@ -181,7 +169,6 @@ public final class SocialConversation {
         }
     }
 
-    /** Un villageois dit une réplique seule, comme les témoins. */
     public static void remark(ServerWorld world, VillagerEntityMCA speaker, Text text) {
         if (SocialConfig.get().showChats && canSpeak(speaker) && !speaker.isSleeping()) {
             PENDING.add(new Line(world, speaker, text, false, world.getTime() + 10L));
@@ -219,7 +206,6 @@ public final class SocialConversation {
     private static void say(ServerWorld world, VillagerEntityMCA speaker, Text text, boolean angry) {
         SocialConfig config = SocialConfig.get();
         double max = (double) config.chatRadius * config.chatRadius;
-        // trois espaces de la largeur d'une petite tête ; le client la dessine à leur place
         MutableText head = Text.literal("   ").styled(s -> s.withInsertion(HEAD_MARKER + speaker.getId() + ":" + speaker.getUuid()));
         MutableText chat = Text.empty().append(head).append(Text.translatable("chat.mca_vie.social.said", speaker.getName(), text)
                 .formatted(angry ? Formatting.RED : Formatting.GRAY, Formatting.ITALIC));

@@ -20,7 +20,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-// cuisine à la marmite : soupes et ragoûts d'abord, puis tout ce qui se cuit au fumoir, avec les ingrédients rangés dans la marmite
 public class CookTask extends AbstractJobTask {
     private static final int SCAN_INTERVAL = 200;
     private static final int COOK_TICKS = 80;
@@ -69,7 +68,6 @@ public class CookTask extends AbstractJobTask {
         return cooking != null || pot(world, villager) != null;
     }
 
-    // la marmite liée, seulement si elle contient de quoi cuisiner
     @Nullable
     private Inventory pot(ServerWorld world, VillagerEntityMCA villager) {
         BlockPos depot = depotPos(villager);

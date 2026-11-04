@@ -31,7 +31,6 @@ public abstract class VillagerEntityMCAMixin implements AgeHolder {
     @Unique
     private boolean mcavie$started;
 
-    // Minecraft n'anime le bras que des monstres et des joueurs : sans ça, swingHand ne se voit pas sur les villageois
     @Inject(method = "tick", at = @At("HEAD"))
     private void mcavie$tickHandSwing(CallbackInfo ci) {
         ((LivingEntityInvoker) this).mcavie$tickHandSwing();

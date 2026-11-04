@@ -68,7 +68,6 @@ public final class LifeCycle {
         }
         Long death = registry.getDeathDay(villager.getUuid());
         if (death != null) {
-            // vivant avec une date de décès : il vient d'être ressuscité (faux ou bâton de vie)
             registry.resurrected(villager.getUuid(), WorldCalendar.exactCalendarDay(world), world.getTime());
             Resurrection.returned(villager, world);
         }

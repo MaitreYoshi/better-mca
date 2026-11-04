@@ -223,7 +223,6 @@ public final class BlueprintPanels {
         return wrapped(context, text, Text.translatable("gui.mca_vie.building.upkeep", rule.upkeep), x, y, width, WHITE);
     }
 
-    /** Texte du trésor (les boutons sont placés par l'écran) ; renvoie le bas du texte. */
     public static int renderTreasury(DrawContext context, TextRenderer text, Village village, int x, int y, int width) {
         VillageState state = VillageState.of(village);
         VillageConfig config = VillageConfig.get();
@@ -288,7 +287,6 @@ public final class BlueprintPanels {
         return Text.translatable("gui.mca_vie.market.product_tooltip", state.stock.getOrDefault(id, 0), VillageConfig.get().maxLotsPerOrder);
     }
 
-    /** Une ligne du registre d'état civil. */
     public static MutableText registryLine(CivilRegistry.Entry e) {
         return switch (e.kind()) {
             case CivilRegistry.BIRTH -> e.other().isEmpty() ? Text.translatable("gui.mca_vie.registry.birth", e.name())

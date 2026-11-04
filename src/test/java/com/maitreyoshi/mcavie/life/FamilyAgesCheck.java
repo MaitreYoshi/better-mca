@@ -6,8 +6,6 @@ public final class FamilyAgesCheck {
     private static int failures;
 
     public static void main(String[] args) {
-        // Capture du 1er novembre : enfants et petits-enfants des joueurs tous à 18 ans, monde d'un an.
-        // 0 Gerardette, 1 GuiGuillotin, 2 Domi-nique, 3 Ani (sans âge), 4 SaleFaible, 5 Radu, 6 Eftimie, 7 Beata
         FamilyAges.Family family = FamilyAges.Family.of(
                 new int[]{18, 18, 18, -1, 18, 18, 18, 30},
                 new boolean[]{true, true, true, false, true, true, true, false},
@@ -24,7 +22,6 @@ public final class FamilyAgesCheck {
             check("Eftimie et Beata proches", Math.abs(ages[6] - ages[7]) <= 8);
         }
 
-        // Premier rapport : épouse 36 ans, fils 40, petit-fils 46.
         FamilyAges.Family first = FamilyAges.Family.of(
                 new int[]{36, 40, 46},
                 new boolean[]{false, true, true},
@@ -34,7 +31,6 @@ public final class FamilyAgesCheck {
         System.out.println("épouse/petit-fils : " + Arrays.toString(fixed));
         check("épouse/petit-fils soluble", fixed != null && fixed[0] - fixed[1] >= 18 && fixed[1] - fixed[2] >= 18);
 
-        // Famille cohérente : rien ne bouge.
         FamilyAges.Family fine = FamilyAges.Family.of(
                 new int[]{62, 60, 35, 33, 8},
                 new boolean[]{false, false, true, false, true},

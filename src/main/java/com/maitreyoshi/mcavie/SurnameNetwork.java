@@ -52,7 +52,6 @@ public final class SurnameNetwork {
                     ServerPlayNetworking.send(player, RANDOM_SURNAME_RESULT, out);
                 }));
 
-        // Écran « nommer le bébé » : pré-remplit le nom de famille avec celui que l'enfant aura.
         ServerPlayNetworking.registerGlobalReceiver(BABY_SURNAME, (server, player, handler, buf, responseSender) -> {
             int slot = buf.readVarInt();
             server.execute(() -> {

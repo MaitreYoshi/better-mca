@@ -69,7 +69,6 @@ public final class VillageState {
     public boolean prisonActive;
     public final Set<UUID> pendingRelease = new HashSet<>();
     public final Map<UUID, Prisoner> prisoners = new java.util.LinkedHashMap<>();
-    /** Titres donnés par un opérateur (/villagetitle), prioritaires sur le calcul de MCA. */
     public final Map<UUID, net.mca.resources.Rank> forcedTitles = new HashMap<>();
 
     public static final class Case {
@@ -467,7 +466,6 @@ public final class VillageState {
             try {
                 forcedTitles.put(UUID.fromString(key), net.mca.resources.Rank.valueOf(titleNbt.getString(key)));
             } catch (IllegalArgumentException ignored) {
-                // entrée illisible : on l'ignore
             }
         }
         pendingRelease.clear();

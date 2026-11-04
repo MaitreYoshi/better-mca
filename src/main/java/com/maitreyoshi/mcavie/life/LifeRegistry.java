@@ -18,14 +18,10 @@ public class LifeRegistry extends PersistentState {
     private final Map<UUID, Long> births = new HashMap<>();
     private final Map<UUID, Long> deaths = new HashMap<>();
     private final Map<UUID, Long> zombies = new HashMap<>();
-    /** Dates exactes (jours du calendrier) des naissances et morts vues en direct, à la montre. */
     private final Map<UUID, Long> exactBirths = new HashMap<>();
     private final Map<UUID, Long> exactDeaths = new HashMap<>();
-    /** Vies passées des ressuscités, en jours du calendrier : mort, retour, mort, retour… */
     private final Map<UUID, long[]> pastLives = new HashMap<>();
-    /** Ancien format (jours Minecraft), converti à la première lecture. */
     private final Map<UUID, long[]> legacyLives = new HashMap<>();
-    /** Heure de jeu (ticks) de la dernière résurrection, pour que l'étonnement des villageois s'estompe. */
     private final Map<UUID, Long> resurrectedAt = new HashMap<>();
 
     public static LifeRegistry get(MinecraftServer server) {
@@ -146,19 +142,16 @@ public class LifeRegistry extends PersistentState {
         markDirty();
     }
 
-    /** Naissance vue en direct : le jour Minecraft et la date exacte de la montre. */
     public void recordBirth(UUID uuid, long day, long exactCalendarDay) {
         setBirthDay(uuid, day);
         exactBirths.put(uuid, exactCalendarDay);
     }
 
-    /** Mort vue en direct : le jour Minecraft et la date exacte de la montre. */
     public void recordDeath(UUID uuid, long day, long exactCalendarDay) {
         setDeathDay(uuid, day);
         exactDeaths.put(uuid, exactCalendarDay);
     }
 
-    /** Date de naissance en jour du calendrier : l'exacte si elle a été vue, sinon un jour stable dans la journée Minecraft. */
     @Nullable
     public Long exactBirth(UUID uuid) {
         Long exact = exactBirths.get(uuid);
@@ -179,7 +172,6 @@ public class LifeRegistry extends PersistentState {
         return WorldCalendar.spreadCalendarDay(death, uuid.getLeastSignificantBits());
     }
 
-    /** Enregistre un retour à la vie : la mort précédente et le jour du retour s'ajoutent aux vies passées. */
     public void resurrected(UUID uuid, long exactToday, long gameTime) {
         Long death = exactDeath(uuid);
         long[] previous = lives(uuid);
@@ -206,7 +198,6 @@ public class LifeRegistry extends PersistentState {
         return pastLives.getOrDefault(uuid, new long[0]);
     }
 
-    /** Jours du calendrier de mort et de résurrection à la suite, vide pour quelqu'un qui n'est jamais revenu. */
     public List<Long> pastLives(UUID uuid) {
         return java.util.Arrays.stream(lives(uuid)).boxed().toList();
     }
@@ -216,10 +207,6 @@ public class LifeRegistry extends PersistentState {
         return resurrectedAt.get(uuid);
     }
 
-    /**
-     * Naissance du corps : la vraie naissance décalée du temps passé dans la tombe. Sert à la vieillesse,
-     * à la santé et au travail ; l'âge affiché reste celui de la vraie naissance.
-     */
     @Nullable
     public Long getBodyBirthDay(UUID uuid) {
         Long birth = births.get(uuid);

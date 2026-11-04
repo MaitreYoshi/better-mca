@@ -39,7 +39,6 @@ public abstract class VillagerEditorScreenMixin extends Screen implements Surnam
     @Final
     UUID playerUUID;
 
-    // Champ « nom de famille » de l'éditeur d'un villageois (le joueur a le sien dans DestinyScreen).
     @Unique
     @Nullable
     private TextFieldWidget mcavie$editorSurnameField;

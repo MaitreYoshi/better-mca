@@ -120,8 +120,6 @@ public final class AgingConfig {
         return GSON.toJson(this);
     }
 
-    // version 1 : seuils trop tardifs (canne à 75 ans alors que les âges de départ s'arrêtent à 75),
-    // on n'avance que les valeurs encore à leur ancien défaut pour garder les réglages du joueur
     private void migrate() {
         if (version >= VERSION) {
             return;

@@ -37,7 +37,6 @@ public class LumberjackTask extends AbstractJobTask {
     private static final long SCAN_INTERVAL = 1200;
     private static final int SCAN_HEIGHT = 8;
     private static final double WORK_DISTANCE_SQ = 12.25;
-    // durée de coupe par bûche selon le niveau (apprenti → maître), bornée pour les très grands arbres
     private static final int[] TICKS_PER_LOG = {60, 50, 40, 30, 20};
     private static final int MIN_CHOP_TICKS = 60;
     private static final int MAX_CHOP_TICKS = 1100;
@@ -148,7 +147,6 @@ public class LumberjackTask extends AbstractJobTask {
         selectTarget(world, villager);
     }
 
-    // à portée de hache du tronc, même si des feuilles ou une pente l'empêchent de le toucher
     private static boolean nearTrunk(VillagerEntityMCA villager, BlockPos base) {
         double dx = villager.getX() - (base.getX() + 0.5);
         double dz = villager.getZ() - (base.getZ() + 0.5);
@@ -221,7 +219,6 @@ public class LumberjackTask extends AbstractJobTask {
                 && !PlacedLogs.get(world).contains(pos);
     }
 
-    // arbres des autres mods : tous ne remplissent pas les tags vanilla, on se rabat sur la classe ou le nom du bloc
     public static boolean isLog(BlockState state) {
         if (state.isIn(BlockTags.LOGS)) {
             return true;

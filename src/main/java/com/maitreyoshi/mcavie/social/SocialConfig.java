@@ -18,10 +18,8 @@ public final class SocialConfig {
 
     private static SocialConfig instance;
 
-    /** Version du fichier : sert à recaler les anciennes valeurs par défaut. */
     public int version;
     public boolean showChats = true;
-    /** Distance (en blocs) à laquelle un joueur reçoit les répliques des PNJ dans son chat. */
     public int chatRadius = 16;
     public int lookSeconds = 3;
 
@@ -48,7 +46,6 @@ public final class SocialConfig {
             config = new SocialConfig();
         }
         if (config.version < 3) {
-            // anciennes valeurs par défaut (bulles) : 16 blocs évite d'inonder le chat avec tout le village
             if (config.chatRadius == 12 || config.chatRadius == 24) {
                 config.chatRadius = 16;
             }

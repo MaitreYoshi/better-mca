@@ -25,7 +25,6 @@ public final class SocialChat {
         SocialConfig config = SocialConfig.get();
         long time = world.getTime();
         HOLDS.values().removeIf(h -> h.until < time || h.until - time > 600);
-        // une vraie conversation (bulles) quand des joueurs sont assez près pour la voir
         int talk = 0;
         if (config.showChats && anyPlayerNear(world, a, b, config.chatRadius)) {
             talk = SocialConversation.start(world, a, b, delta < 0, score, family);

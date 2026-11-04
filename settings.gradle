@@ -9,7 +9,6 @@ pluginManagement {
             url = "https://maven.architectury.dev/"
         }
         maven {
-            // requis par architectury-loom même pour un projet Fabric seul
             name = 'Forge'
             url = "https://files.minecraftforge.net/maven/"
         }

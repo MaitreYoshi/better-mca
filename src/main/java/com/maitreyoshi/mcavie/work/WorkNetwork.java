@@ -154,7 +154,6 @@ public final class WorkNetwork {
         return villager;
     }
 
-    // fait briller le poste de travail et le contour de la zone, pour ce joueur seulement
     private static void showWorkstation(ServerPlayerEntity player, VillagerEntityMCA villager) {
         WorkRegistry.Record record = WorkManager.findRecord(villager);
         if (record == null || record.depot == null) {

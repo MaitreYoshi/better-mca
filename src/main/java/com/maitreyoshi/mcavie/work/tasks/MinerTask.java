@@ -32,13 +32,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-// mine en galeries derrière le chariot (côté opposé à sa face avant) :
-// - un escalier descend de DEPTH blocs, puis une galerie principale de 2 de haut part tout droit,
-//   avec une galerie latérale de chaque côté tous les 3 blocs ;
-// - un minerai visible depuis les galeries passe avant tout, et il suit le filon ;
-// - il s'arrête devant l'eau, la lave, le vide, les blocs trop durs pour ses pioches ou à inventaire, et ne sort pas de sa zone ;
-// - torches prises dans le chariot, butin déposé dans le chariot.
-// Le plan se déduit du chariot et l'avancement se lit dans le monde : rien à sauvegarder, il reprend où il en était.
 public class MinerTask extends AbstractJobTask {
     private static final int DEPTH = 12;
     private static final int MAX_MAIN = 32;
@@ -47,7 +40,6 @@ public class MinerTask extends AbstractJobTask {
     private static final int TORCH_EVERY = 8;
     private static final float MAX_HARDNESS = 50F;
     private static final double WORK_DISTANCE_SQ = 12.25;
-    // durée d'un bloc de pierre selon le niveau (apprenti → maître), multipliée par la dureté
     private static final int[] TICKS_PER_BLOCK = {50, 42, 34, 26, 18};
     private static final int REACH_TICKS = 240;
     private static final long BLACKLIST_TICKS = 600;
@@ -56,7 +48,6 @@ public class MinerTask extends AbstractJobTask {
     private static final List<TagKey<net.minecraft.block.Block>> ORES = List.of(BlockTags.COAL_ORES, BlockTags.IRON_ORES, BlockTags.COPPER_ORES,
             BlockTags.GOLD_ORES, BlockTags.REDSTONE_ORES, BlockTags.LAPIS_ORES, BlockTags.DIAMOND_ORES, BlockTags.EMERALD_ORES);
 
-    // un tronçon du plan : s'il est bloqué, le reste du tronçon est abandonné ; un tronçon vital bloqué arrête la mine
     private record Segment(List<BlockPos> blocks, boolean vital) {
     }
 
@@ -109,7 +100,6 @@ public class MinerTask extends AbstractJobTask {
         return depotPos(villager) != null && bestPickaxe(world, villager, null) == null ? WorkStatus.NO_TOOL : null;
     }
 
-    // il tient en main une copie de la meilleure pioche du chariot
     @Override
     protected void holdTool(VillagerEntityMCA villager) {
         ItemStack pickaxe = villager.getWorld() instanceof ServerWorld world ? bestPickaxe(world, villager, null) : null;
@@ -120,7 +110,6 @@ public class MinerTask extends AbstractJobTask {
         }
     }
 
-    // la meilleure pioche du chariot capable de casser ce bloc (n'importe quel bloc si state est null) ; c'est la vraie, dans le chariot
     @Nullable
     private static ItemStack bestPickaxe(ServerWorld world, VillagerEntityMCA villager, @Nullable BlockState state) {
         Inventory cart = depotInventory(world, villager);
@@ -177,8 +166,6 @@ public class MinerTask extends AbstractJobTask {
                 clearBreaking(world, villager, target);
                 mineTicks = 0;
             }
-            // on marche vers une case libre de la galerie à côté du bloc : le bloc lui-même est plein,
-            // et viser un bloc plein au fond d'un escalier laisse le pathfinding sans chemin
             walkTo(villager, standPos(world, target));
             if (reach.giveUp(world, target)) {
                 selectTarget(world, villager);
@@ -199,7 +186,6 @@ public class MinerTask extends AbstractJobTask {
         clearBreaking(world, villager, done);
         mine(world, villager, done);
         ores.remove(done);
-        // filon : les minerais touchant le bloc creusé passent en tête
         for (Direction direction : Direction.values()) {
             addOre(world, villager, done.offset(direction));
         }
@@ -216,7 +202,6 @@ public class MinerTask extends AbstractJobTask {
         ItemStack pickaxe = bestPickaxe(world, villager, state);
         List<ItemStack> drops = pickaxe == null ? List.of() : blockDrops(world, villager, pos, state, pickaxe);
         if (pickaxe != null && pickaxe.damage(1, world.random, null)) {
-            // pioche usée jusqu'au bout : elle se casse dans le chariot
             pickaxe.decrement(1);
             world.playSound(null, villager.getBlockPos(), SoundEvents.ENTITY_ITEM_BREAK, SoundCategory.NEUTRAL, 0.8F, 1.0F);
         }
@@ -237,7 +222,6 @@ public class MinerTask extends AbstractJobTask {
         gainExperience(villager, isOre(state) ? 2 : 1);
     }
 
-    // torche au sol, à intervalle régulier, si l'endroit est sombre et que le chariot en contient
     private void placeTorch(ServerWorld world, VillagerEntityMCA villager, BlockPos pos) {
         if (!torchSpots.contains(pos) || !world.getBlockState(pos).isAir()
                 || world.getLightLevel(LightType.BLOCK, pos) >= 8 || !Blocks.TORCH.getDefaultState().canPlaceAt(world, pos)) {
@@ -262,7 +246,6 @@ public class MinerTask extends AbstractJobTask {
         int perBlock = TICKS_PER_BLOCK[Math.max(0, Math.min(TICKS_PER_BLOCK.length - 1, level - 1))];
         BlockState state = world.getBlockState(pos);
         float hardness = Math.max(0.5F, state.getHardness(world, pos));
-        // vitesse de la pioche : bois 2, pierre 4, fer 6 (référence), diamant 8, netherite 9, or 12, plus Efficacité
         ItemStack pickaxe = bestPickaxe(world, villager, state);
         float speed = pickaxe == null ? 1F : pickaxe.getMiningSpeedMultiplier(state);
         int efficiency = pickaxe == null ? 0 : EnchantmentHelper.getLevel(Enchantments.EFFICIENCY, pickaxe);
@@ -279,7 +262,6 @@ public class MinerTask extends AbstractJobTask {
         return dx * dx + dz * dz <= WORK_DISTANCE_SQ && dy >= -3 && dy <= 3;
     }
 
-    // la case de galerie déjà creusée (avec un sol) la plus proche du bloc visé
     private BlockPos standPos(ServerWorld world, BlockPos goal) {
         BlockPos best = goal;
         double bestDistance = Double.MAX_VALUE;
@@ -301,7 +283,6 @@ public class MinerTask extends AbstractJobTask {
         mineTicks = 0;
     }
 
-    // un filon en vue d'abord (le plus proche), sinon le prochain bloc du plan
     @Nullable
     private BlockPos findTarget(ServerWorld world, VillagerEntityMCA villager) {
         reach.prune(world);
@@ -341,7 +322,6 @@ public class MinerTask extends AbstractJobTask {
                     break;
                 }
                 if (reach.isBlacklisted(world, pos)) {
-                    // inaccessible pour l'instant : il réessaiera plus tard
                     if (segment.vital()) {
                         return null;
                     }
@@ -357,7 +337,6 @@ public class MinerTask extends AbstractJobTask {
         return null;
     }
 
-    // plan recalculé seulement si le chariot ou son orientation changent
     private boolean updatePlan(ServerWorld world, VillagerEntityMCA villager) {
         BlockPos cart = depotPos(villager);
         if (cart == null || !isLoaded(world, cart)) {
@@ -388,7 +367,6 @@ public class MinerTask extends AbstractJobTask {
         List<BlockPos> stairs = new ArrayList<>();
         for (int i = 0; i <= DEPTH; i++) {
             BlockPos floor = cart.offset(forward, 1 + i).withY(y - i);
-            // 3 de haut dans l'escalier pour ne pas se cogner en descendant
             for (int h = i == 0 ? 1 : 2; h >= 0; h--) {
                 stairs.add(floor.up(h));
             }
@@ -434,7 +412,6 @@ public class MinerTask extends AbstractJobTask {
         return new Segment(blocks, false);
     }
 
-    // minerais visibles depuis les galeries déjà creusées
     private void scanOres(ServerWorld world, VillagerEntityMCA villager) {
         for (Segment segment : plan) {
             for (BlockPos pos : segment.blocks()) {
@@ -454,7 +431,6 @@ public class MinerTask extends AbstractJobTask {
         }
     }
 
-    // bloc qu'il a le droit et la possibilité de creuser sans danger
     private boolean canDig(ServerWorld world, VillagerEntityMCA villager, BlockPos pos) {
         if (!isLoaded(world, pos) || !inMineZone(villager, pos) || pos.equals(villager.getBlockPos().down())
                 || pos.equals(planCart) || pos.getY() <= world.getBottomY() + 1) {
@@ -468,7 +444,6 @@ public class MinerTask extends AbstractJobTask {
         if (hardness < 0 || hardness > MAX_HARDNESS || bestPickaxe(world, villager, state) == null) {
             return false;
         }
-        // ni eau ni lave autour : la creuser ouvrirait une brèche
         for (Direction direction : Direction.values()) {
             BlockPos side = pos.offset(direction);
             if (!isLoaded(world, side) || !world.getFluidState(side).isEmpty()) {
@@ -478,7 +453,6 @@ public class MinerTask extends AbstractJobTask {
         return mayAlter(world, pos);
     }
 
-    // la zone de travail compte à l'horizontale : la mine peut descendre sous le chariot
     private static boolean inMineZone(VillagerEntityMCA villager, BlockPos pos) {
         WorkManager.Zone zone = WorkManager.getZone(villager);
         BlockPos center = zone.center();
@@ -487,7 +461,6 @@ public class MinerTask extends AbstractJobTask {
         return dx * dx + dz * dz <= (long) zone.radius() * zone.radius();
     }
 
-    // de l'air ou une plante, une torche… : rien à creuser
     private static boolean isPassable(ServerWorld world, BlockPos pos) {
         BlockState state = world.getBlockState(pos);
         return state.getFluidState().isEmpty() && state.getCollisionShape(world, pos).isEmpty();

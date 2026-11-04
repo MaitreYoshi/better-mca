@@ -23,10 +23,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.ArrayList;
 
-/**
- * Nommer son bébé : MCA n'a qu'une case, et le dernier mot tapé devenait le nom de famille (« Bernard Jacques »
- * donnait le nom de famille Jacques). On ajoute une case « Nom de famille », pré-remplie avec celui de la famille.
- */
 @Mixin(NameBabyScreen.class)
 public abstract class NameBabyScreenMixin extends Screen implements SurnameFieldHolder {
     @Unique
@@ -43,7 +39,6 @@ public abstract class NameBabyScreenMixin extends Screen implements SurnameField
     @Nullable
     private TextFieldWidget mcavie$surnameField;
 
-    // MCA redonne le focus à la case prénom à chaque image : on retient quelle case le joueur a choisie.
     @Unique
     private boolean mcavie$surnameFocused;
 
@@ -88,7 +83,7 @@ public abstract class NameBabyScreenMixin extends Screen implements SurnameField
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 258 && mcavie$surnameField != null) { // Tab : passe d'une case à l'autre
+        if (keyCode == 258 && mcavie$surnameField != null) {
             mcavie$surnameFocused = !mcavie$surnameFocused;
             mcavie$applyFocus();
             return true;

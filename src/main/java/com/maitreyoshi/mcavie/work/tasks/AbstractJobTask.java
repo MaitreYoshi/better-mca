@@ -48,7 +48,6 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
     }
 
     protected AbstractJobTask(Job job, int maxRunTicks) {
-        // pas d'exigence sur WALK_TARGET / LOOK_TARGET : un reste de balade ou de regard bloquait le démarrage
         super(ImmutableMap.of(), maxRunTicks);
         this.job = job;
     }
@@ -63,7 +62,6 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
         }
         WorkStatus status = idleStatus(world, villager);
         if (status != null) {
-            // raison propre au métier (outil manquant…)
         } else if (isSearching()) {
             status = WorkStatus.SEARCHING;
         } else if (altersBlocks() && !world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
@@ -82,8 +80,6 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
         villager.getBrain().forget(MemoryModuleType.LOOK_TARGET);
     }
 
-    // vrai tant que le métier parcourt encore sa zone (le scan est étalé sur plusieurs ticks)
-    // statut affiché quand il ne peut pas travailler, si le métier a une raison précise ; null sinon
     @Nullable
     protected WorkStatus idleStatus(ServerWorld world, VillagerEntityMCA villager) {
         return null;
@@ -97,7 +93,6 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
         return false;
     }
 
-    // ne relance pas le pathfinding à chaque tick si la destination n'a pas changé
     static void walkTo(VillagerEntityMCA villager, BlockPos pos) {
         WorkManager.setStatus(villager, WorkStatus.TRAVELING);
         WorkManager.setGesture(villager, WorkGesture.NONE);
@@ -113,13 +108,11 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
         villager.getNavigation().stop();
     }
 
-    // arrivé au travail : il s'arrête et joue le geste de son métier
     protected static void arrive(VillagerEntityMCA villager, WorkGesture gesture) {
         arrive(villager, WorkStatus.WORKING);
         WorkManager.setGesture(villager, gesture);
     }
 
-    // coup d'outil visible : bras, fissures sur le bloc, son et éclats du bloc
     protected static void hitBlock(ServerWorld world, VillagerEntityMCA villager, BlockPos pos, int ticks, int total) {
         if (ticks % 5 != 1) {
             return;
@@ -186,7 +179,6 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
         }
     }
 
-    // un objet en plus de temps en temps, d'autant plus souvent que le PNJ est expérimenté
     protected static void addBonus(VillagerEntityMCA villager, ItemStack stack) {
         WorkRegistry.Record record = WorkManager.findRecord(villager);
         int level = record == null ? 1 : record.level;
@@ -207,7 +199,6 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
         return blockDrops(world, villager, pos, state, job.tool());
     }
 
-    // butin calculé avec cet outil : ses enchantements (fortune, toucher de soie) comptent
     protected List<ItemStack> blockDrops(ServerWorld world, VillagerEntityMCA villager, BlockPos pos, BlockState state, ItemStack tool) {
         LootContextParameterSet.Builder builder = new LootContextParameterSet.Builder(world)
                 .add(LootContextParameters.ORIGIN, Vec3d.ofCenter(pos))

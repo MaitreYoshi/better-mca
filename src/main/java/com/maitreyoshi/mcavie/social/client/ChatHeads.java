@@ -14,10 +14,8 @@ import org.joml.Vector3f;
 
 import java.util.UUID;
 
-/** Petite tête du PNJ devant son nom quand il parle dans le chat (dessinée à la place des espaces repérés par le serveur). */
 public final class ChatHeads {
     private static final int SIZE = 8;
-    /** En dessous de cette opacité (ligne de chat qui s'efface), la tête n'est plus dessinée. */
     private static final int MIN_ALPHA = 80;
 
     private ChatHeads() {
@@ -40,7 +38,6 @@ public final class ChatHeads {
         Vector3f from = matrix.transformPosition(x, y, 0, new Vector3f());
         Vector3f to = matrix.transformPosition(x + SIZE, y + SIZE, 0, new Vector3f());
         float height = villager.getHeight();
-        // la tête fait un quart de la hauteur du corps : on agrandit le PNJ et on ne montre que sa tête
         int scale = Math.max(1, Math.round(SIZE / (height * 0.25f)));
         float bodyYaw = villager.bodyYaw;
         float yaw = villager.getYaw();
