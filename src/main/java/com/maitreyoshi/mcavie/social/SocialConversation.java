@@ -1,6 +1,5 @@
 package com.maitreyoshi.mcavie.social;
 
-import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.village.CivilRegistry;
 import com.maitreyoshi.mcavie.village.VillageState;
@@ -8,20 +7,16 @@ import com.maitreyoshi.mcavie.life.WellbeingRegistry;
 import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.math.random.Random;
 
 import java.util.ArrayList;
@@ -33,13 +28,14 @@ import java.util.UUID;
 /**
  * Conversations entre villageois : un sujet tiré de ce qui se passe vraiment (météo, travail, impôts, Registre…),
  * une ouverture, une réponse (d'accord ou non selon l'issue de la rencontre), une conclusion.
- * Chaque réplique part en bulle vers les joueurs proches ; les témoins réagissent aussi aux événements marquants.
+ * Chaque réplique part dans le chat des joueurs proches, avec la tête du PNJ devant son nom ; les témoins réagissent aussi aux événements marquants.
  */
 public final class SocialConversation {
-    public static final Identifier BUBBLE = MCAVie.id("speech_bubble");
+    /** Repère placé (en « insertion ») sur l'espace où le client dessine la tête du PNJ : préfixe, id réseau, UUID. */
+    public static final String HEAD_MARKER = "mca_vie:head:";
     /** Écart entre deux répliques, en ticks. */
     public static final int GAP = 60;
-    /** Durée d'affichage d'une bulle, en ticks. */
+    /** Temps laissé à la dernière réplique avant de relâcher les PNJ, en ticks. */
     public static final int BUBBLE_TICKS = 90;
     private static final int OPEN_VARIANTS = 3;
     private static final int ANSWER_VARIANTS = 2;
@@ -176,7 +172,7 @@ public final class SocialConversation {
         }
     }
 
-    /** Un villageois dit une réplique seule, avec la même bulle que les témoins. */
+    /** Un villageois dit une réplique seule, comme les témoins. */
     public static void remark(ServerWorld world, VillagerEntityMCA speaker, Text text) {
         if (SocialConfig.get().showChats && canSpeak(speaker) && !speaker.isSleeping()) {
             PENDING.add(new Line(world, speaker, text, false, world.getTime() + 10L));
@@ -214,19 +210,12 @@ public final class SocialConversation {
     private static void say(ServerWorld world, VillagerEntityMCA speaker, Text text, boolean angry) {
         SocialConfig config = SocialConfig.get();
         double max = (double) config.chatRadius * config.chatRadius;
-        MutableText chat = config.chatCopy ? Text.translatable("chat.mca_vie.social.said", speaker.getName(), text)
-                .formatted(angry ? Formatting.RED : Formatting.GRAY, Formatting.ITALIC) : null;
+        // trois espaces de la largeur d'une petite tête ; le client la dessine à leur place
+        MutableText head = Text.literal("   ").styled(s -> s.withInsertion(HEAD_MARKER + speaker.getId() + ":" + speaker.getUuid()));
+        MutableText chat = Text.empty().append(head).append(Text.translatable("chat.mca_vie.social.said", speaker.getName(), text)
+                .formatted(angry ? Formatting.RED : Formatting.GRAY, Formatting.ITALIC));
         for (ServerPlayerEntity player : world.getPlayers()) {
-            if (player.squaredDistanceTo(speaker) > max) {
-                continue;
-            }
-            PacketByteBuf buf = PacketByteBufs.create();
-            buf.writeVarInt(speaker.getId());
-            buf.writeText(text);
-            buf.writeBoolean(angry);
-            buf.writeVarInt(BUBBLE_TICKS);
-            ServerPlayNetworking.send(player, BUBBLE, buf);
-            if (chat != null) {
+            if (player.squaredDistanceTo(speaker) <= max) {
                 player.sendMessage(chat);
             }
         }
