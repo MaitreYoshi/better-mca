@@ -4,6 +4,7 @@ import com.maitreyoshi.mcavie.Surnames;
 import com.maitreyoshi.mcavie.aging.AgeHolder;
 import com.maitreyoshi.mcavie.aging.Aging;
 import com.maitreyoshi.mcavie.life.LifeCycle;
+import com.maitreyoshi.mcavie.life.Orientation;
 import com.maitreyoshi.mcavie.life.Wellbeing;
 import com.maitreyoshi.mcavie.social.Social;
 import com.maitreyoshi.mcavie.social.SocialChat;
@@ -52,6 +53,7 @@ public abstract class VillagerEntityMCAMixin implements AgeHolder {
             return;
         }
         mcavie$cooldown = 20;
+        Orientation.update(self);
         Surnames.update(self);
         LifeCycle.update(self);
         Wellbeing.update(self, mcavie$checks++ % 5 == 0);

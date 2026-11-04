@@ -59,6 +59,7 @@ public final class History {
         long start;
         boolean alive = true;
         long lastChild;
+        Orientation orientation;
 
         Person(UUID uuid, FamilyTreeNode node, long birth, float happiness, int village, boolean bornInSim, boolean playerSpouse, long lastChild) {
             this.uuid = uuid;
@@ -77,6 +78,13 @@ public final class History {
 
         boolean female() {
             return node.gender() == Gender.FEMALE;
+        }
+
+        Orientation orientation(ServerWorld world, Random random) {
+            if (orientation == null) {
+                orientation = Orientation.known(world, uuid, random);
+            }
+            return orientation;
         }
     }
 
@@ -166,7 +174,7 @@ public final class History {
             for (Person single : present) {
                 long when = day + random.nextInt(length);
                 if (!single.alive || single.village == NO_VILLAGE || single.playerSpouse || !available(single, when)
-                        || random.nextDouble() >= Wellbeing.overDays(MARRY_PER_DAY, days)) {
+                        || random.nextDouble() >= Wellbeing.overDays(MARRY_PER_DAY, days) || single.orientation(world, random) == Orientation.ASEXUAL) {
                     continue;
                 }
                 Person partner = choosePartner(world, single, living, when, random);
@@ -198,7 +206,7 @@ public final class History {
                     continue;
                 }
                 Person father = people.get(mother.node.partner());
-                if (father == null || !father.alive) {
+                if (father == null || !father.alive || father.female()) {
                     continue;
                 }
                 Person child = birth(world, villages.get(mother.village), mother, father, when, random);
@@ -281,8 +289,9 @@ public final class History {
         Person best = null;
         int bestScore = Social.MARRIAGE_MIN - 1;
         for (Person woman : living) {
-            if (!woman.alive || woman.female() == man.female() || woman.village != man.village || woman.playerSpouse || !available(woman, day)
-                    || Math.abs(woman.age(day) - man.age(day)) > MAX_AGE_GAP) {
+            if (!woman.alive || woman == man || woman.village != man.village || woman.playerSpouse || !available(woman, day)
+                    || Math.abs(woman.age(day) - man.age(day)) > MAX_AGE_GAP
+                    || !Orientation.compatible(man.orientation(world, random), man.node.gender(), woman.orientation(world, random), woman.node.gender())) {
                 continue;
             }
             Set<UUID> womanLine = lineage(tree, woman.node);
@@ -308,7 +317,9 @@ public final class History {
     }
 
     private static Person outsider(ServerWorld world, Village village, Person spouse, long day, Random random) {
-        Gender gender = spouse.female() ? Gender.MALE : Gender.FEMALE;
+        Orientation wanted = spouse.orientation(world, random);
+        boolean sameSex = wanted == Orientation.GAY || wanted == Orientation.BISEXUAL && random.nextBoolean();
+        Gender gender = spouse.female() != sameSex ? Gender.MALE : Gender.FEMALE;
         double age = Math.max(MARRIAGE_AGE, spouse.age(day) + random.nextInt(11) - 5);
         long birth = WorldCalendar.gameDayOf(WorldCalendar.calendarDay(day) - (long) (age * LifeCycle.DAYS_PER_YEAR) - random.nextInt(365));
         UUID uuid = UUID.randomUUID();
@@ -321,6 +332,8 @@ public final class History {
         history.setOrigin(uuid, village.getId());
         Person person = new Person(uuid, node, birth, 60, village.getId(), true, false, Long.MIN_VALUE / 2);
         person.start = day;
+        person.orientation = sameSex ? wanted : Orientation.STRAIGHT;
+        Orientation.assign(world, uuid, person.orientation);
         return person;
     }
 

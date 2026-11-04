@@ -3,6 +3,7 @@ package com.maitreyoshi.mcavie.village;
 import com.maitreyoshi.mcavie.SurnameRegistry;
 import com.maitreyoshi.mcavie.Surnames;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
+import com.maitreyoshi.mcavie.life.Orientation;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.VillagerFactory;
 import net.mca.entity.ai.relationship.AgeState;
@@ -83,6 +84,10 @@ public final class VillageImmigration {
             children.add(VillagerFactory.newVillager(world).withAge(age).withPosition(spot).spawn(SpawnReason.EVENT));
         }
 
+        if (!Orientation.compatible(father, mother)) {
+            Orientation.apply(father.getTraits(), Orientation.STRAIGHT);
+            Orientation.apply(mother.getTraits(), Orientation.STRAIGHT);
+        }
         world.getServer().execute(() -> {
             father.getRelationships().marry(mother);
             mother.getRelationships().marry(father);

@@ -21,6 +21,8 @@ import net.minecraft.util.math.Vec3d;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.life.LifeCycle;
 import com.maitreyoshi.mcavie.life.LifeRegistry;
+import com.maitreyoshi.mcavie.life.Orientation;
+import com.maitreyoshi.mcavie.life.OrientationRegistry;
 import net.mca.block.BlocksMCA;
 import net.mca.block.TombstoneBlock;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -268,6 +270,40 @@ final class DevTestCommand {
                                 }
                             }
                             String text = out.toString();
+                            ctx.getSource().sendFeedback(() -> Text.literal(text), false);
+                            return 1;
+                        }))
+                        .then(CommandManager.literal("couples").executes(ctx -> {
+                            ServerWorld world = ctx.getSource().getWorld();
+                            OrientationRegistry orientations = OrientationRegistry.get(world.getServer());
+                            FamilyTree tree = FamilyTree.get(world);
+                            int couples = 0;
+                            int unknown = 0;
+                            StringBuilder out = new StringBuilder();
+                            for (FamilyTreeNode node : ((com.maitreyoshi.mcavie.tree.server.mixin.FamilyTreeAccessor) tree).mcavie$getEntries().values()) {
+                                if (node.isDeceased() || node.getRelationshipState() != net.mca.entity.ai.relationship.RelationshipState.MARRIED_TO_VILLAGER
+                                        || node.id().compareTo(node.partner()) > 0) {
+                                    continue;
+                                }
+                                Optional<FamilyTreeNode> partner = tree.getOrEmpty(node.partner());
+                                if (partner.isEmpty() || partner.get().isDeceased()) {
+                                    continue;
+                                }
+                                couples++;
+                                Orientation a = orientations.get(node.id());
+                                Orientation b = orientations.get(partner.get().id());
+                                if (a == null || b == null) {
+                                    unknown++;
+                                    continue;
+                                }
+                                if (!Orientation.compatible(a, node.gender(), b, partner.get().gender())) {
+                                    out.append(" - ").append(socialName(world, node.id())).append(" (").append(node.gender()).append(", ").append(a)
+                                            .append(") + ").append(socialName(world, partner.get().id())).append(" (").append(partner.get().gender())
+                                            .append(", ").append(b).append(")\n");
+                                }
+                            }
+                            String text = "Couples PNJ : " + couples + ", orientation inconnue : " + unknown
+                                    + (out.isEmpty() ? ", aucun couple incompatible" : ", incompatibles :\n" + out);
                             ctx.getSource().sendFeedback(() -> Text.literal(text), false);
                             return 1;
                         }))
