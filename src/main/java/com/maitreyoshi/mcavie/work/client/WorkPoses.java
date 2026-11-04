@@ -38,7 +38,6 @@ public final class WorkPoses {
                 float s = MathHelper.sin(progress * 0.25F);
                 pose(right, -0.75F + 0.35F * s, -0.1F, 0F);
                 pose(left, -0.55F + 0.35F * s, 0.25F, 0F);
-                model.body.pitch = 0.2F;
                 model.head.pitch = 0.45F;
             }
             case FISH -> {
@@ -52,7 +51,6 @@ public final class WorkPoses {
                 float s = MathHelper.sin(progress * 0.18F);
                 pose(right, -0.9F + 0.2F * s, -0.1F, 0F);
                 pose(left, -0.9F - 0.2F * s, 0.1F, 0F);
-                model.body.pitch = 0.35F;
                 model.head.pitch = 0.5F;
             }
             case HEAL -> {
@@ -75,7 +73,6 @@ public final class WorkPoses {
                 float s = MathHelper.sin(progress * 0.3F);
                 pose(right, -0.95F + 0.25F * s, -0.2F, 0F);
                 pose(left, -0.95F - 0.25F * s, 0.2F, 0F);
-                model.body.pitch = 0.15F;
                 model.head.pitch = 0.4F;
             }
             case TEACH -> {
@@ -102,6 +99,21 @@ public final class WorkPoses {
             default -> {
             }
         }
+    }
+
+    // inclinaison du buste pendant le geste ; appliquée par AgingClient.pose avec la courbure de l'âge,
+    // qui déplace aussi tête, bras, jambes et poitrine (sinon le corps se disloque)
+    public static float lean(LivingEntity entity) {
+        WorkClient.Info info = WorkClient.get(entity.getId());
+        if (info == null || !info.working()) {
+            return 0F;
+        }
+        return switch (info.gesture()) {
+            case HOE -> 0.2F;
+            case TEND -> 0.35F;
+            case KNEAD -> 0.15F;
+            default -> 0F;
+        };
     }
 
     private static void pose(ModelPart arm, float pitch, float yaw, float roll) {
