@@ -92,9 +92,18 @@ public final class SocialConversation {
         } else {
             topics.add(new Topic("sun", empty));
         }
-        WorkRegistry.Record work = WorkRegistry.get(world.getServer()).get(a.getUuid());
+        WorkRegistry registry = WorkRegistry.get(world.getServer());
+        WorkRegistry.Record work = registry.get(a.getUuid());
         if (work != null && work.job != Job.NONE) {
             topics.add(new Topic("work", work.job.getName()));
+            // chaque métier a ses propres répliques : on en parle plus souvent que de la météo
+            topics.add(new Topic("job." + work.job.id(), work.job.getName()));
+            topics.add(new Topic("job." + work.job.id(), work.job.getName()));
+        }
+        WorkRegistry.Record other = registry.get(b.getUuid());
+        if (other != null && other.job != Job.NONE) {
+            topics.add(new Topic("ask." + other.job.id(), other.job.getName()));
+            topics.add(new Topic("ask." + other.job.id(), other.job.getName()));
         }
         Optional<Village> village = VillageManager.get(world).findNearestVillage(a);
         if (village.isPresent()) {
