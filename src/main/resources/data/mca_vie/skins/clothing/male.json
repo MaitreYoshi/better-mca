@@ -1,0 +1,72 @@
+{
+  "mca_vie:skins/clothing/normal/male/farmer/%d.png": {
+    "count": 2,
+    "profession": "mca_vie:farmer",
+    "chance": 1.0,
+    "exclude": false,
+    "temperature": 0
+  },
+  "mca_vie:skins/clothing/normal/male/lumberjack/%d.png": {
+    "count": 2,
+    "profession": "mca_vie:lumberjack",
+    "chance": 1.0,
+    "exclude": false,
+    "temperature": 0
+  },
+  "mca_vie:skins/clothing/normal/male/fisher/%d.png": {
+    "count": 2,
+    "profession": "mca_vie:fisher",
+    "chance": 1.0,
+    "exclude": false,
+    "temperature": 0
+  },
+  "mca_vie:skins/clothing/normal/male/breeder/%d.png": {
+    "count": 2,
+    "profession": "mca_vie:breeder",
+    "chance": 1.0,
+    "exclude": false,
+    "temperature": 0
+  },
+  "mca_vie:skins/clothing/normal/male/doctor/%d.png": {
+    "count": 2,
+    "profession": "mca_vie:doctor",
+    "chance": 1.0,
+    "exclude": false,
+    "temperature": 0
+  },
+  "mca_vie:skins/clothing/normal/male/blacksmith/%d.png": {
+    "count": 2,
+    "profession": "mca_vie:blacksmith",
+    "chance": 1.0,
+    "exclude": false,
+    "temperature": 0
+  },
+  "mca_vie:skins/clothing/normal/male/baker/%d.png": {
+    "count": 2,
+    "profession": "mca_vie:baker",
+    "chance": 1.0,
+    "exclude": false,
+    "temperature": 0
+  },
+  "mca_vie:skins/clothing/normal/male/teacher/%d.png": {
+    "count": 2,
+    "profession": "mca_vie:teacher",
+    "chance": 1.0,
+    "exclude": false,
+    "temperature": 0
+  },
+  "mca_vie:skins/clothing/normal/male/miner/%d.png": {
+    "count": 2,
+    "profession": "mca_vie:miner",
+    "chance": 1.0,
+    "exclude": false,
+    "temperature": 0
+  },
+  "mca_vie:skins/clothing/normal/male/cook/%d.png": {
+    "count": 2,
+    "profession": "mca_vie:cook",
+    "chance": 1.0,
+    "exclude": false,
+    "temperature": 0
+  }
+}

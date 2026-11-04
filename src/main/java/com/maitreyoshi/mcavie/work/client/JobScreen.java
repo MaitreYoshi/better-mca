@@ -290,6 +290,8 @@ public class JobScreen extends Screen {
             case FISHER -> new Item[]{Items.COD, Items.SALMON, Items.TROPICAL_FISH};
             case BREEDER -> new Item[]{Items.WHITE_WOOL, Items.EGG};
             case BAKER -> new Item[]{Items.BREAD};
+            case MINER -> new Item[]{Items.COBBLESTONE, Items.COAL, Items.RAW_IRON, Items.RAW_COPPER};
+            case COOK -> new Item[]{Items.COOKED_BEEF, Items.BAKED_POTATO, Items.MUSHROOM_STEW, Items.BEETROOT_SOUP};
             default -> new Item[0];
         };
     }
@@ -299,6 +301,7 @@ public class JobScreen extends Screen {
             case FARMER -> new Item[]{Items.WHEAT_SEEDS};
             case BLACKSMITH -> new Item[]{Items.IRON_INGOT};
             case BAKER -> new Item[]{Items.WHEAT};
+            case COOK -> new Item[]{Items.BEEF, Items.POTATO, Items.BOWL};
             default -> new Item[0];
         };
     }

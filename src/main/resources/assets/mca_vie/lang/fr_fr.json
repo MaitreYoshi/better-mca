@@ -814,5 +814,13 @@
   "job.mca_vie.desc.baker": "Transforme le blé rangé dans son four : 3 blé donnent 1 pain.",
   "job.mca_vie.desc.teacher": "Fait la classe aux enfants et aux ados de sa zone, ce qui les rend plus heureux. Il ne produit rien.",
   "job.mca_vie.desc.guard": "Garde de MCA : protège le village au corps à corps.",
-  "job.mca_vie.desc.archer": "Archer de MCA : protège le village à l'arc."
+  "job.mca_vie.desc.archer": "Archer de MCA : protège le village à l'arc.",
+  "job.mca_vie.miner": "Mineur",
+  "job.mca_vie.cook": "Cuisinier",
+  "entity.minecraft.villager.mca_vie.miner": "Mineur",
+  "entity.minecraft.villager.mca_vie.cook": "Cuisinier",
+  "block.mca_vie.miner_cart": "Chariot de mineur",
+  "block.mca_vie.cooking_pot": "Marmite de cuisinier",
+  "job.mca_vie.desc.miner": "Exploite une carrière : extrait la pierre et les minerais à découvert sous le niveau de son chariot, minerais en priorité. Il ne creuse jamais au-dessus.",
+  "job.mca_vie.desc.cook": "Cuisine avec ce qui est rangé dans sa marmite : soupes et ragoûts (betteraves, champignons, lapin) puis viandes, poissons et pommes de terre."
 }

@@ -84,6 +84,21 @@ public final class WorkPoses {
                 pose(right, -2.2F + 0.25F * s, -0.4F, 0F);
                 pose(left, -0.6F, 0.2F, 0F);
             }
+            case MINE -> {
+                // pioche levée par-dessus l'épaule puis abattue sur la paroi
+                float t = cycle(progress, 16F);
+                float swing = t < 0.6F ? ease(t / 0.6F) : 1F - ease((t - 0.6F) / 0.4F);
+                pose(right, MathHelper.lerp(swing, -2.9F, -0.8F), -0.2F, 0F);
+                pose(left, MathHelper.lerp(swing, -1.6F, -0.6F), 0.25F, 0F);
+                model.head.pitch = 0.2F;
+            }
+            case STIR -> {
+                // remue la marmite en rond avec la louche
+                float a = progress * 0.2F;
+                pose(right, -1.0F + 0.15F * MathHelper.sin(a), -0.25F + 0.3F * MathHelper.cos(a), 0F);
+                pose(left, -0.45F, 0.2F, 0F);
+                model.head.pitch = 0.45F;
+            }
             default -> {
             }
         }

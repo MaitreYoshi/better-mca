@@ -18,7 +18,9 @@ public enum Job {
     BLACKSMITH("blacksmith", Items.ANVIL, Items.IRON_PICKAXE),
     BAKER("baker", Items.BREAD, Items.WHEAT),
     TEACHER("teacher", Items.BOOK, Items.BOOK),
-    RETIRED("retired", Items.CLOCK, Items.AIR);
+    RETIRED("retired", Items.CLOCK, Items.AIR),
+    MINER("miner", Items.IRON_PICKAXE, Items.IRON_PICKAXE),
+    COOK("cook", Items.MUSHROOM_STEW, Items.BOWL);
 
     private static final Job[] VALUES = values();
 

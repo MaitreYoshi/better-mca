@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "minecraft:chest"
+    },
+    {
+      "item": "minecraft:minecart"
+    },
+    {
+      "item": "minecraft:stone_pickaxe"
+    }
+  ],
+  "result": {
+    "item": "mca_vie:miner_cart",
+    "count": 1
+  }
+}
