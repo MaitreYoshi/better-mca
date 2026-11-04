@@ -1108,6 +1108,6 @@
   "entity.minecraft.villager.mca_vie.cook": "Cuisinier",
   "block.mca_vie.miner_cart": "Chariot de mineur",
   "block.mca_vie.cooking_pot": "Marmite de cuisinier",
-  "job.mca_vie.desc.miner": "Creuse une mine en galeries derrière son chariot : escalier, galerie principale et galeries latérales, filons en priorité. Outils : mettez des pioches dans le chariot (enchantées ou non), sans pioche il ne travaille pas ; il prend la meilleure, l'use, et ne casse que ce qu'elle permet (fer pour l'or et le diamant, diamant pour l'obsidienne). Torches : prises dans le chariot pour éclairer la mine. Le butin arrive dans le chariot.",
+  "job.mca_vie.desc.miner": "Creuse une mine derrière son chariot, filons d'abord. Pioches et torches à mettre dans le chariot : sans pioche, il ne travaille pas.",
   "job.mca_vie.desc.cook": "Cuisine avec ce qui est rangé dans sa marmite : soupes et ragoûts (betteraves, champignons, lapin) puis viandes, poissons et pommes de terre."
 }
