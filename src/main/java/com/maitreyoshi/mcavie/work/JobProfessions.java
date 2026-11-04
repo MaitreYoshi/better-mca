@@ -89,6 +89,18 @@ public final class JobProfessions {
                 List.of(sell(Items.COMPASS, 1, 4), sell(Items.CLOCK, 1, 5)),
                 List.of(sell(Items.BOOKSHELF, 1, 9)),
                 List.of(sell(Items.NAME_TAG, 1, 15)));
+        trades(Job.MINER,
+                List.of(buy(Items.TORCH, 24, 1), sell(Items.COBBLESTONE, 32, 1)),
+                List.of(buy(Items.STONE_PICKAXE, 1, 1), sell(Items.COAL, 8, 1)),
+                List.of(sell(Items.RAW_IRON, 4, 2), sell(Items.RAW_COPPER, 8, 1)),
+                List.of(sell(Items.LAPIS_LAZULI, 6, 2)),
+                List.of(sell(Items.DIAMOND, 1, 12)));
+        trades(Job.COOK,
+                List.of(buy(Items.POTATO, 26, 1), sell(Items.BAKED_POTATO, 8, 1)),
+                List.of(buy(Items.BEEF, 10, 1), sell(Items.COOKED_BEEF, 5, 1)),
+                List.of(buy(Items.BOWL, 12, 1), sell(Items.MUSHROOM_STEW, 1, 1)),
+                List.of(sell(Items.RABBIT_STEW, 1, 2)),
+                List.of(sell(Items.GOLDEN_CARROT, 4, 3)));
     }
 
     @SafeVarargs

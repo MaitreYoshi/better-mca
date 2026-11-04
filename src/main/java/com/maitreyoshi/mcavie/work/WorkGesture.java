@@ -10,7 +10,9 @@ public enum WorkGesture {
     HEAL,
     HAMMER,
     KNEAD,
-    TEACH;
+    TEACH,
+    MINE,
+    STIR;
 
     private static final WorkGesture[] VALUES = values();
 

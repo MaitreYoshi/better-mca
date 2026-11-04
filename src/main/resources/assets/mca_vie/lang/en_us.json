@@ -814,5 +814,13 @@
   "job.mca_vie.desc.baker": "Turns the wheat stored in their oven into bread: 3 wheat make 1 bread.",
   "job.mca_vie.desc.teacher": "Teaches the children and teens in their zone, which makes them happier. Produces nothing.",
   "job.mca_vie.desc.guard": "MCA guard: protects the village in melee.",
-  "job.mca_vie.desc.archer": "MCA archer: protects the village with a bow."
+  "job.mca_vie.desc.archer": "MCA archer: protects the village with a bow.",
+  "job.mca_vie.miner": "Miner",
+  "job.mca_vie.cook": "Cook",
+  "entity.minecraft.villager.mca_vie.miner": "Miner",
+  "entity.minecraft.villager.mca_vie.cook": "Cook",
+  "block.mca_vie.miner_cart": "Miner's Cart",
+  "block.mca_vie.cooking_pot": "Cooking Pot",
+  "job.mca_vie.desc.miner": "Works a quarry: digs exposed stone and ores below the level of their cart, ores first. Never digs above it.",
+  "job.mca_vie.desc.cook": "Cooks with what is stored in their pot: soups and stews (beetroot, mushroom, rabbit), then meat, fish and potatoes."
 }

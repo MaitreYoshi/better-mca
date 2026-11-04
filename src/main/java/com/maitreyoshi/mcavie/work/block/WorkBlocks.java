@@ -26,6 +26,8 @@ public final class WorkBlocks {
     public static final WorkstationBlock APOTHECARY_TABLE = register("apothecary_table", Job.DOCTOR, Blocks.BIRCH_PLANKS, 0, Shapes.APOTHECARY_TABLE);
     public static final WorkstationBlock FORGE = register("forge", Job.BLACKSMITH, Blocks.POLISHED_BLACKSTONE_BRICKS, 10, Shapes.FORGE);
     public static final WorkstationBlock BREAD_OVEN = register("bread_oven", Job.BAKER, Blocks.BRICKS, 9, Shapes.BREAD_OVEN);
+    public static final WorkstationBlock MINER_CART = register("miner_cart", Job.MINER, Blocks.OAK_PLANKS, 0, Shapes.MINER_CART);
+    public static final WorkstationBlock COOKING_POT = register("cooking_pot", Job.COOK, Blocks.BRICKS, 9, Shapes.COOKING_POT);
     public static final WorkstationBlock SCHOOL_DESK = register("school_desk", Job.TEACHER, Blocks.OAK_PLANKS, 0, Shapes.SCHOOL_DESK);
 
     public static final BlockEntityType<WorkstationBlockEntity> WORKSTATION_ENTITY = Registry.register(Registries.BLOCK_ENTITY_TYPE, MCAVie.id("workstation"),
@@ -63,6 +65,8 @@ public final class WorkBlocks {
         static final double[][] APOTHECARY_TABLE = {{1, 9, 1, 15, 11, 15}, {2, 0, 2, 14, 9, 14}, {2, 11, 2, 14, 15, 14}};
         static final double[][] FORGE = {{0, 0, 0, 16, 8, 16}, {6, 8, 3.5, 16, 11, 16}, {6, 11, 13.5, 16, 16, 16}, {0.5, 8, 1.5, 7.5, 13.5, 5.5}};
         static final double[][] BREAD_OVEN = {{0, 0, 0, 16, 4, 16}, {1, 4, 2, 15, 10.5, 15}, {2, 10.5, 4, 14, 13.5, 14}, {5.5, 13.5, 7, 12.5, 16, 13}};
+        static final double[][] MINER_CART = {{0, 0, 0, 16, 2, 16}, {1.25, 2, 3, 14.75, 11.5, 13}, {3, 11.5, 5.25, 13, 13, 10.75}, {0.5, 0, 0, 3.5, 5.5, 3.25}};
+        static final double[][] COOKING_POT = {{1, 0, 1, 15, 5, 15}, {1, 5, 2, 15, 13.25, 14}, {9, 13.25, 9, 13, 16, 11}};
         static final double[][] SCHOOL_DESK = {{1, 0, 3.5, 15, 10.5, 12}, {1, 0, 12, 15, 10.5, 14}, {0.5, 9.5, 14, 15.5, 16, 15.5}};
     }
 }

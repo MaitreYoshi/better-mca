@@ -19,7 +19,9 @@ public final class JobTasks {
                 Pair.of(1, new DoctorTask()),
                 Pair.of(1, new BlacksmithTask()),
                 Pair.of(1, new BakerTask()),
-                Pair.of(1, new TeacherTask())
+                Pair.of(1, new TeacherTask()),
+                Pair.of(1, new MinerTask()),
+                Pair.of(1, new CookTask())
         );
     }
 }
