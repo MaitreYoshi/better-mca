@@ -21,11 +21,9 @@ public final class SocialConfig {
     /** Version du fichier : sert à recaler les anciennes valeurs par défaut. */
     public int version;
     public boolean showChats = true;
-    /** Distance (en blocs) à laquelle un joueur voit les bulles. */
-    public int chatRadius = 24;
+    /** Distance (en blocs) à laquelle un joueur reçoit les répliques des PNJ dans son chat. */
+    public int chatRadius = 16;
     public int lookSeconds = 3;
-    /** Recopie aussi les répliques dans le chat (les bulles restent l'affichage principal). */
-    public boolean chatCopy = false;
 
     public static SocialConfig get() {
         if (instance == null) {
@@ -49,12 +47,12 @@ public final class SocialConfig {
         if (config == null) {
             config = new SocialConfig();
         }
-        if (config.version < 2) {
-            // ancienne valeur par défaut, trop courte : il fallait être collé aux PNJ pour voir les bulles
-            if (config.chatRadius == 12) {
-                config.chatRadius = 24;
+        if (config.version < 3) {
+            // anciennes valeurs par défaut (bulles) : 16 blocs évite d'inonder le chat avec tout le village
+            if (config.chatRadius == 12 || config.chatRadius == 24) {
+                config.chatRadius = 16;
             }
-            config.version = 2;
+            config.version = 3;
         }
         config.chatRadius = Math.max(1, Math.min(64, config.chatRadius));
         config.lookSeconds = Math.max(0, Math.min(30, config.lookSeconds));

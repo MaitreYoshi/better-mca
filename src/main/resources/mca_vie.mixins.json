@@ -38,6 +38,7 @@
     "client.CameraHudMixin",
     "client.CameraMouseMixin",
     "client.CameraZoomMixin",
+    "client.ChatHudMixin",
     "client.CreateWorldGameTabMixin",
     "client.DestinyScreenMixin",
     "client.EntityRendererMixin",
