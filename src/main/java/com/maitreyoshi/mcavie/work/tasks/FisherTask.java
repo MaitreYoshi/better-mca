@@ -112,7 +112,6 @@ public class FisherTask extends AbstractJobTask {
             world.spawnParticles(ParticleTypes.SPLASH, wx, wy, wz, 6, 0.2, 0.05, 0.2, 0.1);
             cast = true;
         }
-        // pas de vrai bouchon (réservé aux joueurs) : remous au point de pêche, puis la touche
         if (catchTimer % 30 == 0) {
             world.spawnParticles(ParticleTypes.FISHING, wx, wy, wz, 2, 0.1, 0.0, 0.1, 0.0);
         }
@@ -187,7 +186,6 @@ public class FisherTask extends AbstractJobTask {
                     if (dist >= best || !isStandable(world, cursor) || reach.isBlacklisted(world, cursor)) {
                         continue;
                     }
-                    // eau au niveau du sol, ou un bloc plus bas (berge surélevée)
                     candidates:
                     for (int drop = 1; drop <= 2; drop++) {
                         for (Direction dir : Direction.Type.HORIZONTAL) {

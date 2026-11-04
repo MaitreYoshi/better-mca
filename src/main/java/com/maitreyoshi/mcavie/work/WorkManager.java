@@ -199,14 +199,12 @@ public final class WorkManager {
 
     public static void giveTool(VillagerEntityMCA villager, Job job) {
         ItemStack hand = villager.getMainHandStack();
-        // le mineur montre la vraie pioche de son chariot : ne pas la remplacer par l'outil par défaut
         if (job == Job.MINER && isMarkedTool(hand) && hand.isIn(net.minecraft.registry.tag.ItemTags.PICKAXES)) {
             return;
         }
         giveTool(villager, job.tool());
     }
 
-    // montre une copie de cet outil en main (marquée, rendue à la fin du travail)
     public static void giveTool(VillagerEntityMCA villager, ItemStack tool) {
         ItemStack hand = villager.getMainHandStack();
         if (tool.isEmpty() || (hand.isOf(tool.getItem())
@@ -324,7 +322,6 @@ public final class WorkManager {
         return crafts[random.nextInt(crafts.length)];
     }
 
-    // expérience totale à atteindre pour passer au niveau suivant, -1 au niveau maximum
     public static int nextLevelExperience(int level) {
         return level >= 1 && level < LEVEL_THRESHOLDS.length ? LEVEL_THRESHOLDS[level] : -1;
     }
@@ -359,7 +356,6 @@ public final class WorkManager {
                 || brain.hasActivity(Activity.RAID) || brain.hasActivity(Activity.PRE_RAID);
     }
 
-    // un seul métier : la profession du PNJ est celle de Better MCA (échanges, tenue MCA)
     @Nullable
     private static VillagerProfession professionFor(Job job) {
         return JobProfessions.of(job);
@@ -378,7 +374,6 @@ public final class WorkManager {
         if (villager.getProfession() != profession) {
             villager.setProfession(profession);
         }
-        // sans expérience, la tâche vanilla LoseUnimportantJob lui retire sa profession faute de bloc de métier
         if (villager.getExperience() == 0) {
             villager.setExperience(1);
         }
@@ -386,7 +381,6 @@ public final class WorkManager {
 
     public static final int WORKSTATION_SEARCH_RADIUS = 32;
 
-    // lie le PNJ au poste de travail libre de son métier le plus proche ; le poste devient le centre de sa zone et son coffre
     public static boolean linkNearestWorkstation(VillagerEntityMCA villager, ServerWorld world, WorkRegistry.Record record) {
         com.maitreyoshi.mcavie.work.block.WorkstationBlock wanted = com.maitreyoshi.mcavie.work.block.WorkBlocks.forJob(record.job);
         if (wanted == null) {

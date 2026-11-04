@@ -19,7 +19,6 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
-// une vraie profession par métier Better MCA (échanges, tenues MCA) ; le poste de travail est géré par le mod, pas par les POI vanilla
 public final class JobProfessions {
     private static final Map<Job, VillagerProfession> BY_JOB = new EnumMap<>(Job.class);
     private static final int[] TRADE_XP = {2, 10, 20, 30, 30};
@@ -121,12 +120,10 @@ public final class JobProfessions {
         TradeOffer create(int xp);
     }
 
-    // le villageois achète : objets contre émeraudes
     private static Factory buy(Item item, int count, int emeralds) {
         return xp -> new TradeOffer(new ItemStack(item, count), new ItemStack(Items.EMERALD, emeralds), 16, xp, 0.05F);
     }
 
-    // le villageois vend : émeraudes contre objets
     private static Factory sell(Item item, int count, int emeralds) {
         return sell(new ItemStack(item, count), emeralds);
     }

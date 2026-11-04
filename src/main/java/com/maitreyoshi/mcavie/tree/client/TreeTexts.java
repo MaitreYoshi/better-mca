@@ -79,7 +79,6 @@ public final class TreeTexts {
         return info != null && !"none".equals(info.code()) && !"self".equals(info.code());
     }
 
-    // Le lien générique « parent par alliance » encombre les cartes : il reste visible dans le détail.
     public static boolean isShownOnCard(@Nullable RelationInfo info) {
         return isShown(info) && !"relative_by_marriage".equals(info.code());
     }
@@ -122,7 +121,6 @@ public final class TreeTexts {
         return dateOf(WorldCalendar.dateOfDay(day));
     }
 
-    /** Date exacte en jour du calendrier (celle de la montre), sinon la date du jour Minecraft. */
     public static Text date(@Nullable Long calendarDay, long day) {
         return calendarDay != null ? dateOf(WorldCalendar.dateOfCalendarDay(calendarDay)) : date(day);
     }

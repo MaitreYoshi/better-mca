@@ -22,7 +22,6 @@ public abstract class VillagerEditorSyncRequestMixin {
     @Final
     private UUID uuid;
 
-    // Le nom de famille saisi dans l'éditeur remplace celui du registre, sinon il serait ré-ajouté au tick suivant.
     @Inject(method = "receive", at = @At("TAIL"))
     private void mcavie$storeEditedSurname(ServerPlayerEntity player, CallbackInfo ci) {
         if ("sync".equals(command) && player.getServerWorld().getEntity(uuid) instanceof VillagerEntityMCA villager) {

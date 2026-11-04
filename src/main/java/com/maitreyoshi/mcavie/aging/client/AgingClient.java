@@ -80,7 +80,6 @@ public final class AgingClient {
         return 0.4f + 0.6f * AgingConfig.progress(years, config.stoopStartAge, config.stoopFullAge);
     }
 
-    // la main dominante si elle est libre, sinon l'autre : un objet en main ne doit pas faire disparaître la canne
     @Nullable
     public static Arm caneArm(VillagerEntityMCA villager) {
         AgingConfig config = AgingConfig.get();

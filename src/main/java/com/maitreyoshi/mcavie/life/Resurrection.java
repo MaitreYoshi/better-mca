@@ -14,15 +14,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Retour d'entre les morts : les témoins s'exclament tout de suite, puis chaque villageois qui croise le
- * ressuscité pour la première fois peut s'en étonner. L'étonnement s'estompe sur quelques jours de jeu,
- * puisque tout le village finit par l'avoir vu ou en avoir entendu parler.
- */
 public final class Resurrection {
-    /** Durée pendant laquelle les villageois s'étonnent encore (7 jours Minecraft). */
     private static final long FADE_TICKS = 7 * 24000L;
-    /** En dessous de cette part de la durée, c'est le choc ; après, la rumeur a fait le tour. */
     private static final double SHOCK_PART = 0.3;
     private static final double MEET_RADIUS = 6;
     private static final long REMARK_GAP_TICKS = 200;
@@ -40,7 +33,6 @@ public final class Resurrection {
         SEEN.remove(villager.getUuid());
         LAST_REMARK.put(villager.getUuid(), world.getTime());
         SocialConversation.witness(world, villager, "resurrection", villager.getName(), villager.getUuid());
-        // les témoins de la scène ne s'étonneront pas une seconde fois
         Set<UUID> seen = SEEN.computeIfAbsent(villager.getUuid(), k -> new HashSet<>());
         world.getEntitiesByClass(VillagerEntityMCA.class, villager.getBoundingBox().expand(10), v -> v != villager)
                 .forEach(v -> seen.add(v.getUuid()));
@@ -69,7 +61,6 @@ public final class Resurrection {
                 continue;
             }
             boolean relative = family.contains(other.getUuid());
-            // la famille s'émeut toujours, les autres de moins en moins avec le temps
             if (!relative && random.nextDouble() > 1 - elapsed) {
                 continue;
             }

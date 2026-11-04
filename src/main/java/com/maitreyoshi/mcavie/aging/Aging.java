@@ -42,8 +42,6 @@ public final class Aging {
 
     public static void register() {
         AgingConfig.load();
-        // START_TRACKING part avant le paquet d'apparition : envoyé tout de suite, l'âge arrive sur une entité
-        // que le client ne connaît pas encore et se perd. On l'envoie au tour suivant, une fois le villageois apparu.
         EntityTrackingEvents.START_TRACKING.register((entity, player) -> {
             if (entity instanceof VillagerEntityMCA) {
                 player.server.send(new ServerTask(player.server.getTicks(), () -> {

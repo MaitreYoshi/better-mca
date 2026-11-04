@@ -107,7 +107,6 @@ public final class Social {
         SocialRegistry registry = SocialRegistry.get(world.getServer());
         long time = world.getTime();
         long today = WorldCalendar.now(world).dayIndex();
-        // au-delà du plafond du jour, ils se parlent encore (bulles) mais l'amitié ne bouge plus
         boolean capped = false;
         if (mode == Mode.NATURAL) {
             if (time - registry.lastTalk(b) < TALK_COOLDOWN) {

@@ -18,10 +18,6 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Optional;
 
-/**
- * /villagetitle (opérateurs) : donne à un joueur un titre fixe (Paysan… Monarque) dans le village le plus proche de lui,
- * à la place du titre calculé par MCA. « reset » rend le calcul normal.
- */
 public final class VillageTitleCommand {
     private VillageTitleCommand() {
     }

@@ -124,7 +124,6 @@ public final class Surnames {
         }
     }
 
-    // Mondes créés avant l'addon : donne un nom de famille à toutes les personnes de l'arbre qui n'en ont pas.
     public static int fillMissing(ServerWorld world) {
         FamilyTree tree = FamilyTree.get(world);
         SurnameRegistry registry = SurnameRegistry.get(world.getServer());
@@ -144,7 +143,6 @@ public final class Surnames {
         resolve(FamilyTree.get(world), SurnameRegistry.get(world.getServer()), node, SurnameLists.DEFAULT_REGION, 0);
     }
 
-    /** Nom de famille qu'aura un bébé : celui du père, sinon celui de la mère (mêmes règles qu'à la naissance). */
     @Nullable
     public static String babySurname(ServerWorld world, Entity near, UUID father, UUID mother) {
         FamilyTree tree = FamilyTree.get(world);

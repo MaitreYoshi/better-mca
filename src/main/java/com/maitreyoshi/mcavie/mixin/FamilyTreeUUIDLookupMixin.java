@@ -14,11 +14,6 @@ import java.util.Comparator;
 import java.util.Locale;
 import java.util.stream.Stream;
 
-/**
- * Recherche de l'arbre généalogique et du traqueur de villageois : MCA exige le nom complet exact, et depuis les
- * noms de famille « Jean » ne trouvait plus « Jean Dupont ». On accepte le début du nom ou d'un de ses mots,
- * sans tenir compte des majuscules ni des accents.
- */
 @Mixin(value = FamilyTreeUUIDLookup.class, remap = false)
 public abstract class FamilyTreeUUIDLookupMixin {
     @Redirect(method = "receive", at = @At(value = "INVOKE", target = "Lnet/mca/server/world/data/FamilyTree;getAllWithName(Ljava/lang/String;)Ljava/util/stream/Stream;"))

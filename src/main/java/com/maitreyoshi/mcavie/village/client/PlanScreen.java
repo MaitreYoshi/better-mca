@@ -54,10 +54,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Plan du village de Better MCA. Remplace l'écran de MCA à l'ouverture (même canal de données :
- * setVillage / setVillageData) et dessine tout dans un cadre unique qui s'adapte à la taille de l'écran.
- */
 public class PlanScreen extends BlueprintScreen {
     private static final Identifier ICONS = new Identifier("mca", "textures/buildings.png");
 
@@ -118,7 +114,6 @@ public class PlanScreen extends BlueprintScreen {
     private int justicePage;
     private UUID hoveredVillager;
 
-    // cadre, recalculé à chaque construction
     private int fx, fy, fw, fh;
     private int cx, cy, cw, ch;
 
@@ -126,7 +121,6 @@ public class PlanScreen extends BlueprintScreen {
         super();
     }
 
-    // ---- données ----
 
     @Override
     public void setVillage(Village village) {
@@ -184,7 +178,6 @@ public class PlanScreen extends BlueprintScreen {
         ClientPlayNetworking.send(channel, buf);
     }
 
-    // ---- construction des widgets ----
 
     private void rebuild() {
         if (renameField != null) {
@@ -212,7 +205,6 @@ public class PlanScreen extends BlueprintScreen {
             return;
         }
 
-        // en-tête : renommer, actualiser
         int nameWidth = textRenderer.getWidth(villageName());
         ButtonWidget rename = addDrawableChild(ButtonWidget.builder(Text.literal("✎"), b -> {
             renaming = true;
@@ -399,7 +391,6 @@ public class PlanScreen extends BlueprintScreen {
         int labelW = 50;
         int y = cy + ch - 38;
         int x = cx + labelW;
-        // la part retirable se calcule à la levée du dimanche ; sans elle, on explique au lieu de laisser cliquer dans le vide
         boolean nothing = VillageEconomy.availableShare(VillageState.of(village)) <= 0;
         Text empty = nothing ? withdrawNone() : null;
         ButtonWidget[] withdraws = {
@@ -574,7 +565,6 @@ public class PlanScreen extends BlueprintScreen {
         ClientPlayNetworking.send(VillageNetwork.JUDGE, buf);
     }
 
-    // ---- rendu ----
 
     private Text villageName() {
         if (village == null) {
@@ -693,7 +683,6 @@ public class PlanScreen extends BlueprintScreen {
         return null;
     }
 
-    /** Ligne d'aide : gris par défaut, le texte stylé (rouge pour un blocage) garde sa couleur. */
     private void renderFooter(DrawContext context, Text footer, int mouseX, int mouseY) {
         int color = GRAY;
         int y = fy + fh - FOOTER + 1;
@@ -705,7 +694,6 @@ public class PlanScreen extends BlueprintScreen {
         }
     }
 
-    /** Zone de texte qui défile à la molette, découpée au cadre. */
     private int beginScroll(DrawContext context, int top) {
         context.enableScissor(cx - 1, top, cx + cw + 1, cy + ch);
         return top - scroll;
@@ -770,7 +758,6 @@ public class PlanScreen extends BlueprintScreen {
         }
     }
 
-    // carte
 
     private Text renderMap(DrawContext context, int mouseX, int mouseY) {
         int size = mapSize();
@@ -885,7 +872,6 @@ public class PlanScreen extends BlueprintScreen {
         return Text.translatable("tag." + id);
     }
 
-    // catalogue
 
     private Text renderCatalog(DrawContext context) {
         int x = cx + 112;
@@ -911,7 +897,6 @@ public class PlanScreen extends BlueprintScreen {
         return Text.translatable("gui.blueprint.catalogHint");
     }
 
-    // villageois
 
     private List<Map.Entry<UUID, String>> residents() {
         return village.getResidentNames().entrySet().stream().sorted(Map.Entry.comparingByValue()).toList();
@@ -947,7 +932,6 @@ public class PlanScreen extends BlueprintScreen {
         return Text.translatable("gui.mca_vie.plan.hint.villagers");
     }
 
-    // règles
 
     private Text renderRules(DrawContext context) {
         VillageState state = VillageState.of(village);
@@ -977,7 +961,6 @@ public class PlanScreen extends BlueprintScreen {
         return footer;
     }
 
-    // trésor
 
     private Text renderTreasury(DrawContext context) {
         if (!allowed(VillageRights.VIEW_TREASURY)) {
@@ -1010,7 +993,6 @@ public class PlanScreen extends BlueprintScreen {
         return scrollMax > 0 ? Text.translatable("gui.mca_vie.plan.hint.scroll") : Text.translatable("gui.mca_vie.plan.hint.treasury");
     }
 
-    // décrets
 
     private Text renderDecrees(DrawContext context) {
         long today = today();
@@ -1051,7 +1033,6 @@ public class PlanScreen extends BlueprintScreen {
         return Text.translatable("gui.mca_vie.plan.hint.decrees");
     }
 
-    // marché
 
     private Text renderMarket(DrawContext context) {
         VillageState state = VillageState.of(village);
@@ -1076,7 +1057,6 @@ public class PlanScreen extends BlueprintScreen {
         return Text.translatable("gui.mca_vie.plan.hint.market");
     }
 
-    // registre
 
     private List<CivilRegistry.Entry> registryEntries() {
         return VillageState.of(village).registry.stream().filter(e -> registryFilter < 0 || e.kind() == registryFilter).toList();
@@ -1120,7 +1100,6 @@ public class PlanScreen extends BlueprintScreen {
         return Text.translatable("gui.mca_vie.registry.year", year, counts[0], counts[1], counts[2]);
     }
 
-    // justice
 
     private Text renderJustice(DrawContext context) {
         VillageState state = VillageState.of(village);
@@ -1166,7 +1145,6 @@ public class PlanScreen extends BlueprintScreen {
         return Text.translatable("gui.mca_vie.justice.hint", config.crimeHappiness);
     }
 
-    // ---- entrées ----
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {

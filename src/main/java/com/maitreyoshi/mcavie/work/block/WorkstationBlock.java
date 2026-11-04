@@ -28,14 +28,12 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
-// poste de travail d'un métier : centre de la zone et inventaire du travailleur
 public class WorkstationBlock extends BlockWithEntity {
     public static final DirectionProperty FACING = Properties.HORIZONTAL_FACING;
 
     private final Job job;
     private final Map<Direction, VoxelShape> shapes = new EnumMap<>(Direction.class);
 
-    // boxes : [x1, y1, z1, x2, y2, z2] en pixels, modèle tourné vers le nord
     public WorkstationBlock(Settings settings, Job job, double[][] boxes) {
         super(settings);
         this.job = job;

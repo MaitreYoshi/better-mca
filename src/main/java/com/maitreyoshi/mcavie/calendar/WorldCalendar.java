@@ -52,7 +52,6 @@ public final class WorldCalendar {
                     state.setSegments(List.of(new Segment(0, 0, s.getGameRules().get(TIME_SPEED).get().calendarDaysPerGameDay())));
                 }
                 serverSegments = state.segments();
-                // Les anciennes valeurs (jour, mois…) ne se relisent plus : on recale la règle sur la vitesse réellement enregistrée.
                 double speed = serverSegments.get(serverSegments.size() - 1).speed();
                 EnumRule<TimeSpeed> rule = s.getGameRules().get(TIME_SPEED);
                 if (rule.get().calendarDaysPerGameDay() != speed) {
@@ -201,7 +200,6 @@ public final class WorldCalendar {
         return fromTicks(world.getTimeOfDay(), true);
     }
 
-    /** Date et heure d'un instant passé telles que la montre les affichait, vitesse du temps comprise. */
     public static CalendarDate flowingFromTicks(long ticks) {
         return fromTicks(ticks, true);
     }
@@ -230,16 +228,11 @@ public final class WorldCalendar {
         );
     }
 
-    /** Jour du calendrier affiché par la montre en ce moment, même quand une journée Minecraft vaut un mois ou plus. */
     public static long exactCalendarDay(World world) {
         long shifted = Math.max(0, world.getTimeOfDay() + TICKS_OFFSET);
         return Math.floorDiv(flowingCalendarTicks(shifted / TICKS_PER_DAY, shifted % TICKS_PER_DAY), TICKS_PER_DAY);
     }
 
-    /**
-     * Jour du calendrier pour un événement dont on ne connaît que la journée Minecraft : un jour stable (tiré de
-     * la graine) parmi ceux que cette journée couvre, au lieu de toujours le premier.
-     */
     public static long spreadCalendarDay(long gameDay, long seed) {
         long start = calendarDay(gameDay);
         long span = calendarDay(gameDay + 1) - start;

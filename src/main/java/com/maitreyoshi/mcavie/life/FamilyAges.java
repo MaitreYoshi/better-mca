@@ -19,16 +19,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Âges cohérents avec l'arbre MCA : parents plus âgés que leurs enfants, conjoints d'âges proches,
- * et PNJ nés en jeu pas plus vieux que le monde. MCA ne stocke aucune date de naissance :
- * les âges viennent uniquement de LifeRegistry.
- */
 public final class FamilyAges {
     private static final int MIN_PARENT_GAP = 18;
     private static final int MAX_PARENT_GAP = 45;
     private static final int MAX_SPOUSE_GAP = 8;
-    // Seuils de réparation, larges pour ne jamais toucher une famille plausible.
     private static final int BAD_PARENT_GAP_MIN = 14;
     private static final int BAD_PARENT_GAP_MAX = 60;
     private static final int BAD_SPOUSE_GAP = 30;
@@ -43,7 +37,6 @@ public final class FamilyAges {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> repair(server.getOverworld()));
     }
 
-    /** Âge initial (en années) d'un villageois sans date de naissance, choisi dans [lo, hi] selon sa famille. */
     static int initialYears(ServerWorld world, UUID self, int lo, int hi, Random random) {
         long today = WorldCalendar.now(world).dayIndex();
         Family family = Family.around(world, self, today);
@@ -69,7 +62,6 @@ public final class FamilyAges {
         return lo + random.nextInt(top - lo + 1);
     }
 
-    /** Corrige les familles dont les âges sont impossibles (attribués avant cette correction). */
     public static void repair(ServerWorld world) {
         LifeRegistry life = LifeRegistry.get(world.getServer());
         long today = WorldCalendar.now(world).dayIndex();
@@ -95,7 +87,6 @@ public final class FamilyAges {
         return ((FamilyTreeAccessor) FamilyTree.get(world)).mcavie$getEntries();
     }
 
-    /** Années écoulées depuis la création du monde (heure du jour ou compteur Time, le plus grand). */
     static int worldYears(ServerWorld world, long today) {
         long start = Math.min(0, today - world.getTime() / WorldCalendar.TICKS_PER_DAY);
         return (int) Math.floor(WorldCalendar.yearsBetween(start, today));
@@ -129,7 +120,6 @@ public final class FamilyAges {
             return ids.size();
         }
 
-        /** Composante familiale vivante (villageois uniquement) autour de start. */
         static Family around(ServerWorld world, UUID start, long today) {
             Map<UUID, FamilyTreeNode> entries = entries(world);
             LifeRegistry life = LifeRegistry.get(world.getServer());
@@ -178,7 +168,6 @@ public final class FamilyAges {
             return f;
         }
 
-        /** Famille construite à la main, pour les vérifications hors jeu. */
         static Family of(int[] ages, boolean[] bornInGame, int[][] parentEdges, int[][] spouseEdges) {
             Family f = new Family();
             int n = ages.length;
@@ -205,13 +194,11 @@ public final class FamilyAges {
             return node != null && !node.isPlayer() && !node.isDeceased() && life.getDeathDay(uuid) == null;
         }
 
-        /** Parent véritable (joueur ou villageois), pas l'ascendant fictif que MCA crée au spawn. */
         private static boolean realParent(Map<UUID, FamilyTreeNode> entries, UUID uuid) {
             FamilyTreeNode node = FamilyTreeNode.isValid(uuid) ? entries.get(uuid) : null;
             return node != null && !node.probablyGenerated();
         }
 
-        /** Resserre les bornes jusqu'au point fixe ; faux si les contraintes sont incompatibles. */
         boolean propagate() {
             int guard = 4 * size() + 16;
             boolean changed = true;
@@ -234,10 +221,6 @@ public final class FamilyAges {
             return !changed;
         }
 
-        /**
-         * Plafonne les PNJ nés en jeu à l'âge du monde, sans descendre sous le minimum imposé
-         * par leurs descendants : deux générations nées en jeu ne peuvent pas avoir toutes deux 18 ans.
-         */
         boolean capToWorld(int worldYears) {
             if (!propagate()) {
                 return false;
@@ -288,10 +271,6 @@ public final class FamilyAges {
             return false;
         }
 
-        /**
-         * Réattribue les âges de la famille en restant le plus près possible des âges actuels,
-         * des aînés vers les cadets, sans changer le stade de croissance de chacun.
-         */
         int fix(LifeRegistry life, int worldYears) {
             int[] chosen = solve(worldYears);
             if (chosen == null) {
@@ -309,7 +288,6 @@ public final class FamilyAges {
             return changed;
         }
 
-        /** Nouveaux âges (-1 pour qui n'en a pas encore), ou null si la famille est insoluble. */
         int[] solve(int worldYears) {
             for (int i = 0; i < size(); i++) {
                 int[] range = age[i] >= 0 ? stageRange(age[i]) : new int[]{0, UNKNOWN_MAX};

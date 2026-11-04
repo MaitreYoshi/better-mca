@@ -24,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-// fiche métier : liste des métiers à gauche, fiche du métier sélectionné à droite
 public class JobScreen extends Screen {
     private static final int MAX_WIDTH = 440;
     private static final int MAX_HEIGHT = 250;
@@ -76,7 +75,6 @@ public class JobScreen extends Screen {
         return info == null ? Job.NONE : info.job();
     }
 
-    // boutons de la fiche : embaucher, ou gérer le métier actuel
     private void rebuildActions() {
         actions.forEach(this::remove);
         actions.clear();
@@ -150,7 +148,6 @@ public class JobScreen extends Screen {
 
     @Override
     public void tick() {
-        // la réponse du serveur arrive après le clic : on remet les boutons à jour quand le métier change
         if (shownFor != currentJob()) {
             rebuildActions();
         }
@@ -253,7 +250,6 @@ public class JobScreen extends Screen {
         return y + 18;
     }
 
-    // niveau, barre d'expérience, état en direct et poste lié
     private void renderProgress(DrawContext context, WorkClient.Info info, int x, int y, int w) {
         int level = Math.max(1, Math.min(5, info.level()));
         Text levelName = Text.translatable("job.mca_vie.level." + level).formatted(Formatting.GOLD);

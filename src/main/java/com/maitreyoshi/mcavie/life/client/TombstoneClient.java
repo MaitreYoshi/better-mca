@@ -145,7 +145,6 @@ public final class TombstoneClient {
         float available = height - medallion - gap;
 
         if (!details.pastLives().isEmpty()) {
-            // ressuscité : une période par vie, (naissance-mort) (retour-mort)…
             lines.add(Text.literal(lives(details)));
         } else if (born == null) {
             lines.add(died);

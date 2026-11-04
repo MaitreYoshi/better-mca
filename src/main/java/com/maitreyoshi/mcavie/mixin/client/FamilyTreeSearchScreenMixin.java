@@ -8,7 +8,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyArg;
 
-/** Les résultats de recherche (arbre, traqueur) affichent le nom de la personne et plus seulement ses parents. */
 @Mixin(FamilyTreeSearchScreen.class)
 public abstract class FamilyTreeSearchScreenMixin {
     @ModifyArg(method = "renderVillagers", remap = false, index = 1,
