@@ -371,6 +371,9 @@ public final class Social {
         int bestScore = MARRIAGE_MIN - 1;
         VillagerEntityMCA fallback = null;
         for (VillagerEntityMCA candidate : candidates) {
+            if (!com.maitreyoshi.mcavie.life.Orientation.compatible(suitor, candidate)) {
+                continue;
+            }
             int mine = score(registry, id, candidate.getUuid());
             int theirs = score(registry, candidate.getUuid(), id);
             if (mine <= ENEMY || theirs <= ENEMY) {
