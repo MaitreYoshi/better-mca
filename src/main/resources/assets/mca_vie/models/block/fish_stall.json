@@ -1,135 +1,77 @@
 {
+  "credit": "Better MCA - made with Blockbench-compatible generator",
+  "texture_size": [
+    16,
+    16
+  ],
   "textures": {
     "particle": "mca_vie:block/workstation/fish_stall_crate",
+    "wood": "mca_vie:block/workstation/fish_stall_wood",
+    "dark": "mca_vie:block/workstation/fish_stall_dark",
     "crate": "mca_vie:block/workstation/fish_stall_crate",
     "ice": "mca_vie:block/workstation/fish_stall_ice",
-    "fish": "mca_vie:block/workstation/fish_stall_fish",
-    "net": "mca_vie:block/workstation/fish_stall_net"
+    "cod": "mca_vie:block/workstation/fish_stall_cod",
+    "salmon": "mca_vie:block/workstation/fish_stall_salmon",
+    "fin": "mca_vie:block/workstation/fish_stall_fin",
+    "rope": "mca_vie:block/workstation/fish_stall_rope",
+    "cloth": "mca_vie:block/workstation/fish_stall_cloth",
+    "wicker": "mca_vie:block/workstation/fish_stall_wicker"
   },
   "elements": [
     {
+      "name": "counter",
       "from": [
         1,
         0,
-        3
-      ],
-      "to": [
-        15,
-        6,
         4
       ],
-      "faces": {
-        "north": {
-          "uv": [
-            0,
-            0,
-            14,
-            6
-          ],
-          "texture": "#crate"
-        },
-        "south": {
-          "uv": [
-            0,
-            12,
-            14,
-            16
-          ],
-          "texture": "#crate"
-        },
-        "east": {
-          "uv": [
-            0,
-            6,
-            1,
-            12
-          ],
-          "texture": "#crate"
-        },
-        "west": {
-          "uv": [
-            0,
-            6,
-            1,
-            12
-          ],
-          "texture": "#crate"
-        },
-        "up": {
-          "uv": [
-            0,
-            12,
-            14,
-            13
-          ],
-          "texture": "#crate"
-        },
-        "down": {
-          "uv": [
-            1,
-            12,
-            15,
-            13
-          ],
-          "texture": "#crate",
-          "cullface": "down"
-        }
-      },
-      "name": "crate_front"
-    },
-    {
-      "from": [
-        1,
-        0,
-        12
-      ],
       "to": [
         15,
-        6,
+        7,
         13
       ],
       "faces": {
         "north": {
           "uv": [
-            0,
+            1,
+            9,
+            15,
+            16
+          ],
+          "texture": "#crate"
+        },
+        "east": {
+          "uv": [
+            3,
+            9,
             12,
-            14,
             16
           ],
           "texture": "#crate"
         },
         "south": {
           "uv": [
-            0,
-            0,
-            14,
-            6
-          ],
-          "texture": "#crate"
-        },
-        "east": {
-          "uv": [
+            1,
             9,
-            6,
-            10,
-            12
+            15,
+            16
           ],
           "texture": "#crate"
         },
         "west": {
           "uv": [
+            4,
             9,
-            6,
-            10,
-            12
+            13,
+            16
           ],
           "texture": "#crate"
         },
         "up": {
           "uv": [
-            0,
-            12,
-            14,
+            1,
+            4,
+            15,
             13
           ],
           "texture": "#crate"
@@ -139,675 +81,1655 @@
             1,
             3,
             15,
-            4
+            12
           ],
-          "texture": "#crate",
-          "cullface": "down"
+          "texture": "#crate"
         }
-      },
-      "name": "crate_back"
+      }
     },
     {
+      "name": "counter_back",
       "from": [
         1,
-        0,
-        4
-      ],
-      "to": [
-        2,
-        6,
-        12
-      ],
-      "faces": {
-        "east": {
-          "uv": [
-            0,
-            12,
-            8,
-            16
-          ],
-          "texture": "#crate"
-        },
-        "west": {
-          "uv": [
-            1,
-            6,
-            9,
-            12
-          ],
-          "texture": "#crate"
-        },
-        "up": {
-          "uv": [
-            0,
-            12,
-            1,
-            13
-          ],
-          "texture": "#crate"
-        },
-        "down": {
-          "uv": [
-            1,
-            4,
-            2,
-            12
-          ],
-          "texture": "#crate",
-          "cullface": "down"
-        }
-      },
-      "name": "crate_left"
-    },
-    {
-      "from": [
-        14,
-        0,
-        4
+        7,
+        9.5
       ],
       "to": [
         15,
-        6,
-        12
+        9.25,
+        13
       ],
       "faces": {
-        "east": {
+        "north": {
           "uv": [
             1,
-            6,
-            9,
-            12
+            6.75,
+            15,
+            9
           ],
-          "texture": "#crate"
+          "texture": "#wood"
+        },
+        "east": {
+          "uv": [
+            3,
+            6.75,
+            6.5,
+            9
+          ],
+          "texture": "#wood"
+        },
+        "south": {
+          "uv": [
+            1,
+            6.75,
+            15,
+            9
+          ],
+          "texture": "#wood"
         },
         "west": {
           "uv": [
-            0,
-            12,
-            8,
-            16
+            9.5,
+            6.75,
+            13,
+            9
           ],
-          "texture": "#crate"
+          "texture": "#wood"
         },
         "up": {
           "uv": [
-            0,
-            12,
             1,
+            9.5,
+            15,
             13
           ],
-          "texture": "#crate"
+          "texture": "#wood"
         },
         "down": {
           "uv": [
-            14,
-            4,
+            1,
+            3,
             15,
-            12
+            6.5
           ],
-          "texture": "#crate",
-          "cullface": "down"
+          "texture": "#wood"
         }
-      },
-      "name": "crate_right"
+      }
     },
     {
+      "name": "tray",
       "from": [
+        1.25,
+        7,
+        3.5
+      ],
+      "to": [
+        14.75,
+        8,
+        11.5
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          7,
+          3.5
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            1.25,
+            8,
+            14.75,
+            9
+          ],
+          "texture": "#wood"
+        },
+        "east": {
+          "uv": [
+            4.5,
+            8,
+            12.5,
+            9
+          ],
+          "texture": "#wood"
+        },
+        "south": {
+          "uv": [
+            1.25,
+            8,
+            14.75,
+            9
+          ],
+          "texture": "#wood"
+        },
+        "west": {
+          "uv": [
+            3.5,
+            8,
+            11.5,
+            9
+          ],
+          "texture": "#wood"
+        },
+        "up": {
+          "uv": [
+            1.25,
+            3.5,
+            14.75,
+            11.5
+          ],
+          "texture": "#ice"
+        },
+        "down": {
+          "uv": [
+            1.25,
+            4.5,
+            14.75,
+            12.5
+          ],
+          "texture": "#wood"
+        }
+      }
+    },
+    {
+      "name": "tray_lip",
+      "from": [
+        1.25,
+        8,
+        3.5
+      ],
+      "to": [
+        14.75,
+        9,
+        4.25
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          7,
+          3.5
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            1.25,
+            7,
+            14.75,
+            8
+          ],
+          "texture": "#dark"
+        },
+        "east": {
+          "uv": [
+            11.75,
+            7,
+            12.5,
+            8
+          ],
+          "texture": "#dark"
+        },
+        "south": {
+          "uv": [
+            1.25,
+            7,
+            14.75,
+            8
+          ],
+          "texture": "#dark"
+        },
+        "west": {
+          "uv": [
+            3.5,
+            7,
+            4.25,
+            8
+          ],
+          "texture": "#dark"
+        },
+        "up": {
+          "uv": [
+            1.25,
+            3.5,
+            14.75,
+            4.25
+          ],
+          "texture": "#dark"
+        },
+        "down": {
+          "uv": [
+            1.25,
+            11.75,
+            14.75,
+            12.5
+          ],
+          "texture": "#dark"
+        }
+      }
+    },
+    {
+      "name": "tray_l",
+      "from": [
+        1.25,
+        8,
+        4.25
+      ],
+      "to": [
         2,
-        0,
-        4
+        9,
+        11.5
       ],
-      "to": [
-        14,
-        5,
-        12
-      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          7,
+          3.5
+        ]
+      },
       "faces": {
-        "up": {
+        "north": {
           "uv": [
-            2,
-            4,
             14,
-            12
+            7,
+            14.75,
+            8
           ],
-          "texture": "#ice"
-        }
-      },
-      "name": "ice"
-    },
-    {
-      "from": [
-        12,
-        5,
-        9.6
-      ],
-      "to": [
-        13.8,
-        6.4,
-        11.6
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            12,
-            12,
-            16,
-            16
-          ],
-          "texture": "#ice"
-        },
-        "south": {
-          "uv": [
-            12,
-            12,
-            16,
-            16
-          ],
-          "texture": "#ice"
+          "texture": "#dark"
         },
         "east": {
           "uv": [
-            12,
-            12,
-            16,
-            16
+            4.5,
+            7,
+            11.75,
+            8
           ],
-          "texture": "#ice"
-        },
-        "west": {
-          "uv": [
-            12,
-            12,
-            16,
-            16
-          ],
-          "texture": "#ice"
-        },
-        "up": {
-          "uv": [
-            12,
-            12,
-            16,
-            16
-          ],
-          "texture": "#ice"
-        }
-      },
-      "name": "ice_cube"
-    },
-    {
-      "from": [
-        2.2,
-        5,
-        7.2
-      ],
-      "to": [
-        3.9,
-        6.2,
-        8.9
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            1,
-            1,
-            5,
-            5
-          ],
-          "texture": "#ice"
+          "texture": "#dark"
         },
         "south": {
           "uv": [
-            1,
-            1,
-            5,
-            5
-          ],
-          "texture": "#ice"
-        },
-        "east": {
-          "uv": [
-            1,
-            1,
-            5,
-            5
-          ],
-          "texture": "#ice"
-        },
-        "west": {
-          "uv": [
-            1,
-            1,
-            5,
-            5
-          ],
-          "texture": "#ice"
-        },
-        "up": {
-          "uv": [
-            1,
-            1,
-            5,
-            5
-          ],
-          "texture": "#ice"
-        }
-      },
-      "name": "ice_cube"
-    },
-    {
-      "from": [
-        2.6,
-        5,
-        4.6
-      ],
-      "to": [
-        10.6,
-        5.7,
-        6.8
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            11,
-            1,
-            16,
-            2
-          ],
-          "texture": "#fish"
-        },
-        "south": {
-          "uv": [
-            11,
+            1.25,
+            7,
             2,
-            16,
-            3
+            8
           ],
-          "texture": "#fish"
-        },
-        "east": {
-          "uv": [
-            11,
-            1,
-            12,
-            2
-          ],
-          "texture": "#fish"
+          "texture": "#dark"
         },
         "west": {
           "uv": [
-            11,
-            1,
-            12,
-            2
+            4.25,
+            7,
+            11.5,
+            8
           ],
-          "texture": "#fish"
+          "texture": "#dark"
         },
         "up": {
           "uv": [
-            0,
-            0,
-            8,
-            4
+            1.25,
+            4.25,
+            2,
+            11.5
           ],
-          "texture": "#fish"
-        }
-      },
-      "name": "fish"
-    },
-    {
-      "from": [
-        10.6,
-        5.35,
-        4.6
-      ],
-      "to": [
-        12.6,
-        5.35,
-        6.8
-      ],
-      "faces": {
-        "up": {
-          "uv": [
-            8,
-            0,
-            10,
-            4
-          ],
-          "texture": "#fish"
+          "texture": "#dark"
         },
         "down": {
           "uv": [
-            8,
-            0,
-            10,
-            4
+            1.25,
+            4.5,
+            2,
+            11.75
           ],
-          "texture": "#fish"
+          "texture": "#dark"
         }
-      },
-      "name": "fish_tail"
+      }
     },
     {
+      "name": "tray_r",
       "from": [
-        6.4,
-        5,
-        7
+        14,
+        8,
+        4.25
       ],
       "to": [
-        14.4,
-        5.7,
-        9.2
+        14.75,
+        9,
+        11.5
       ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          7,
+          3.5
+        ]
+      },
       "faces": {
         "north": {
           "uv": [
-            11,
-            5,
-            16,
-            6
+            1.25,
+            7,
+            2,
+            8
           ],
-          "texture": "#fish"
-        },
-        "south": {
-          "uv": [
-            11,
-            6,
-            16,
-            7
-          ],
-          "texture": "#fish"
+          "texture": "#dark"
         },
         "east": {
           "uv": [
-            11,
-            5,
-            12,
-            6
-          ],
-          "texture": "#fish"
-        },
-        "west": {
-          "uv": [
-            11,
-            5,
-            12,
-            6
-          ],
-          "texture": "#fish"
-        },
-        "up": {
-          "uv": [
-            8,
-            4,
-            0,
+            4.5,
+            7,
+            11.75,
             8
           ],
-          "texture": "#fish"
-        }
-      },
-      "name": "fish"
-    },
-    {
-      "from": [
-        4.4,
-        5.35,
-        7
-      ],
-      "to": [
-        6.4,
-        5.35,
-        9.2
-      ],
-      "faces": {
-        "up": {
-          "uv": [
-            10,
-            4,
-            8,
-            8
-          ],
-          "texture": "#fish"
-        },
-        "down": {
-          "uv": [
-            10,
-            4,
-            8,
-            8
-          ],
-          "texture": "#fish"
-        }
-      },
-      "name": "fish_tail"
-    },
-    {
-      "from": [
-        3.2,
-        5,
-        9.4
-      ],
-      "to": [
-        11.2,
-        5.7,
-        11.6
-      ],
-      "faces": {
-        "north": {
-          "uv": [
-            11,
-            9,
-            16,
-            10
-          ],
-          "texture": "#fish"
+          "texture": "#dark"
         },
         "south": {
           "uv": [
+            14,
+            7,
+            14.75,
+            8
+          ],
+          "texture": "#dark"
+        },
+        "west": {
+          "uv": [
+            4.25,
+            7,
+            11.5,
+            8
+          ],
+          "texture": "#dark"
+        },
+        "up": {
+          "uv": [
+            14,
+            4.25,
+            14.75,
+            11.5
+          ],
+          "texture": "#dark"
+        },
+        "down": {
+          "uv": [
+            14,
+            4.5,
+            14.75,
+            11.75
+          ],
+          "texture": "#dark"
+        }
+      }
+    },
+    {
+      "name": "fish0",
+      "from": [
+        2.75,
+        8,
+        5
+      ],
+      "to": [
+        6.75,
+        8.9,
+        6.6
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          7,
+          3.5
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            9.25,
+            7.1,
+            13.25,
+            8
+          ],
+          "texture": "#cod"
+        },
+        "east": {
+          "uv": [
+            9.4,
+            7.1,
             11,
-            10,
-            16,
+            8
+          ],
+          "texture": "#cod"
+        },
+        "south": {
+          "uv": [
+            2.75,
+            7.1,
+            6.75,
+            8
+          ],
+          "texture": "#cod"
+        },
+        "west": {
+          "uv": [
+            5,
+            7.1,
+            6.6,
+            8
+          ],
+          "texture": "#cod"
+        },
+        "up": {
+          "uv": [
+            2.75,
+            5,
+            6.75,
+            6.6
+          ],
+          "texture": "#cod"
+        },
+        "down": {
+          "uv": [
+            2.75,
+            9.4,
+            6.75,
             11
           ],
-          "texture": "#fish"
+          "texture": "#cod"
+        }
+      }
+    },
+    {
+      "name": "tail0",
+      "from": [
+        6.75,
+        8.1,
+        5.2
+      ],
+      "to": [
+        7.75,
+        8.8,
+        6.4
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          7,
+          3.5
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            8.25,
+            7.2,
+            9.25,
+            7.9
+          ],
+          "texture": "#fin"
         },
         "east": {
           "uv": [
-            11,
-            9,
-            12,
-            10
+            9.6,
+            7.2,
+            10.8,
+            7.9
           ],
-          "texture": "#fish"
+          "texture": "#fin"
+        },
+        "south": {
+          "uv": [
+            6.75,
+            7.2,
+            7.75,
+            7.9
+          ],
+          "texture": "#fin"
         },
         "west": {
           "uv": [
-            11,
-            9,
-            12,
-            10
+            5.2,
+            7.2,
+            6.4,
+            7.9
           ],
-          "texture": "#fish"
+          "texture": "#fin"
         },
         "up": {
           "uv": [
-            0,
-            8,
-            8,
-            12
+            6.75,
+            5.2,
+            7.75,
+            6.4
           ],
-          "texture": "#fish"
+          "texture": "#fin"
+        },
+        "down": {
+          "uv": [
+            6.75,
+            9.6,
+            7.75,
+            10.8
+          ],
+          "texture": "#fin"
         }
-      },
-      "name": "fish"
+      }
     },
     {
+      "name": "fish1",
       "from": [
-        11.2,
-        5.35,
+        8,
+        8,
+        5.25
+      ],
+      "to": [
+        12,
+        8.9,
+        6.85
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          7,
+          3.5
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            4,
+            7.1,
+            8,
+            8
+          ],
+          "texture": "#salmon"
+        },
+        "east": {
+          "uv": [
+            9.15,
+            7.1,
+            10.75,
+            8
+          ],
+          "texture": "#salmon"
+        },
+        "south": {
+          "uv": [
+            8,
+            7.1,
+            12,
+            8
+          ],
+          "texture": "#salmon"
+        },
+        "west": {
+          "uv": [
+            5.25,
+            7.1,
+            6.85,
+            8
+          ],
+          "texture": "#salmon"
+        },
+        "up": {
+          "uv": [
+            8,
+            5.25,
+            12,
+            6.85
+          ],
+          "texture": "#salmon"
+        },
+        "down": {
+          "uv": [
+            8,
+            9.15,
+            12,
+            10.75
+          ],
+          "texture": "#salmon"
+        }
+      }
+    },
+    {
+      "name": "tail1",
+      "from": [
+        12,
+        8.1,
+        5.45
+      ],
+      "to": [
+        13,
+        8.8,
+        6.65
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          7,
+          3.5
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            3,
+            7.2,
+            4,
+            7.9
+          ],
+          "texture": "#fin"
+        },
+        "east": {
+          "uv": [
+            9.35,
+            7.2,
+            10.55,
+            7.9
+          ],
+          "texture": "#fin"
+        },
+        "south": {
+          "uv": [
+            12,
+            7.2,
+            13,
+            7.9
+          ],
+          "texture": "#fin"
+        },
+        "west": {
+          "uv": [
+            5.45,
+            7.2,
+            6.65,
+            7.9
+          ],
+          "texture": "#fin"
+        },
+        "up": {
+          "uv": [
+            12,
+            5.45,
+            13,
+            6.65
+          ],
+          "texture": "#fin"
+        },
+        "down": {
+          "uv": [
+            12,
+            9.35,
+            13,
+            10.55
+          ],
+          "texture": "#fin"
+        }
+      }
+    },
+    {
+      "name": "fish2",
+      "from": [
+        3.25,
+        8,
+        7.75
+      ],
+      "to": [
+        7.25,
+        8.9,
+        9.35
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          7,
+          3.5
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            8.75,
+            7.1,
+            12.75,
+            8
+          ],
+          "texture": "#salmon"
+        },
+        "east": {
+          "uv": [
+            6.65,
+            7.1,
+            8.25,
+            8
+          ],
+          "texture": "#salmon"
+        },
+        "south": {
+          "uv": [
+            3.25,
+            7.1,
+            7.25,
+            8
+          ],
+          "texture": "#salmon"
+        },
+        "west": {
+          "uv": [
+            7.75,
+            7.1,
+            9.35,
+            8
+          ],
+          "texture": "#salmon"
+        },
+        "up": {
+          "uv": [
+            3.25,
+            7.75,
+            7.25,
+            9.35
+          ],
+          "texture": "#salmon"
+        },
+        "down": {
+          "uv": [
+            3.25,
+            6.65,
+            7.25,
+            8.25
+          ],
+          "texture": "#salmon"
+        }
+      }
+    },
+    {
+      "name": "tail2",
+      "from": [
+        7.25,
+        8.1,
+        7.95
+      ],
+      "to": [
+        8.25,
+        8.8,
+        9.15
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          7,
+          3.5
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            7.75,
+            7.2,
+            8.75,
+            7.9
+          ],
+          "texture": "#fin"
+        },
+        "east": {
+          "uv": [
+            6.85,
+            7.2,
+            8.05,
+            7.9
+          ],
+          "texture": "#fin"
+        },
+        "south": {
+          "uv": [
+            7.25,
+            7.2,
+            8.25,
+            7.9
+          ],
+          "texture": "#fin"
+        },
+        "west": {
+          "uv": [
+            7.95,
+            7.2,
+            9.15,
+            7.9
+          ],
+          "texture": "#fin"
+        },
+        "up": {
+          "uv": [
+            7.25,
+            7.95,
+            8.25,
+            9.15
+          ],
+          "texture": "#fin"
+        },
+        "down": {
+          "uv": [
+            7.25,
+            6.85,
+            8.25,
+            8.05
+          ],
+          "texture": "#fin"
+        }
+      }
+    },
+    {
+      "name": "fish3",
+      "from": [
+        8.5,
+        8,
+        8
+      ],
+      "to": [
+        12.5,
+        8.9,
+        9.6
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          7,
+          3.5
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            3.5,
+            7.1,
+            7.5,
+            8
+          ],
+          "texture": "#cod"
+        },
+        "east": {
+          "uv": [
+            6.4,
+            7.1,
+            8,
+            8
+          ],
+          "texture": "#cod"
+        },
+        "south": {
+          "uv": [
+            8.5,
+            7.1,
+            12.5,
+            8
+          ],
+          "texture": "#cod"
+        },
+        "west": {
+          "uv": [
+            8,
+            7.1,
+            9.6,
+            8
+          ],
+          "texture": "#cod"
+        },
+        "up": {
+          "uv": [
+            8.5,
+            8,
+            12.5,
+            9.6
+          ],
+          "texture": "#cod"
+        },
+        "down": {
+          "uv": [
+            8.5,
+            6.4,
+            12.5,
+            8
+          ],
+          "texture": "#cod"
+        }
+      }
+    },
+    {
+      "name": "tail3",
+      "from": [
+        12.5,
+        8.1,
+        8.2
+      ],
+      "to": [
+        13.5,
+        8.8,
         9.4
       ],
-      "to": [
-        13.2,
-        5.35,
-        11.6
-      ],
-      "faces": {
-        "up": {
-          "uv": [
-            8,
-            8,
-            10,
-            12
-          ],
-          "texture": "#fish"
-        },
-        "down": {
-          "uv": [
-            8,
-            8,
-            10,
-            12
-          ],
-          "texture": "#fish"
-        }
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          7,
+          3.5
+        ]
       },
-      "name": "fish_tail"
-    },
-    {
-      "from": [
-        15.4,
-        0.6,
-        4
-      ],
-      "to": [
-        15.4,
-        6.4,
-        11
-      ],
       "faces": {
+        "north": {
+          "uv": [
+            2.5,
+            7.2,
+            3.5,
+            7.9
+          ],
+          "texture": "#fin"
+        },
         "east": {
           "uv": [
-            4,
-            10.2,
-            11,
-            16
+            6.6,
+            7.2,
+            7.8,
+            7.9
           ],
-          "texture": "#net"
+          "texture": "#fin"
+        },
+        "south": {
+          "uv": [
+            12.5,
+            7.2,
+            13.5,
+            7.9
+          ],
+          "texture": "#fin"
         },
         "west": {
           "uv": [
-            4,
-            10.2,
-            11,
-            16
+            8.2,
+            7.2,
+            9.4,
+            7.9
           ],
-          "texture": "#net"
-        }
-      },
-      "name": "net_side"
-    },
-    {
-      "from": [
-        12.6,
-        6.4,
-        4
-      ],
-      "to": [
-        15.4,
-        6.4,
-        11
-      ],
-      "faces": {
+          "texture": "#fin"
+        },
         "up": {
           "uv": [
-            4,
-            0,
-            6.8,
-            7
+            12.5,
+            8.2,
+            13.5,
+            9.4
           ],
-          "texture": "#net"
+          "texture": "#fin"
         },
         "down": {
           "uv": [
-            4,
-            0,
-            6.8,
-            7
+            12.5,
+            6.6,
+            13.5,
+            7.8
           ],
-          "texture": "#net"
+          "texture": "#fin"
         }
-      },
-      "name": "net_top"
+      }
     },
     {
+      "name": "post_l",
       "from": [
+        1,
+        7,
+        13
+      ],
+      "to": [
+        2,
+        18,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            14,
+            1,
+            15,
+            9
+          ],
+          "texture": "#dark"
+        },
+        "east": {
+          "uv": [
+            2,
+            1,
+            3,
+            9
+          ],
+          "texture": "#dark"
+        },
+        "south": {
+          "uv": [
+            1,
+            1,
+            2,
+            9
+          ],
+          "texture": "#dark"
+        },
+        "west": {
+          "uv": [
+            13,
+            1,
+            14,
+            9
+          ],
+          "texture": "#dark"
+        },
+        "up": {
+          "uv": [
+            1,
+            13,
+            2,
+            14
+          ],
+          "texture": "#dark"
+        },
+        "down": {
+          "uv": [
+            1,
+            2,
+            2,
+            3
+          ],
+          "texture": "#dark"
+        }
+      }
+    },
+    {
+      "name": "post_r",
+      "from": [
+        14,
+        7,
+        13
+      ],
+      "to": [
         15,
-        2.4,
-        6.6
+        18,
+        14
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1,
+            1,
+            2,
+            9
+          ],
+          "texture": "#dark"
+        },
+        "east": {
+          "uv": [
+            2,
+            1,
+            3,
+            9
+          ],
+          "texture": "#dark"
+        },
+        "south": {
+          "uv": [
+            14,
+            1,
+            15,
+            9
+          ],
+          "texture": "#dark"
+        },
+        "west": {
+          "uv": [
+            13,
+            1,
+            14,
+            9
+          ],
+          "texture": "#dark"
+        },
+        "up": {
+          "uv": [
+            14,
+            13,
+            15,
+            14
+          ],
+          "texture": "#dark"
+        },
+        "down": {
+          "uv": [
+            14,
+            2,
+            15,
+            3
+          ],
+          "texture": "#dark"
+        }
+      }
+    },
+    {
+      "name": "awning",
+      "from": [
+        0,
+        17.5,
+        5.5
       ],
       "to": [
         16,
-        4,
-        8.2
+        19.25,
+        14.5
       ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          18,
+          14
+        ]
+      },
       "faces": {
         "north": {
           "uv": [
             0,
-            12,
-            3,
-            16
+            0.75,
+            16,
+            1.5
           ],
-          "texture": "#fish"
+          "texture": "#cloth"
+        },
+        "east": {
+          "uv": [
+            1.5,
+            0.75,
+            10.5,
+            1.5
+          ],
+          "texture": "#cloth"
         },
         "south": {
           "uv": [
             0,
-            12,
-            3,
-            16
+            0.75,
+            16,
+            1.5
           ],
-          "texture": "#fish"
-        },
-        "east": {
-          "uv": [
-            0,
-            12,
-            3,
-            16
-          ],
-          "texture": "#fish"
+          "texture": "#cloth"
         },
         "west": {
           "uv": [
-            0,
-            12,
-            3,
-            16
+            5.5,
+            0.75,
+            14.5,
+            1.5
           ],
-          "texture": "#fish"
+          "texture": "#cloth"
         },
         "up": {
           "uv": [
             0,
-            12,
-            3,
-            16
+            5.5,
+            16,
+            14.5
           ],
-          "texture": "#fish"
+          "texture": "#cloth"
         },
         "down": {
           "uv": [
             0,
-            12,
+            1.5,
+            16,
+            10.5
+          ],
+          "texture": "#cloth"
+        }
+      }
+    },
+    {
+      "name": "valance",
+      "from": [
+        0,
+        16.25,
+        5.5
+      ],
+      "to": [
+        16,
+        17.5,
+        6
+      ],
+      "rotation": {
+        "angle": -22.5,
+        "axis": "x",
+        "origin": [
+          8,
+          18,
+          14
+        ]
+      },
+      "faces": {
+        "north": {
+          "uv": [
+            0,
+            1.5,
+            16,
+            2.75
+          ],
+          "texture": "#cloth"
+        },
+        "east": {
+          "uv": [
+            10,
+            1.5,
+            10.5,
+            2.75
+          ],
+          "texture": "#cloth"
+        },
+        "south": {
+          "uv": [
+            0,
+            1.5,
+            16,
+            2.75
+          ],
+          "texture": "#cloth"
+        },
+        "west": {
+          "uv": [
+            5.5,
+            1.5,
+            6,
+            2.75
+          ],
+          "texture": "#cloth"
+        },
+        "up": {
+          "uv": [
+            0,
+            5.5,
+            16,
+            6
+          ],
+          "texture": "#cloth"
+        },
+        "down": {
+          "uv": [
+            0,
+            10,
+            16,
+            10.5
+          ],
+          "texture": "#cloth"
+        }
+      }
+    },
+    {
+      "name": "rope",
+      "from": [
+        1.35,
+        11,
+        12.55
+      ],
+      "to": [
+        1.65,
+        13,
+        12.85
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            14.35,
             3,
+            14.65,
+            5
+          ],
+          "texture": "#rope"
+        },
+        "east": {
+          "uv": [
+            3.15,
+            3,
+            3.45,
+            5
+          ],
+          "texture": "#rope"
+        },
+        "south": {
+          "uv": [
+            1.35,
+            3,
+            1.65,
+            5
+          ],
+          "texture": "#rope"
+        },
+        "west": {
+          "uv": [
+            12.55,
+            3,
+            12.85,
+            5
+          ],
+          "texture": "#rope"
+        },
+        "up": {
+          "uv": [
+            1.35,
+            12.55,
+            1.65,
+            12.85
+          ],
+          "texture": "#rope"
+        },
+        "down": {
+          "uv": [
+            1.35,
+            3.15,
+            1.65,
+            3.45
+          ],
+          "texture": "#rope"
+        }
+      }
+    },
+    {
+      "name": "hang_fish",
+      "from": [
+        0.75,
+        7.5,
+        12.25
+      ],
+      "to": [
+        2.25,
+        11,
+        12.95
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            13.75,
+            5,
+            15.25,
+            8.5
+          ],
+          "texture": "#cod"
+        },
+        "east": {
+          "uv": [
+            3.05,
+            5,
+            3.75,
+            8.5
+          ],
+          "texture": "#cod"
+        },
+        "south": {
+          "uv": [
+            0.75,
+            5,
+            2.25,
+            8.5
+          ],
+          "texture": "#cod"
+        },
+        "west": {
+          "uv": [
+            12.25,
+            5,
+            12.95,
+            8.5
+          ],
+          "texture": "#cod"
+        },
+        "up": {
+          "uv": [
+            0.75,
+            12.25,
+            2.25,
+            12.95
+          ],
+          "texture": "#cod"
+        },
+        "down": {
+          "uv": [
+            0.75,
+            3.05,
+            2.25,
+            3.75
+          ],
+          "texture": "#cod"
+        }
+      }
+    },
+    {
+      "name": "basket",
+      "from": [
+        11.5,
+        0,
+        0.5
+      ],
+      "to": [
+        15,
+        2.5,
+        3.5
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1,
+            13.5,
+            4.5,
             16
           ],
-          "texture": "#fish"
+          "texture": "#wicker"
+        },
+        "east": {
+          "uv": [
+            12.5,
+            13.5,
+            15.5,
+            16
+          ],
+          "texture": "#wicker"
+        },
+        "south": {
+          "uv": [
+            11.5,
+            13.5,
+            15,
+            16
+          ],
+          "texture": "#wicker"
+        },
+        "west": {
+          "uv": [
+            0.5,
+            13.5,
+            3.5,
+            16
+          ],
+          "texture": "#wicker"
+        },
+        "up": {
+          "uv": [
+            11.5,
+            0.5,
+            15,
+            3.5
+          ],
+          "texture": "#wicker"
+        },
+        "down": {
+          "uv": [
+            11.5,
+            12.5,
+            15,
+            15.5
+          ],
+          "texture": "#wicker"
         }
-      },
-      "name": "float"
+      }
+    },
+    {
+      "name": "basket_fish1",
+      "from": [
+        12,
+        2.5,
+        1
+      ],
+      "to": [
+        14.5,
+        3.25,
+        2
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1.5,
+            12.75,
+            4,
+            13.5
+          ],
+          "texture": "#salmon"
+        },
+        "east": {
+          "uv": [
+            14,
+            12.75,
+            15,
+            13.5
+          ],
+          "texture": "#salmon"
+        },
+        "south": {
+          "uv": [
+            12,
+            12.75,
+            14.5,
+            13.5
+          ],
+          "texture": "#salmon"
+        },
+        "west": {
+          "uv": [
+            1,
+            12.75,
+            2,
+            13.5
+          ],
+          "texture": "#salmon"
+        },
+        "up": {
+          "uv": [
+            12,
+            1,
+            14.5,
+            2
+          ],
+          "texture": "#salmon"
+        },
+        "down": {
+          "uv": [
+            12,
+            14,
+            14.5,
+            15
+          ],
+          "texture": "#salmon"
+        }
+      }
+    },
+    {
+      "name": "basket_fish2",
+      "from": [
+        12.25,
+        2.5,
+        2.25
+      ],
+      "to": [
+        14.75,
+        3.1,
+        3.1
+      ],
+      "faces": {
+        "north": {
+          "uv": [
+            1.25,
+            12.9,
+            3.75,
+            13.5
+          ],
+          "texture": "#cod"
+        },
+        "east": {
+          "uv": [
+            12.9,
+            12.9,
+            13.75,
+            13.5
+          ],
+          "texture": "#cod"
+        },
+        "south": {
+          "uv": [
+            12.25,
+            12.9,
+            14.75,
+            13.5
+          ],
+          "texture": "#cod"
+        },
+        "west": {
+          "uv": [
+            2.25,
+            12.9,
+            3.1,
+            13.5
+          ],
+          "texture": "#cod"
+        },
+        "up": {
+          "uv": [
+            12.25,
+            2.25,
+            14.75,
+            3.1
+          ],
+          "texture": "#cod"
+        },
+        "down": {
+          "uv": [
+            12.25,
+            12.9,
+            14.75,
+            13.75
+          ],
+          "texture": "#cod"
+        }
+      }
     }
   ]
 }

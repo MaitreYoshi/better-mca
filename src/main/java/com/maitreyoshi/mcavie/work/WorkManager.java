@@ -54,7 +54,7 @@ public final class WorkManager {
 
     public static boolean isWorkTime(World world) {
         WorldCalendar.CalendarDate date = WorldCalendar.now(world);
-        return date.dayOfWeek() != DayOfWeek.SUNDAY && date.hour() >= START_HOUR && date.hour() < END_HOUR;
+        return WorldCalendar.rhythmDay(date) != DayOfWeek.SUNDAY && date.hour() >= START_HOUR && date.hour() < END_HOUR;
     }
 
     public static boolean isWorking(VillagerEntityMCA villager) {
@@ -257,6 +257,15 @@ public final class WorkManager {
         return !stack.isEmpty() && stack.hasNbt() && stack.getNbt().contains(TOOL_KEY);
     }
 
+    public static boolean isWorkTool(ItemStack stack) {
+        return isMarkedTool(stack);
+    }
+
+    public static ItemStack heldOriginal(VillagerEntityMCA villager) {
+        ItemStack hand = villager.getMainHandStack();
+        return isMarkedTool(hand) ? originalOf(hand) : ItemStack.EMPTY;
+    }
+
     private static ItemStack originalOf(ItemStack tool) {
         NbtCompound mark = tool.getNbt() == null ? null : tool.getNbt().getCompound(TOOL_KEY);
         return mark == null || !mark.contains("held") ? ItemStack.EMPTY : ItemStack.fromNbt(mark.getCompound("held"));
@@ -373,9 +382,15 @@ public final class WorkManager {
         }
         if (villager.getProfession() != profession) {
             villager.setProfession(profession);
+            villager.setVillagerData(villager.getVillagerData().withLevel(1));
+            villager.setExperience(0);
         }
         if (villager.getExperience() == 0) {
             villager.setExperience(1);
+        }
+        WorkRegistry.Record tradeRecord = findRecord(villager);
+        if (tradeRecord != null) {
+            JobProfessions.syncTradeLevel(villager, job, tradeRecord.level);
         }
     }
 
@@ -476,6 +491,7 @@ public final class WorkManager {
         STATUS.remove(uuid);
         GESTURE.remove(uuid);
         DepositTask.forget(uuid);
+        RepairErrands.forget(uuid);
     }
 
     public static void register() {

@@ -8,6 +8,8 @@ import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -106,6 +108,7 @@ public class TeacherTask extends AbstractJobTask {
                 Wellbeing.addHappiness(world, pupil.getUuid(), HAPPINESS);
                 world.spawnParticles(ParticleTypes.ENCHANT, pupil.getX(), pupil.getBodyY(1.2), pupil.getZ(), 15, 0.4, 0.4, 0.4, 0.5);
                 taughtDay.put(pupil.getUuid(), today);
+                store(villager, new ItemStack(Items.EXPERIENCE_BOTTLE));
                 gainExperience(villager, 1);
             }
         }

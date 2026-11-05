@@ -35,6 +35,7 @@ public class MCAVie implements ModInitializer {
         SurnameNetwork.registerServer();
         registerCommand();
         com.maitreyoshi.mcavie.village.VillageTitleCommand.register();
+        com.maitreyoshi.mcavie.village.VillageRankCommand.register();
         TreeServer.register();
         com.maitreyoshi.mcavie.work.block.WorkBlocks.register();
         com.maitreyoshi.mcavie.work.JobProfessions.register();
@@ -48,6 +49,8 @@ public class MCAVie implements ModInitializer {
         com.maitreyoshi.mcavie.life.TombstoneBlocks.register();
         com.maitreyoshi.mcavie.aging.Aging.register();
         com.maitreyoshi.mcavie.life.FamilyAges.register();
+        com.maitreyoshi.mcavie.book.HappinessBook.register();
+        com.maitreyoshi.mcavie.item.BetterMcaItemGroup.register();
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
             DevTestCommand.register();
         }

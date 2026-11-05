@@ -17,6 +17,8 @@ public class BakerTask extends AbstractJobTask {
     private static final int WHEAT_PER_BREAD = 3;
     private static final int BAKE_TICKS = 60;
     private static final int MAX_BREADS = 8;
+    private static final int WHEAT_PER_TRIP = 24;
+    private static final double SUPPLIER_SQ = 64 * 64;
     private static final double REACH_SQ = 6.25;
     private static final int REACH_TICKS = 200;
     private static final long BLACKLIST_TICKS = 2400;
@@ -26,6 +28,7 @@ public class BakerTask extends AbstractJobTask {
     private int bakeTicks;
     private int breads;
     private boolean holdingWheat;
+    private BlockPos supplier;
     private final Reach<BlockPos> reach = new Reach<>(REACH_TICKS, BLACKLIST_TICKS);
 
     public BakerTask() {
@@ -42,11 +45,18 @@ public class BakerTask extends AbstractJobTask {
         BlockPos depot = depotPos(villager);
         Inventory chest = depot == null || reach.isBlacklisted(world, depot) ? null : depotInventory(world, villager);
         lastScan = chest != null && countWheat(chest) >= WHEAT_PER_BREAD;
+        if (!lastScan && chest != null) {
+            supplier = findSupplier(world, villager);
+            lastScan = supplier != null;
+        }
         return lastScan;
     }
 
     @Override
     protected boolean keepWorking(ServerWorld world, VillagerEntityMCA villager) {
+        if (supplier != null) {
+            return true;
+        }
         if (breads >= MAX_BREADS) {
             return false;
         }
@@ -72,6 +82,10 @@ public class BakerTask extends AbstractJobTask {
 
     @Override
     protected void keepRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+        if (supplier != null) {
+            fetchWheat(world, villager);
+            return;
+        }
         BlockPos depot = depotPos(villager);
         if (depot == null) {
             return;
@@ -125,9 +139,75 @@ public class BakerTask extends AbstractJobTask {
             }
         }
         holdingWheat = false;
+        supplier = null;
         bakeTicks = 0;
         breads = 0;
         nextScan = 0;
+    }
+
+    // four vide : il va chercher le blé rangé par le fermier le plus proche, puis le dépose dans son four
+    private BlockPos findSupplier(ServerWorld world, VillagerEntityMCA villager) {
+        net.minecraft.util.Identifier dimension = world.getRegistryKey().getValue();
+        BlockPos best = null;
+        double bestDistance = SUPPLIER_SQ;
+        for (com.maitreyoshi.mcavie.work.WorkRegistry.Record record
+                : com.maitreyoshi.mcavie.work.WorkRegistry.get(world.getServer()).all()) {
+            if (record.job != Job.FARMER || record.depot == null || reach.isBlacklisted(world, record.depot)
+                    || (record.depotDimension != null && !record.depotDimension.equals(dimension))) {
+                continue;
+            }
+            double distance = villager.squaredDistanceTo(Vec3d.ofCenter(record.depot));
+            Inventory chest = distance < bestDistance ? inventoryAt(world, record.depot) : null;
+            if (chest != null && countWheat(chest) >= WHEAT_PER_BREAD) {
+                best = record.depot;
+                bestDistance = distance;
+            }
+        }
+        return best;
+    }
+
+    private void fetchWheat(ServerWorld world, VillagerEntityMCA villager) {
+        if (villager.squaredDistanceTo(Vec3d.ofCenter(supplier)) > REACH_SQ) {
+            walkTo(villager, supplier);
+            if (reach.giveUp(world, supplier)) {
+                supplier = null;
+            }
+            return;
+        }
+        reach.reset();
+        arrive(villager, WorkGesture.NONE);
+        villager.lookAt(supplier);
+        villager.swingHand(Hand.MAIN_HAND);
+        Inventory chest = inventoryAt(world, supplier);
+        if (chest != null) {
+            int take = Math.min(WHEAT_PER_TRIP, countWheat(chest)) / WHEAT_PER_BREAD * WHEAT_PER_BREAD;
+            int left = take;
+            for (int i = 0; i < chest.size() && left > 0; i++) {
+                ItemStack stack = chest.getStack(i);
+                if (stack.isOf(Items.WHEAT)) {
+                    int n = Math.min(left, stack.getCount());
+                    stack.decrement(n);
+                    left -= n;
+                }
+            }
+            chest.markDirty();
+            if (take - left > 0) {
+                store(villager, new ItemStack(Items.WHEAT, take - left), false);
+            }
+        }
+        supplier = null;
+        nextScan = 0;
+    }
+
+    private static Inventory inventoryAt(ServerWorld world, BlockPos pos) {
+        if (!isLoaded(world, pos)) {
+            return null;
+        }
+        net.minecraft.block.BlockState state = world.getBlockState(pos);
+        if (state.getBlock() instanceof net.minecraft.block.ChestBlock chest) {
+            return net.minecraft.block.ChestBlock.getInventory(chest, state, world, pos, true);
+        }
+        return world.getBlockEntity(pos) instanceof Inventory inventory ? inventory : null;
     }
 
     private static int countWheat(Inventory chest) {

@@ -257,7 +257,8 @@ public final class BlueprintPanels {
         if (!state.journal.isEmpty()) {
             y += 4;
             for (VillageState.Withdrawal w : state.journal) {
-                y = wrapped(context, text, Text.translatable(w.deposit() ? "gui.mca_vie.treasury.journal_deposit" : "gui.mca_vie.treasury.journal", w.player(), w.amount()), x + 6, y, width - 6, GRAY);
+                y = wrapped(context, text, Text.translatable(w.deposit() ? "gui.mca_vie.treasury.journal_deposit" : "gui.mca_vie.treasury.journal", w.player(), w.amount(),
+                        com.maitreyoshi.mcavie.tree.client.TreeTexts.date(w.day())), x + 6, y, width - 6, GRAY);
             }
         }
         return y;

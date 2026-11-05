@@ -34,11 +34,6 @@ public abstract class ReportBuildingMessageMixin {
         VillageManager villages = VillageManager.get(player.getServerWorld());
         Optional<Village> village = villages.findNearestVillage(player);
 
-        if (village.isPresent() && !VillageRights.hasRights(village.get(), player)) {
-            player.sendMessage(Text.translatable("msg.mca_vie.rights.denied", Text.translatable(VillageRights.RIGHTS.getTranslationKey())), true);
-            ci.cancel();
-            return;
-        }
         if (action != ReportBuildingMessage.Action.FORCE_TYPE || data == null || data.equals("blocked")) {
             return;
         }

@@ -188,6 +188,12 @@ public final class WorldCalendar {
         return calendarDaysBetween(fromGameDay, toGameDay) / DAYS_PER_YEAR;
     }
 
+    // jour de la semaine de travail : suit les jours de jeu, quelle que soit la vitesse du calendrier
+    // (sinon à « 1 jour = 1 semaine » le calendrier reste bloqué sur le même jour, parfois un dimanche)
+    public static java.time.DayOfWeek rhythmDay(CalendarDate date) {
+        return FIRST_DAY.getDayOfWeek().plus(date.dayIndex());
+    }
+
     public static CalendarDate now(World world) {
         return fromTicks(world.getTimeOfDay());
     }

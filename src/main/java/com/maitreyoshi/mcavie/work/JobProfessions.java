@@ -3,6 +3,8 @@ package com.maitreyoshi.mcavie.work;
 import com.google.common.collect.ImmutableSet;
 import com.maitreyoshi.mcavie.MCAVie;
 import net.fabricmc.fabric.api.object.builder.v1.trade.TradeOfferHelper;
+import com.maitreyoshi.mcavie.mixin.VillagerEntityInvoker;
+import net.minecraft.entity.passive.VillagerEntity;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -11,6 +13,7 @@ import net.minecraft.potion.Potions;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.village.TradeOffer;
+import net.minecraft.village.VillagerData;
 import net.minecraft.village.VillagerProfession;
 import net.minecraft.world.poi.PointOfInterestType;
 import org.jetbrains.annotations.Nullable;
@@ -100,6 +103,29 @@ public final class JobProfessions {
                 List.of(buy(Items.BOWL, 12, 1), sell(Items.MUSHROOM_STEW, 1, 1)),
                 List.of(sell(Items.RABBIT_STEW, 1, 2)),
                 List.of(sell(Items.GOLDEN_CARROT, 4, 3)));
+    }
+
+    /**
+     * Aligne le niveau d'échange vanilla sur le niveau de métier (Apprenti 1 ... Maître 5) :
+     * chaque niveau gagné ajoute les offres de ce niveau, comme une montée de niveau vanilla.
+     */
+    public static void syncTradeLevel(VillagerEntity villager, Job job, int jobLevel) {
+        VillagerProfession profession = BY_JOB.get(job);
+        if (profession == null || villager.getWorld().isClient() || villager.getVillagerData().getProfession() != profession) {
+            return;
+        }
+        int target = Math.max(1, Math.min(5, jobLevel));
+        int current = villager.getVillagerData().getLevel();
+        if (current >= target) {
+            return;
+        }
+        villager.getOffers();
+        while (current < target) {
+            current++;
+            villager.setVillagerData(villager.getVillagerData().withLevel(current));
+            ((VillagerEntityInvoker) villager).mcavie$fillRecipes();
+        }
+        villager.setExperience(Math.max(villager.getExperience(), VillagerData.getLowerLevelExperience(target)));
     }
 
     @SafeVarargs
