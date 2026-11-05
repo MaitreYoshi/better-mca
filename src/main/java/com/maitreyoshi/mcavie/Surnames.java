@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie;
 
+import com.maitreyoshi.mcavie.tree.server.mixin.FamilyTreeAccessor;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.VillagerLike;
 import net.mca.network.s2c.PlayerDataMessage;
@@ -13,6 +14,9 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.List;
+import java.util.UUID;
 
 public final class Surnames {
     private static final int MAX_DEPTH = 16;
@@ -105,8 +109,59 @@ public final class Surnames {
         }
     }
 
+    public static void onEditorRename(VillagerEntityMCA villager) {
+        if (!(villager.getWorld() instanceof ServerWorld world)) {
+            return;
+        }
+        String surname = existingSurname(villager.getTrackedValue(VillagerLike.VILLAGER_NAME));
+        if (surname == null) {
+            return;
+        }
+        SurnameRegistry registry = SurnameRegistry.get(world.getServer());
+        String current = registry.get(villager.getUuid());
+        if (current == null || !surname.equals(SurnameText.display(current, villager.getGenetics().getGender()))) {
+            registry.set(villager.getUuid(), surname);
+        }
+    }
+
+    public static int fillMissing(ServerWorld world) {
+        FamilyTree tree = FamilyTree.get(world);
+        SurnameRegistry registry = SurnameRegistry.get(world.getServer());
+        List<FamilyTreeNode> missing = ((FamilyTreeAccessor) tree).mcavie$getEntries().values().stream()
+                .filter(node -> !node.isPlayer() && registry.get(node.id()) == null)
+                .toList();
+        int filled = 0;
+        for (FamilyTreeNode node : missing) {
+            if (registry.get(node.id()) != null || resolve(tree, registry, node, SurnameLists.DEFAULT_REGION, 0) != null) {
+                filled++;
+            }
+        }
+        return filled;
+    }
+
     public static void assign(ServerWorld world, FamilyTreeNode node) {
         resolve(FamilyTree.get(world), SurnameRegistry.get(world.getServer()), node, SurnameLists.DEFAULT_REGION, 0);
+    }
+
+    @Nullable
+    public static String babySurname(ServerWorld world, Entity near, UUID father, UUID mother) {
+        FamilyTree tree = FamilyTree.get(world);
+        SurnameRegistry registry = SurnameRegistry.get(world.getServer());
+        for (UUID parent : new UUID[]{father, mother}) {
+            if (!FamilyTreeNode.isValid(parent)) {
+                continue;
+            }
+            String surname = registry.get(parent);
+            if (surname == null) {
+                surname = tree.getOrEmpty(parent)
+                        .map(node -> resolve(tree, registry, node, regionOf(near), 0))
+                        .orElse(null);
+            }
+            if (surname != null) {
+                return surname;
+            }
+        }
+        return null;
     }
 
     public static String randomSurnameFor(Entity entity) {

@@ -77,8 +77,8 @@ public final class VillageEconomy {
     }
 
     public static long availableShare(VillageState state) {
-        long cap = state.shareBase * VillageConfig.get().playerSharePercent / 100;
-        return Math.max(0, Math.min(state.treasury - state.depositPool, cap - state.withdrawnThisWeek));
+        // Plus de quota : le maire peut retirer tout le trésor, chaque mouvement est inscrit au journal.
+        return Math.max(0, state.treasury);
     }
 
     public static int equilibriumFor(VillagerEntityMCA villager) {
@@ -98,11 +98,30 @@ public final class VillageEconomy {
                 .orElse(50);
     }
 
+    /** « Payé en nature » retiré à la demande : l'impôt est entièrement payé en émeraudes. */
+    private static final boolean NATURE_TAXES = false;
+
     public static boolean tick(Village village, ServerWorld world, long today) {
         VillageState state = VillageState.of(village);
         if (!state.economyActive) {
             return false;
         }
+        boolean changed = runLevies(village, state, world, today);
+        if (state.shareDay != today) {
+            refreshDailyShare(state, today);
+            changed = true;
+        }
+        return changed;
+    }
+
+    /** La part des joueurs se recalcule chaque jour sur le trésor du moment (hors émeraudes déposées). */
+    private static void refreshDailyShare(VillageState state, long today) {
+        state.shareBase = Math.max(0, state.treasury - state.depositPool);
+        state.withdrawnToday = 0;
+        state.shareDay = today;
+    }
+
+    private static boolean runLevies(Village village, VillageState state, ServerWorld world, long today) {
         long latest = Math.floorDiv(today - 6, 7);
         if (state.lastLevyWeek == VillageState.NONE) {
             state.lastLevyWeek = Math.floorDiv(today, 7) - 1;
@@ -197,6 +216,7 @@ public final class VillageEconomy {
         state.depositPool = Math.max(0, Math.min(state.depositPool, state.treasury));
         state.shareBase = Math.max(0, state.treasury - state.depositPool);
         state.withdrawnThisWeek = 0;
+        state.withdrawnToday = 0;
         state.depositedThisWeek = 0;
         state.appliedRate = Math.round(village.getTaxes() * 100);
 
@@ -205,7 +225,7 @@ public final class VillageEconomy {
     }
 
     private static double collectNature(Village village, ServerWorld world, VillageState state, Prestige.Result result) {
-        if (state.natureShare <= 0 || !VillageNature.hasStorage(village, result)) {
+        if (!NATURE_TAXES || state.natureShare <= 0 || !VillageNature.hasStorage(village, result)) {
             return 0;
         }
         VillageNature.Storage storage = VillageNature.storage(village, world, result);
@@ -242,7 +262,7 @@ public final class VillageEconomy {
                 .toList();
         Prestige.Result current = result;
         for (Building b : candidates) {
-            double cash = grossTaxes(village, world, state, current, rate, week, null) * (100 - state.natureShare) / 100.0;
+            double cash = grossTaxes(village, world, state, current, rate, week, null) * (100 - (NATURE_TAXES ? state.natureShare : 0)) / 100.0;
             if (weeklyUpkeep(village, current) <= Math.floor(cash + 1e-9)) {
                 break;
             }
@@ -267,6 +287,7 @@ public final class VillageEconomy {
             }
             state.treasury -= taken;
             state.withdrawnThisWeek += taken;
+            state.withdrawnToday += taken;
             state.addWithdrawal(new VillageState.Withdrawal(state.lastDay, player.getName().getString(), taken, false));
             long left = taken;
             while (left > 0) {

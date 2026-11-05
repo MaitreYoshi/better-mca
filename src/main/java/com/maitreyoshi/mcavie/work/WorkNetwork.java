@@ -12,8 +12,6 @@ import com.maitreyoshi.mcavie.village.VillageRights;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
-import net.minecraft.block.ChestBlock;
-import net.minecraft.inventory.Inventory;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -32,6 +30,7 @@ public final class WorkNetwork {
     public static final Identifier PICK_DEPOT = MCAVie.id("pick_depot");
     public static final Identifier ZONE_HERE = MCAVie.id("zone_here");
     public static final Identifier JOB_INFO = MCAVie.id("job_info");
+    public static final Identifier SHOW_WORKSTATION = MCAVie.id("show_workstation");
 
     private static final double MAX_DISTANCE_SQ = 16 * 16;
     private static final Map<UUID, PendingDepot> PENDING_DEPOTS = new ConcurrentHashMap<>();
@@ -87,6 +86,11 @@ public final class WorkNetwork {
             }));
         });
 
+        ServerPlayNetworking.registerGlobalReceiver(SHOW_WORKSTATION, (server, player, handler, buf, responseSender) -> {
+            UUID uuid = buf.readUuid();
+            server.execute(() -> findVillager(player, uuid).ifPresent(villager -> showWorkstation(player, villager)));
+        });
+
         UseBlockCallback.EVENT.register((player, world, hand, hit) -> {
             if (world.isClient || !(player instanceof ServerPlayerEntity serverPlayer)) {
                 return ActionResult.PASS;
@@ -96,21 +100,27 @@ public final class WorkNetwork {
                 return ActionResult.PASS;
             }
             BlockPos pos = hit.getBlockPos();
-            boolean container = world.getBlockState(pos).getBlock() instanceof ChestBlock || world.getBlockEntity(pos) instanceof Inventory;
-            if (!container || world.getTime() > pending.expiresAt()) {
+            boolean workstation = world.getBlockState(pos).getBlock() instanceof com.maitreyoshi.mcavie.work.block.WorkstationBlock;
+            if (!workstation || world.getTime() > pending.expiresAt()) {
                 PENDING_DEPOTS.remove(player.getUuid());
                 return ActionResult.PASS;
             }
             PENDING_DEPOTS.remove(player.getUuid());
             if (((ServerWorld) world).getEntity(pending.villager()) instanceof VillagerEntityMCA villager && canManage(serverPlayer, villager)) {
-                if (!WorkManager.isInZone(villager, pos)) {
-                    serverPlayer.sendMessage(Text.translatableWithFallback("job.mca_vie.depot_out_of_zone",
-                            "Ce coffre est hors de la zone de travail de %s.", villager.getName()).formatted(Formatting.RED), false);
+                WorkRegistry.Record record = WorkManager.getRecord(villager);
+                Job stationJob = ((com.maitreyoshi.mcavie.work.block.WorkstationBlock) world.getBlockState(pos).getBlock()).job();
+                if (stationJob != record.job) {
+                    serverPlayer.sendMessage(Text.translatable("job.mca_vie.wrong_workstation", villager.getName(), record.job.getName()).formatted(Formatting.RED), false);
                     return ActionResult.SUCCESS;
                 }
-                WorkRegistry.Record record = WorkManager.getRecord(villager);
+                Identifier dimension = world.getRegistryKey().getValue();
+                if (WorkRegistry.get(serverPlayer.getServer()).isClaimed(dimension, pos, villager.getUuid())) {
+                    serverPlayer.sendMessage(Text.translatable("job.mca_vie.workstation_taken").formatted(Formatting.RED), false);
+                    return ActionResult.SUCCESS;
+                }
                 record.depot = pos.toImmutable();
-                record.depotDimension = world.getRegistryKey().getValue();
+                record.depotDimension = dimension;
+                record.center = record.depot;
                 WorkRegistry.get(serverPlayer.getServer()).markDirty();
                 sendJobInfo(villager);
                 serverPlayer.sendMessage(Text.translatable("job.mca_vie.depot_set", villager.getName()).formatted(Formatting.GREEN), false);
@@ -144,6 +154,32 @@ public final class WorkNetwork {
         return villager;
     }
 
+    private static void showWorkstation(ServerPlayerEntity player, VillagerEntityMCA villager) {
+        WorkRegistry.Record record = WorkManager.findRecord(villager);
+        if (record == null || record.depot == null) {
+            player.sendMessage(Text.translatable("job.mca_vie.show_none", villager.getName()).formatted(Formatting.GOLD), true);
+            return;
+        }
+        ServerWorld world = player.getServerWorld();
+        BlockPos depot = record.depot;
+        for (int i = 0; i < 12; i++) {
+            world.spawnParticles(player, net.minecraft.particle.ParticleTypes.END_ROD, true,
+                    depot.getX() + 0.5, depot.getY() + 1.0 + i * 0.4, depot.getZ() + 0.5, 2, 0.1, 0.1, 0.1, 0.0);
+        }
+        BlockPos center = record.center != null ? record.center : depot;
+        int radius = record.radius;
+        int points = Math.max(48, radius * 8);
+        for (int i = 0; i < points; i++) {
+            double angle = Math.PI * 2 * i / points;
+            double x = center.getX() + 0.5 + Math.cos(angle) * radius;
+            double z = center.getZ() + 0.5 + Math.sin(angle) * radius;
+            int y = world.getTopY(net.minecraft.world.Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(x), (int) Math.floor(z));
+            world.spawnParticles(player, net.minecraft.particle.ParticleTypes.HAPPY_VILLAGER, true, x, y + 0.2, z, 1, 0.0, 0.0, 0.0, 0.0);
+        }
+        player.sendMessage(Text.translatable("job.mca_vie.shown", villager.getName(),
+                depot.getX(), depot.getY(), depot.getZ()).formatted(Formatting.GREEN), false);
+    }
+
     public static boolean canManage(ServerPlayerEntity player, VillagerEntityMCA villager) {
         WorkRegistry.Record record = WorkManager.findRecord(villager);
         if (record == null || record.employer == null || record.employer.equals(player.getUuid()) || player.hasPermissionLevel(2)) {
@@ -171,6 +207,9 @@ public final class WorkNetwork {
         buf.writeBoolean(WorkManager.isWorking(villager));
         buf.writeVarInt(record == null ? 1 : record.level);
         buf.writeBoolean(record != null && record.depot != null);
+        buf.writeVarInt(WorkManager.getStatus(villager).ordinal());
+        buf.writeVarInt(record == null ? 0 : record.experience);
+        buf.writeVarInt(WorkManager.getGesture(villager).ordinal());
         ServerPlayNetworking.send(player, JOB_INFO, buf);
     }
 }

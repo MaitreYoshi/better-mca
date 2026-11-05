@@ -21,12 +21,16 @@ public abstract class TimeCommandMixin {
 
     @ModifyVariable(method = "executeAdd", at = @At("HEAD"), argsOnly = true)
     private static int mcavie$limitJump(int time, ServerCommandSource source) {
-        long max = History.maxGameDays(WorldCalendar.now(source.getServer().getOverworld()).dayIndex()) * WorldCalendar.TICKS_PER_DAY;
-        if (time > max) {
-            source.sendFeedback(() -> Text.translatable("msg.mca_vie.history.limited", History.MAX_DAYS / 365), false);
-            return (int) max;
+        if (time <= 0) {
+            return time;
         }
-        return time;
+        // La durée demandée est du temps calendaire : /time add 100d avance de 100 jours du calendrier, quelle que soit l'échelle de temps.
+        long calendarTicks = Math.min(time, History.MAX_DAYS * WorldCalendar.TICKS_PER_DAY);
+        if (time > calendarTicks) {
+            source.sendFeedback(() -> Text.translatable("msg.mca_vie.history.limited", History.MAX_DAYS / 365), false);
+        }
+        double speed = WorldCalendar.calendarDaysPerGameDay(WorldCalendar.now(source.getServer().getOverworld()).dayIndex());
+        return (int) Math.max(1, Math.round(calendarTicks / speed));
     }
 
     @Inject(method = "executeAdd", at = @At("HEAD"))

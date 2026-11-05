@@ -54,7 +54,11 @@ public final class LifeCycle {
         if (birth == null) {
             boolean newborn = isNewborn(villager, world);
             birth = newborn ? today : initialBirthDay(villager, world, today);
-            registry.setBirthDay(villager.getUuid(), birth);
+            if (newborn) {
+                registry.recordBirth(villager.getUuid(), birth, WorldCalendar.exactCalendarDay(world));
+            } else {
+                registry.setBirthDay(villager.getUuid(), birth);
+            }
             if (newborn) {
                 VillageDecrees.onBirth(villager);
                 if (villager.getBreedingAge() <= -net.mca.entity.ai.relationship.AgeState.getMaxAge() + 2400) {
@@ -62,10 +66,16 @@ public final class LifeCycle {
                 }
             }
         }
-        registry.clearDeathDay(villager.getUuid());
+        Long death = registry.getDeathDay(villager.getUuid());
+        if (death != null) {
+            registry.resurrected(villager.getUuid(), WorldCalendar.exactCalendarDay(world), world.getTime());
+            Resurrection.returned(villager, world);
+        }
+        Resurrection.update(villager, world);
 
-        applyGrowth(villager, WorldCalendar.yearsBetween(birth, today));
-        Aging.update(villager, world, ageInYears(birth, today));
+        long body = registry.getBodyBirthDay(villager.getUuid());
+        applyGrowth(villager, WorldCalendar.yearsBetween(body, today));
+        Aging.update(villager, world, ageInYears(body, today));
     }
 
     public static void forgetDead(ServerWorld world, UUID uuid) {
@@ -88,7 +98,7 @@ public final class LifeCycle {
                 || !(villager.getWorld() instanceof ServerWorld world)) {
             return false;
         }
-        Long birth = LifeRegistry.get(world.getServer()).getBirthDay(villager.getUuid());
+        Long birth = LifeRegistry.get(world.getServer()).getBodyBirthDay(villager.getUuid());
         return birth != null && ageInYears(birth, WorldCalendar.now(world).dayIndex()) >= MENOPAUSE_AGE;
     }
 
@@ -104,7 +114,7 @@ public final class LifeCycle {
         int stage = stageIndex(AgeState.byCurrentAge(villager.getBreedingAge()));
         Random random = world.getRandom();
         int[] range = INITIAL_AGE_RANGES[stage];
-        int years = range[0] + random.nextInt(range[1] - range[0] + 1);
+        int years = FamilyAges.initialYears(world, villager.getUuid(), range[0], range[1], random);
         return WorldCalendar.gameDayOf(WorldCalendar.calendarDay(today) - (long) (years * DAYS_PER_YEAR) - random.nextInt(365));
     }
 

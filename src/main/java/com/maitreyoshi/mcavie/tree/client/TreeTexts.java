@@ -79,6 +79,10 @@ public final class TreeTexts {
         return info != null && !"none".equals(info.code()) && !"self".equals(info.code());
     }
 
+    public static boolean isShownOnCard(@Nullable RelationInfo info) {
+        return isShown(info) && !"relative_by_marriage".equals(info.code());
+    }
+
     private static String articleForm(String label, int gender) {
         String elision = I18n.translate(PREFIX + "elision");
         if (!label.isEmpty() && elision.indexOf(Character.toLowerCase(label.charAt(0))) >= 0
@@ -114,14 +118,25 @@ public final class TreeTexts {
     }
 
     public static Text date(long day) {
-        LocalDate date = WorldCalendar.dateOfDay(day);
+        return dateOf(WorldCalendar.dateOfDay(day));
+    }
+
+    public static Text date(@Nullable Long calendarDay, long day) {
+        return calendarDay != null ? dateOf(WorldCalendar.dateOfCalendarDay(calendarDay)) : date(day);
+    }
+
+    public static Text calendarDate(long calendarDay) {
+        return dateOf(WorldCalendar.dateOfCalendarDay(calendarDay));
+    }
+
+    private static Text dateOf(LocalDate date) {
         Text dayOfMonth = date.getDayOfMonth() == 1
                 ? Text.translatable("calendar.mca_vie.first_day")
                 : Text.literal(String.valueOf(date.getDayOfMonth()));
         return Text.translatable(PREFIX + "date",
                 dayOfMonth,
                 Text.translatable("calendar.mca_vie.month." + date.getMonthValue()),
-                WorldCalendar.displayYearOfDay(day));
+                date.getYear() <= 0 ? date.getYear() - 1 : date.getYear());
     }
 
     public static String profession(FamilyPerson person) {

@@ -52,6 +52,7 @@ public final class CivilRegistry {
                 .flatMap(Optional::stream)
                 .findFirst();
         add(village.isPresent() ? village : village(baby, world), new Entry(BIRTH, today(world), name(baby), parents, 0));
+        com.maitreyoshi.mcavie.social.SocialConversation.witness(world, baby, "birth", net.minecraft.text.Text.literal(name(baby)), baby.getUuid());
     }
 
     public static void marriage(VillagerEntityMCA villager, ServerWorld world, FamilyTreeNode node) {

@@ -15,9 +15,12 @@ import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.world.ServerWorld;
 import org.jetbrains.annotations.Nullable;
 
+import com.maitreyoshi.mcavie.calendar.WorldCalendar;
+import java.util.List;
 import java.util.UUID;
 
-public record TombstoneDetails(UUID person, String firstName, String lastName, @Nullable String job, @Nullable Long birth, long death, int tier) {
+public record TombstoneDetails(UUID person, String firstName, String lastName, @Nullable String job, @Nullable Long birth, long death, int tier,
+                               List<Long> pastLives, @Nullable Long exactBirth, @Nullable Long exactDeath) {
     public static final String KEY = "mca_vie:tombstone";
     public static final int LEGACY = -1;
     public static final int POOR = 0;
@@ -42,7 +45,11 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
             first = name.trim();
             surname = "";
         }
-        return new TombstoneDetails(entity.getUuid(), first, surname, jobOf(entity, world), birth, death, tierOf(entity, world));
+        LifeRegistry life = LifeRegistry.get(world.getServer());
+        Long exactDeath = life.getDeathDay(entity.getUuid()) != null ? life.exactDeath(entity.getUuid()) : null;
+        return new TombstoneDetails(entity.getUuid(), first, surname, jobOf(entity, world), birth, death, tierOf(entity, world),
+                life.pastLives(entity.getUuid()), birth == null ? null : life.exactBirth(entity.getUuid()),
+                exactDeath != null ? exactDeath : WorldCalendar.exactCalendarDay(world));
     }
 
     public static int tierOf(Entity entity, ServerWorld world) {
@@ -102,7 +109,11 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
                 nbt.contains("job") ? nbt.getString("job") : null,
                 nbt.contains("birth") ? nbt.getLong("birth") : null,
                 nbt.getLong("death"),
-                nbt.contains("tier") ? nbt.getInt("tier") : LEGACY
+                nbt.contains("tier") ? nbt.getInt("tier") : LEGACY,
+                nbt.contains("lives_cal") ? java.util.Arrays.stream(nbt.getLongArray("lives_cal")).boxed().toList()
+                        : java.util.Arrays.stream(nbt.getLongArray("lives")).map(WorldCalendar::calendarDay).boxed().toList(),
+                nbt.contains("exact_birth") ? nbt.getLong("exact_birth") : null,
+                nbt.contains("exact_death") ? nbt.getLong("exact_death") : null
         );
     }
 
@@ -120,6 +131,15 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
         nbt.putLong("death", death);
         if (tier != LEGACY) {
             nbt.putInt("tier", tier);
+        }
+        if (!pastLives.isEmpty()) {
+            nbt.putLongArray("lives_cal", pastLives);
+        }
+        if (exactBirth != null) {
+            nbt.putLong("exact_birth", exactBirth);
+        }
+        if (exactDeath != null) {
+            nbt.putLong("exact_death", exactDeath);
         }
         parent.put(KEY, nbt);
     }

@@ -4,6 +4,7 @@ import com.maitreyoshi.mcavie.Surnames;
 import com.maitreyoshi.mcavie.aging.AgeHolder;
 import com.maitreyoshi.mcavie.aging.Aging;
 import com.maitreyoshi.mcavie.life.LifeCycle;
+import com.maitreyoshi.mcavie.life.Orientation;
 import com.maitreyoshi.mcavie.life.Wellbeing;
 import com.maitreyoshi.mcavie.social.Social;
 import com.maitreyoshi.mcavie.social.SocialChat;
@@ -30,10 +31,15 @@ public abstract class VillagerEntityMCAMixin implements AgeHolder {
     @Unique
     private boolean mcavie$started;
 
+    @Inject(method = "tick", at = @At("HEAD"))
+    private void mcavie$tickHandSwing(CallbackInfo ci) {
+        ((LivingEntityInvoker) this).mcavie$tickHandSwing();
+    }
+
     @Inject(method = "tick", at = @At("TAIL"))
     private void mcavie$checkSurname(CallbackInfo ci) {
         VillagerEntityMCA self = (VillagerEntityMCA) (Object) this;
-        if (self.getWorld().isClient) {
+        if (self.getWorld().isClient || self.isDead()) {
             return;
         }
         WorkManager.keepWorking(self);
@@ -46,11 +52,13 @@ public abstract class VillagerEntityMCAMixin implements AgeHolder {
             return;
         }
         mcavie$cooldown = 20;
+        Orientation.update(self);
         Surnames.update(self);
         LifeCycle.update(self);
         Wellbeing.update(self, mcavie$checks++ % 5 == 0);
         Social.update(self);
         WorkManager.update(self);
+        com.maitreyoshi.mcavie.work.RepairErrands.update(self);
     }
 
     @Inject(method = "convertTo", at = @At("HEAD"))

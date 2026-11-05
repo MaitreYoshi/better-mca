@@ -25,10 +25,10 @@ public class CaneLayer extends FeatureRenderer<VillagerEntityMCA, VillagerEntity
 
     @Override
     public void render(MatrixStack matrices, VertexConsumerProvider provider, int light, VillagerEntityMCA villager, float limbAngle, float limbDistance, float tickDelta, float animationProgress, float headYaw, float headPitch) {
-        if (villager.isInvisible() || villager.hasCustomSkin() || !AgingClient.hasCane(villager)) {
+        Arm arm = AgingClient.caneArm(villager);
+        if (villager.isInvisible() || villager.hasCustomSkin() || arm == null) {
             return;
         }
-        Arm arm = villager.getMainArm();
         matrices.push();
         getContextModel().setArmAngle(arm, matrices);
         matrices.translate((arm == Arm.LEFT ? 1 : -1) / 16f, 15 / 16f, -1 / 32f);

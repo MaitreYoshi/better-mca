@@ -5,20 +5,15 @@ import net.minecraft.entity.ai.brain.EntityLookTarget;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 public final class SocialChat {
-    public static final int PHRASES = 6;
     private static final double HOLD_DISTANCE = 6;
 
     private static final Map<UUID, Hold> HOLDS = new HashMap<>();
-    private static final Map<UUID, Long> LAST_CHAT = new HashMap<>();
 
     private record Hold(VillagerEntityMCA partner, long until) {
     }
@@ -30,29 +25,28 @@ public final class SocialChat {
         SocialConfig config = SocialConfig.get();
         long time = world.getTime();
         HOLDS.values().removeIf(h -> h.until < time || h.until - time > 600);
-        if (config.lookSeconds > 0) {
-            long until = time + config.lookSeconds * 20L;
+        int talk = 0;
+        if (config.showChats && anyPlayerNear(world, a, b, config.chatRadius)) {
+            talk = SocialConversation.start(world, a, b, delta < 0, score, family);
+        }
+        int hold = Math.max(config.lookSeconds * 20, talk);
+        if (hold > 0) {
+            long until = time + hold;
             HOLDS.put(a.getUuid(), new Hold(b, until));
             HOLDS.put(b.getUuid(), new Hold(a, until));
             hold(a);
             hold(b);
         }
-        if (!config.showChats || a.isSpeechImpaired() || a.isToYoungToSpeak()) {
-            return;
-        }
-        String mood = delta < 0 ? "quarrel" : family ? "family" : score >= Social.FRIEND ? "friend" : "neutral";
-        String key = "chat.mca_vie.social." + mood + "." + world.getRandom().nextInt(PHRASES);
-        MutableText text = Text.translatable("chat.mca_vie.social.format", a.getName(), b.getName(), Text.translatable(key))
-                .formatted(Formatting.GRAY, Formatting.ITALIC);
-        double max = (double) config.chatRadius * config.chatRadius;
-        long cooldown = config.chatCooldownSeconds * 20L;
-        LAST_CHAT.values().removeIf(last -> time - last >= cooldown || last > time);
+    }
+
+    private static boolean anyPlayerNear(ServerWorld world, VillagerEntityMCA a, VillagerEntityMCA b, int radius) {
+        double max = (double) radius * radius;
         for (ServerPlayerEntity player : world.getPlayers()) {
-            if ((player.squaredDistanceTo(a) <= max || player.squaredDistanceTo(b) <= max) && !LAST_CHAT.containsKey(player.getUuid())) {
-                LAST_CHAT.put(player.getUuid(), time);
-                player.sendMessage(text);
+            if (player.squaredDistanceTo(a) <= max || player.squaredDistanceTo(b) <= max) {
+                return true;
             }
         }
+        return false;
     }
 
     public static void hold(VillagerEntityMCA self) {
@@ -72,13 +66,9 @@ public final class SocialChat {
         self.getBrain().remember(MemoryModuleType.LOOK_TARGET, new EntityLookTarget(partner, true), left);
     }
 
-    public static void forgetPlayer(UUID uuid) {
-        LAST_CHAT.remove(uuid);
-    }
-
     public static void clear() {
         HOLDS.clear();
-        LAST_CHAT.clear();
+        SocialConversation.clear();
     }
 
     public static void forget(UUID uuid) {

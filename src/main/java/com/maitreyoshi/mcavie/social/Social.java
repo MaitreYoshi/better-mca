@@ -49,8 +49,8 @@ public final class Social {
     public static final int FORGET_AFTER_DAYS = 7;
     public static final int MAX_CATCH_UP_DAYS = 30;
     public static final int VIRTUAL_TALKS = 2;
-    public static final long TALK_COOLDOWN = 1200;
-    public static final double TALK_DISTANCE = 3;
+    public static final long TALK_COOLDOWN = 600;
+    public static final double TALK_DISTANCE = 4;
     public static final double FRIEND_DISTANCE = 32;
     public static final float FRIEND_NEAR_DAY = 1;
     public static final float ENEMY_AT_HOME_DAY = -1;
@@ -85,7 +85,8 @@ public final class Social {
             return false;
         }
         Optional<Activity> activity = villager.getBrain().getFirstPossibleNonCoreActivity();
-        return activity.isPresent() && (activity.get() == Activity.IDLE || activity.get() == Activity.MEET || activity.get() == Activity.PLAY);
+        return activity.isPresent() && (activity.get() == Activity.IDLE || activity.get() == Activity.MEET || activity.get() == Activity.PLAY
+                || activity.get() == Activity.WORK);
     }
 
     @Nullable
@@ -93,11 +94,11 @@ public final class Social {
         double max = TALK_DISTANCE * TALK_DISTANCE;
         Optional<?> target = villager.getBrain().getOptionalRegisteredMemory(MemoryModuleType.INTERACTION_TARGET);
         if (target.isPresent() && target.get() instanceof VillagerEntityMCA other && other != villager
-                && villager.squaredDistanceTo(other) <= max && canTalk(other)) {
+                && villager.squaredDistanceTo(other) <= max && canTalk(other) && villager.canSee(other)) {
             return other;
         }
         return world.getEntitiesByClass(VillagerEntityMCA.class, villager.getBoundingBox().expand(TALK_DISTANCE), e -> e != villager && canTalk(e)).stream()
-                .filter(e -> villager.squaredDistanceTo(e) <= max)
+                .filter(e -> villager.squaredDistanceTo(e) <= max && villager.canSee(e))
                 .min(Comparator.comparingDouble(villager::squaredDistanceTo))
                 .orElse(null);
     }
@@ -106,30 +107,31 @@ public final class Social {
         SocialRegistry registry = SocialRegistry.get(world.getServer());
         long time = world.getTime();
         long today = WorldCalendar.now(world).dayIndex();
+        boolean capped = false;
         if (mode == Mode.NATURAL) {
             if (time - registry.lastTalk(b) < TALK_COOLDOWN) {
                 return 0;
             }
             registry.setLastTalk(a, time);
-            Link link = registry.get(a, b);
-            if (link != null && link.talkDay == today && link.talks >= MAX_TALKS_PER_PAIR_DAY) {
-                return 0;
-            }
             registry.setLastTalk(b, time);
+            Link link = registry.get(a, b);
+            capped = link != null && link.talkDay == today && link.talks >= MAX_TALKS_PER_PAIR_DAY;
         } else if (mode == Mode.FORCED) {
             registry.setLastTalk(a, time);
             registry.setLastTalk(b, time);
         } else if (score(registry, a, b) <= ENEMY || score(registry, b, a) <= ENEMY) {
             return 0;
         }
-        int delta = world.getRandom().nextDouble() < quarrelChance(world, a, b) ? QUARREL : TALK;
-        countTalk(change(world, a, b, delta, today, true), today);
-        countTalk(change(world, b, a, delta, today, true), today);
+        int delta = capped ? TALK : world.getRandom().nextDouble() < quarrelChance(world, a, b) ? QUARREL : TALK;
+        if (!capped) {
+            countTalk(change(world, a, b, delta, today, true), today);
+            countTalk(change(world, b, a, delta, today, true), today);
+        }
         if (mode != Mode.VIRTUAL && world.getEntity(a) instanceof VillagerEntityMCA first && world.getEntity(b) instanceof VillagerEntityMCA second) {
             Link link = registry.get(a, b);
             SocialChat.show(world, first, second, delta, Math.min(score(registry, a, b), score(registry, b, a)), link != null && link.family);
         }
-        return delta;
+        return capped ? 0 : delta;
     }
 
     private static void countTalk(@Nullable Link link, long today) {
@@ -255,6 +257,9 @@ public final class Social {
                     || world.getEntity(resident) instanceof VillagerEntityMCA v && v.isGuard();
             change(world, resident, thief, guard ? THEFT_GUARD : THEFT, today, false);
         }
+        if (world.getEntity(thief) instanceof VillagerEntityMCA caught) {
+            SocialConversation.witness(world, caught, "theft", caught.getName(), thief);
+        }
     }
 
     public static void hit(ServerWorld world, UUID victim, UUID attacker) {
@@ -267,9 +272,17 @@ public final class Social {
         if (link != null) {
             link.hitDay = today;
         }
+        net.minecraft.entity.Entity victimEntity = world.getEntity(victim);
+        net.minecraft.entity.Entity attackerEntity = world.getEntity(attacker);
+        if (victimEntity != null && attackerEntity != null) {
+            SocialConversation.witness(world, victimEntity, "hit", attackerEntity.getName(), victim, attacker);
+        }
     }
 
     public static void died(ServerWorld world, UUID dead, boolean familyMourned) {
+        if (world.getEntity(dead) instanceof VillagerEntityMCA deceased) {
+            SocialConversation.witness(world, deceased, "death", deceased.getName(), dead);
+        }
         SocialRegistry registry = SocialRegistry.get(world.getServer());
         Optional<FamilyTreeNode> node = FamilyTree.get(world).getOrEmpty(dead);
         for (UUID owner : registry.owners()) {
@@ -357,6 +370,9 @@ public final class Social {
         int bestScore = MARRIAGE_MIN - 1;
         VillagerEntityMCA fallback = null;
         for (VillagerEntityMCA candidate : candidates) {
+            if (!com.maitreyoshi.mcavie.life.Orientation.compatible(suitor, candidate)) {
+                continue;
+            }
             int mine = score(registry, id, candidate.getUuid());
             int theirs = score(registry, candidate.getUuid(), id);
             if (mine <= ENEMY || theirs <= ENEMY) {

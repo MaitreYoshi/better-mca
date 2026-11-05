@@ -20,6 +20,7 @@ import net.minecraft.entity.attribute.EntityAttributeInstance;
 import net.minecraft.entity.attribute.EntityAttributeModifier;
 import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.server.ServerTask;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
@@ -42,9 +43,13 @@ public final class Aging {
     public static void register() {
         AgingConfig.load();
         EntityTrackingEvents.START_TRACKING.register((entity, player) -> {
-            int years = years(entity);
-            if (entity instanceof VillagerEntityMCA && years >= 0) {
-                sendTo(player, entity, years);
+            if (entity instanceof VillagerEntityMCA) {
+                player.server.send(new ServerTask(player.server.getTicks(), () -> {
+                    int years = years(entity);
+                    if (years >= 0 && !player.isDisconnected()) {
+                        sendTo(player, entity, years);
+                    }
+                }));
             }
         });
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {

@@ -1,0 +1,12 @@
+{
+  "replace": false,
+  "values": [
+    "mca_vie:seed_shed",
+    "mca_vie:chopping_block",
+    "mca_vie:fish_stall",
+    "mca_vie:feeding_trough",
+    "mca_vie:apothecary_table",
+    "mca_vie:school_desk",
+    "mca_vie:miner_cart"
+  ]
+}

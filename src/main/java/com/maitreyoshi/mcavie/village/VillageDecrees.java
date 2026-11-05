@@ -61,7 +61,7 @@ public final class VillageDecrees {
             return null;
         }
         if (!state.rank.isAtLeast(decree.rank)) {
-            return Text.translatable("gui.mca_vie.decree.need_rank", decree.rank.getName());
+            return Text.translatable("gui.mca_vie.decree.need_rank", decree.rank.getName(), state.rank.getName());
         }
         if (decree.kind == Decree.Kind.TOGGLE) {
             long first = weeklyCost(village, decree, null, 0);

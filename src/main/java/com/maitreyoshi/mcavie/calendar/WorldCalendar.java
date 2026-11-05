@@ -43,7 +43,7 @@ public final class WorldCalendar {
     public static void register() {
         TIME_SPEED = GameRuleRegistry.register("mcaVieTimeSpeed",
                 new CustomGameRuleCategory(MCAVie.id("calendar"), Text.translatable("gamerule.category.mca_vie")),
-                GameRuleFactory.createEnumRule(TimeSpeed.JOUR, WorldCalendar::onSpeedChanged));
+                GameRuleFactory.createEnumRule(TimeSpeed.DAY, WorldCalendar::onSpeedChanged));
         ServerWorldEvents.LOAD.register((s, world) -> {
             if (world.getRegistryKey() == World.OVERWORLD) {
                 server = s;
@@ -52,6 +52,15 @@ public final class WorldCalendar {
                     state.setSegments(List.of(new Segment(0, 0, s.getGameRules().get(TIME_SPEED).get().calendarDaysPerGameDay())));
                 }
                 serverSegments = state.segments();
+                double speed = serverSegments.get(serverSegments.size() - 1).speed();
+                EnumRule<TimeSpeed> rule = s.getGameRules().get(TIME_SPEED);
+                if (rule.get().calendarDaysPerGameDay() != speed) {
+                    for (TimeSpeed value : TimeSpeed.values()) {
+                        if (value.calendarDaysPerGameDay() == speed) {
+                            rule.set(value, s);
+                        }
+                    }
+                }
             }
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(s -> {
@@ -179,6 +188,12 @@ public final class WorldCalendar {
         return calendarDaysBetween(fromGameDay, toGameDay) / DAYS_PER_YEAR;
     }
 
+    // jour de la semaine de travail : suit les jours de jeu, quelle que soit la vitesse du calendrier
+    // (sinon à « 1 jour = 1 semaine » le calendrier reste bloqué sur le même jour, parfois un dimanche)
+    public static java.time.DayOfWeek rhythmDay(CalendarDate date) {
+        return FIRST_DAY.getDayOfWeek().plus(date.dayIndex());
+    }
+
     public static CalendarDate now(World world) {
         return fromTicks(world.getTimeOfDay());
     }
@@ -189,6 +204,10 @@ public final class WorldCalendar {
 
     public static CalendarDate flowingNow(World world) {
         return fromTicks(world.getTimeOfDay(), true);
+    }
+
+    public static CalendarDate flowingFromTicks(long ticks) {
+        return fromTicks(ticks, true);
     }
 
     private static CalendarDate fromTicks(long ticks, boolean flowing) {
@@ -213,6 +232,26 @@ public final class WorldCalendar {
                 minuteOfDay % 60,
                 dayIndex
         );
+    }
+
+    public static long exactCalendarDay(World world) {
+        long shifted = Math.max(0, world.getTimeOfDay() + TICKS_OFFSET);
+        return Math.floorDiv(flowingCalendarTicks(shifted / TICKS_PER_DAY, shifted % TICKS_PER_DAY), TICKS_PER_DAY);
+    }
+
+    public static long spreadCalendarDay(long gameDay, long seed) {
+        long start = calendarDay(gameDay);
+        long span = calendarDay(gameDay + 1) - start;
+        return span <= 1 ? start : start + Math.floorMod(seed, span);
+    }
+
+    public static LocalDate dateOfCalendarDay(long calendarDay) {
+        return FIRST_DAY.plusDays(calendarDay);
+    }
+
+    public static int displayYearOfCalendarDay(long calendarDay) {
+        int year = dateOfCalendarDay(calendarDay).getYear();
+        return year <= 0 ? year - 1 : year;
     }
 
     public static LocalDate dateOfDay(long dayIndex) {

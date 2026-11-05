@@ -1,11 +1,11 @@
 package com.maitreyoshi.mcavie.calendar;
 
 public enum TimeSpeed {
-    JOUR(1),
-    SEMAINE(7),
-    MOIS(WorldCalendar.DAYS_PER_YEAR / 12),
-    SAISON(WorldCalendar.DAYS_PER_YEAR / 4),
-    AN(WorldCalendar.DAYS_PER_YEAR);
+    DAY(1),
+    WEEK(7),
+    MONTH(WorldCalendar.DAYS_PER_YEAR / 12),
+    SEASON(WorldCalendar.DAYS_PER_YEAR / 4),
+    YEAR(WorldCalendar.DAYS_PER_YEAR);
 
     private final double calendarDaysPerGameDay;
 

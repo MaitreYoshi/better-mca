@@ -3,7 +3,6 @@ package com.maitreyoshi.mcavie.work;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.tag.BlockTags;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.PersistentState;
@@ -56,14 +55,14 @@ public class PlacedLogs extends PersistentState {
     }
 
     public static void placed(ServerWorld world, BlockPos pos) {
-        if (world.getBlockState(pos).isIn(BlockTags.LOGS)) {
+        if (com.maitreyoshi.mcavie.work.tasks.LumberjackTask.isLog(world.getBlockState(pos))) {
             get(world).add(pos);
         }
     }
 
     public static void register() {
         PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
-            if (world instanceof ServerWorld serverWorld && state.isIn(BlockTags.LOGS)) {
+            if (world instanceof ServerWorld serverWorld && com.maitreyoshi.mcavie.work.tasks.LumberjackTask.isLog(state)) {
                 get(serverWorld).remove(pos);
             }
         });

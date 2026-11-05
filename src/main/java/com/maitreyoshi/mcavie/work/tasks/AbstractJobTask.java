@@ -9,7 +9,14 @@ import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.ChestBlock;
 import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.ai.brain.MemoryModuleState;
+import com.maitreyoshi.mcavie.work.WorkStatus;
+import com.maitreyoshi.mcavie.work.WorkGesture;
+import net.minecraft.sound.BlockSoundGroup;
+import net.minecraft.entity.ai.brain.WalkTarget;
+import net.minecraft.particle.BlockStateParticleEffect;
+import net.minecraft.particle.ParticleTypes;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.util.Hand;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.MultiTickTask;
 import net.minecraft.inventory.Inventory;
@@ -29,6 +36,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
     protected static final int MAX_RUN_TICKS = 400;
@@ -36,19 +44,95 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
     private final Job job;
 
     protected AbstractJobTask(Job job) {
-        super(ImmutableMap.of(
-                MemoryModuleType.LOOK_TARGET, MemoryModuleState.VALUE_ABSENT,
-                MemoryModuleType.WALK_TARGET, MemoryModuleState.VALUE_ABSENT
-        ), MAX_RUN_TICKS);
+        this(job, MAX_RUN_TICKS);
+    }
+
+    protected AbstractJobTask(Job job, int maxRunTicks) {
+        super(ImmutableMap.of(), maxRunTicks);
         this.job = job;
     }
 
     @Override
     protected boolean shouldRun(ServerWorld world, VillagerEntityMCA villager) {
-        return WorkManager.isWorking(villager)
-                && WorkManager.getJob(villager) == job
-                && !DepositTask.shouldDeposit(world, villager)
-                && canWork(world, villager);
+        if (!WorkManager.isWorking(villager) || WorkManager.getJob(villager) != job || DepositTask.shouldDeposit(world, villager)) {
+            return false;
+        }
+        if (canWork(world, villager)) {
+            return true;
+        }
+        WorkStatus status = idleStatus(world, villager);
+        if (status != null) {
+        } else if (isSearching()) {
+            status = WorkStatus.SEARCHING;
+        } else if (altersBlocks() && !world.getGameRules().getBoolean(GameRules.DO_MOB_GRIEFING)) {
+            status = WorkStatus.NO_GRIEFING;
+        } else {
+            status = WorkStatus.NOTHING_TO_DO;
+        }
+        WorkManager.setStatus(villager, status);
+        return false;
+    }
+
+    @Override
+    protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+        WorkManager.setGesture(villager, WorkGesture.NONE);
+        villager.getBrain().forget(MemoryModuleType.WALK_TARGET);
+        villager.getBrain().forget(MemoryModuleType.LOOK_TARGET);
+    }
+
+    @Nullable
+    protected WorkStatus idleStatus(ServerWorld world, VillagerEntityMCA villager) {
+        return null;
+    }
+
+    protected boolean isSearching() {
+        return false;
+    }
+
+    protected boolean altersBlocks() {
+        return false;
+    }
+
+    static void walkTo(VillagerEntityMCA villager, BlockPos pos) {
+        WorkManager.setStatus(villager, WorkStatus.TRAVELING);
+        WorkManager.setGesture(villager, WorkGesture.NONE);
+        Optional<WalkTarget> current = villager.getBrain().getOptionalMemory(MemoryModuleType.WALK_TARGET);
+        if (current.isEmpty() || !current.get().getLookTarget().getBlockPos().equals(pos)) {
+            villager.moveTowards(pos);
+        }
+    }
+
+    static void arrive(VillagerEntityMCA villager, WorkStatus status) {
+        WorkManager.setStatus(villager, status);
+        villager.getBrain().forget(MemoryModuleType.WALK_TARGET);
+        villager.getNavigation().stop();
+    }
+
+    protected static void arrive(VillagerEntityMCA villager, WorkGesture gesture) {
+        arrive(villager, WorkStatus.WORKING);
+        WorkManager.setGesture(villager, gesture);
+    }
+
+    protected static void hitBlock(ServerWorld world, VillagerEntityMCA villager, BlockPos pos, int ticks, int total) {
+        if (ticks % 5 != 1) {
+            return;
+        }
+        villager.swingHand(Hand.MAIN_HAND);
+        BlockState state = world.getBlockState(pos);
+        if (state.isAir()) {
+            return;
+        }
+        world.setBlockBreakingInfo(villager.getId(), pos, Math.min(9, ticks * 10 / Math.max(1, total)));
+        BlockSoundGroup sounds = state.getSoundGroup();
+        world.playSound(null, pos, sounds.getHitSound(), SoundCategory.NEUTRAL, (sounds.getVolume() + 1.0F) / 4.0F, sounds.getPitch() * 0.8F);
+        world.spawnParticles(new BlockStateParticleEffect(ParticleTypes.BLOCK, state),
+                pos.getX() + 0.5, pos.getY() + 0.6, pos.getZ() + 0.5, 6, 0.3, 0.3, 0.3, 0.05);
+    }
+
+    protected static void clearBreaking(ServerWorld world, VillagerEntityMCA villager, @Nullable BlockPos pos) {
+        if (pos != null) {
+            world.setBlockBreakingInfo(villager.getId(), pos, -1);
+        }
     }
 
     @Override
@@ -86,14 +170,20 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
     }
 
     protected void store(VillagerEntityMCA villager, ItemStack stack, boolean bonus) {
-        WorkRegistry.Record record = WorkManager.findRecord(villager);
-        int level = record == null ? 1 : record.level;
-        if (bonus && !stack.isEmpty() && stack.getCount() < stack.getMaxCount() && villager.getRandom().nextFloat() < (level - 1) * 0.1f) {
-            stack.increment(1);
+        if (bonus) {
+            addBonus(villager, stack);
         }
         ItemStack rest = villager.getInventory().addStack(stack);
         if (!rest.isEmpty()) {
             villager.getWorld().spawnEntity(new ItemEntity(villager.getWorld(), villager.getX(), villager.getY() + 0.5, villager.getZ(), rest));
+        }
+    }
+
+    protected static void addBonus(VillagerEntityMCA villager, ItemStack stack) {
+        WorkRegistry.Record record = WorkManager.findRecord(villager);
+        int level = record == null ? 1 : record.level;
+        if (!stack.isEmpty() && stack.getCount() < stack.getMaxCount() && villager.getRandom().nextFloat() < (level - 1) * 0.1f) {
+            stack.increment(1);
         }
     }
 
@@ -106,9 +196,13 @@ public abstract class AbstractJobTask extends MultiTickTask<VillagerEntityMCA> {
     }
 
     protected List<ItemStack> blockDrops(ServerWorld world, VillagerEntityMCA villager, BlockPos pos, BlockState state) {
+        return blockDrops(world, villager, pos, state, job.tool());
+    }
+
+    protected List<ItemStack> blockDrops(ServerWorld world, VillagerEntityMCA villager, BlockPos pos, BlockState state, ItemStack tool) {
         LootContextParameterSet.Builder builder = new LootContextParameterSet.Builder(world)
                 .add(LootContextParameters.ORIGIN, Vec3d.ofCenter(pos))
-                .add(LootContextParameters.TOOL, job.tool())
+                .add(LootContextParameters.TOOL, tool)
                 .add(LootContextParameters.THIS_ENTITY, villager)
                 .add(LootContextParameters.BLOCK_STATE, state)
                 .luck(0);

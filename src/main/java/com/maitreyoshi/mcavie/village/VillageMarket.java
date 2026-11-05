@@ -34,7 +34,7 @@ public final class VillageMarket {
     public static boolean isMarketHours(World world) {
         VillageConfig config = VillageConfig.get();
         WorldCalendar.CalendarDate date = WorldCalendar.now(world);
-        return date.dayOfWeek() == DayOfWeek.of(config.marketDayOfWeek) && date.hour() >= config.marketStartHour && date.hour() < config.marketEndHour;
+        return WorldCalendar.rhythmDay(date) == DayOfWeek.of(config.marketDayOfWeek) && date.hour() >= config.marketStartHour && date.hour() < config.marketEndHour;
     }
 
     public static long marketWeek(World world) {
@@ -50,9 +50,12 @@ public final class VillageMarket {
         return isMarketHours(world) && VillageDecrees.residentVillage(villager).map(v -> VillageState.of(v).marketActive).orElse(false);
     }
 
+    /** Commandes et ventes automatiques depuis l'Entrepôt, désactivées : le Marché est un lieu de rassemblement. */
+    public static final boolean AUTOMATIC_TRADE = false;
+
     public static boolean tick(Village village, ServerWorld world, VillageState state, Prestige.Result result) {
         boolean dirty = false;
-        boolean active = Prestige.hasActive(result, village, "market") && VillageNature.hasStorage(village, result) && state.economyActive;
+        boolean active = Prestige.hasActive(result, village, "market") && state.economyActive;
         if (active != state.marketActive) {
             state.marketActive = active;
             dirty = true;
@@ -64,6 +67,29 @@ public final class VillageMarket {
             }
             if (state.lastMarketWeek != week) {
                 state.lastMarketWeek = week;
+                dirty = true;
+            }
+            return dirty;
+        }
+        if (!AUTOMATIC_TRADE) {
+            // Marché manuel : les villageois se rassemblent le jour du marché, les joueurs commercent eux-mêmes.
+            if (refundPending(state)) {
+                dirty = true;
+            }
+            if (isMarketHours(world)) {
+                gather(village, world);
+                if (state.lastMerchantWeek != week && VillageMarketExtras.spawnMerchants(village, world)) {
+                    state.lastMerchantWeek = week;
+                    dirty = true;
+                }
+            }
+            if (state.lastMarketWeek == VillageState.NONE || week < state.lastMarketWeek) {
+                state.lastMarketWeek = week;
+                return true;
+            }
+            if (week > state.lastMarketWeek) {
+                state.lastMarketWeek = week;
+                VillageMarketExtras.sellStalls(village, world, state);
                 dirty = true;
             }
             return dirty;
@@ -104,6 +130,7 @@ public final class VillageMarket {
     }
 
     public static void devHold(Village village, ServerWorld world) {
+        if (!AUTOMATIC_TRADE) { VillageMarketExtras.sellStalls(village, world, VillageState.of(village)); village.markDirty(); return; }
         VillageState state = VillageState.of(village);
         Prestige.Result result = Prestige.evaluate(village, state.rank);
         List<Inventory> storage = VillageNature.hasStorage(village, result) ? VillageNature.storage(village, world, result).inventories() : List.of();

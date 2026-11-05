@@ -18,10 +18,10 @@ public final class SocialConfig {
 
     private static SocialConfig instance;
 
+    public int version;
     public boolean showChats = true;
-    public int chatRadius = 12;
+    public int chatRadius = 16;
     public int lookSeconds = 3;
-    public int chatCooldownSeconds = 20;
 
     public static SocialConfig get() {
         if (instance == null) {
@@ -45,9 +45,14 @@ public final class SocialConfig {
         if (config == null) {
             config = new SocialConfig();
         }
+        if (config.version < 3) {
+            if (config.chatRadius == 12 || config.chatRadius == 24) {
+                config.chatRadius = 16;
+            }
+            config.version = 3;
+        }
         config.chatRadius = Math.max(1, Math.min(64, config.chatRadius));
         config.lookSeconds = Math.max(0, Math.min(30, config.lookSeconds));
-        config.chatCooldownSeconds = Math.max(0, config.chatCooldownSeconds);
         instance = config;
         if (!readable) {
             return;

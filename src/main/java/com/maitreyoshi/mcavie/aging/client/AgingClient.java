@@ -12,6 +12,7 @@ import net.mca.entity.VillagerEntityMCA;
 import net.minecraft.client.model.ModelPart;
 import net.minecraft.util.Arm;
 import net.minecraft.util.math.MathHelper;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
@@ -79,18 +80,26 @@ public final class AgingClient {
         return 0.4f + 0.6f * AgingConfig.progress(years, config.stoopStartAge, config.stoopFullAge);
     }
 
-    public static boolean hasCane(VillagerEntityMCA villager) {
+    @Nullable
+    public static Arm caneArm(VillagerEntityMCA villager) {
         AgingConfig config = AgingConfig.get();
-        return config.cane && Aging.years(villager) >= config.caneAge
-                && villager.getMainHandStack().isEmpty()
-                && !villager.isSleeping() && !villager.hasVehicle() && !villager.isSwimming() && !villager.isBaby();
+        if (!config.cane || Aging.years(villager) < config.caneAge
+                || villager.isSleeping() || villager.hasVehicle() || villager.isSwimming() || villager.isBaby()) {
+            return null;
+        }
+        Arm main = villager.getMainArm();
+        if (villager.getMainHandStack().isEmpty()) {
+            return main;
+        }
+        return villager.getOffHandStack().isEmpty() ? main.getOpposite() : null;
     }
 
     public static void pose(VillagerEntityBaseModelMCA<?> model, VillagerEntityMCA villager) {
         float stoop = stoopAmount(villager);
         boolean free = !villager.isSleeping() && !villager.hasVehicle() && !villager.isInSneakingPose()
                 && !villager.isSwimming() && !villager.isFallFlying();
-        float angle = free ? stoop * AgingConfig.get().stoopDegrees * MathHelper.RADIANS_PER_DEGREE : 0;
+        float angle = free ? stoop * AgingConfig.get().stoopDegrees * MathHelper.RADIANS_PER_DEGREE
+                + com.maitreyoshi.mcavie.work.client.WorkPoses.lean(villager) : 0;
         float sin = MathHelper.sin(angle);
         float cos = MathHelper.cos(angle);
         model.head.pivotZ = -4 * sin;
@@ -113,8 +122,9 @@ public final class AgingClient {
         }
         model.hat.copyTransform(model.head);
 
-        if (free && hasCane(villager) && model.handSwingProgress <= 0) {
-            ModelPart arm = villager.getMainArm() == Arm.LEFT ? model.leftArm : model.rightArm;
+        Arm caneArm = free ? caneArm(villager) : null;
+        if (caneArm != null && (caneArm != villager.getMainArm() || model.handSwingProgress <= 0)) {
+            ModelPart arm = caneArm == Arm.LEFT ? model.leftArm : model.rightArm;
             arm.pitch = -0.15f;
             arm.yaw = 0;
             arm.roll = 0;

@@ -60,7 +60,7 @@ public final class Wellbeing {
             return;
         }
         WellbeingRegistry registry = WellbeingRegistry.get(world.getServer());
-        Long birth = LifeRegistry.get(world.getServer()).getBirthDay(villager.getUuid());
+        Long birth = LifeRegistry.get(world.getServer()).getBodyBirthDay(villager.getUuid());
         if (birth == null) {
             return;
         }

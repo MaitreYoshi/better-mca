@@ -4,7 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
 import net.mca.entity.VillagerEntityMCA;
-import net.minecraft.entity.ai.brain.MemoryModuleState;
+import com.maitreyoshi.mcavie.work.WorkStatus;
 import net.minecraft.entity.ai.brain.MemoryModuleType;
 import net.minecraft.entity.ai.brain.task.MultiTickTask;
 import net.minecraft.inventory.Inventory;
@@ -27,8 +27,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DepositTask extends MultiTickTask<VillagerEntityMCA> {
-    private static final int SLOTS_BEFORE_DEPOSIT = 6;
-    private static final int ITEMS_BEFORE_DEPOSIT = 24;
     private static final int KEEP_FOR_PLANTING = 16;
     private static final int REACH_TICKS = 300;
     private static final long BLACKLIST_TICKS = 2400;
@@ -41,10 +39,7 @@ public class DepositTask extends MultiTickTask<VillagerEntityMCA> {
     private final AbstractJobTask.Reach<UUID> reach = new AbstractJobTask.Reach<>(REACH_TICKS, BLACKLIST_TICKS, UNREACHABLE);
 
     public DepositTask() {
-        super(ImmutableMap.of(
-                MemoryModuleType.LOOK_TARGET, MemoryModuleState.VALUE_ABSENT,
-                MemoryModuleType.WALK_TARGET, MemoryModuleState.VALUE_ABSENT
-        ), 600);
+        super(ImmutableMap.of(), 600);
     }
 
     public static boolean needsDeposit(VillagerEntityMCA villager) {
@@ -52,20 +47,29 @@ public class DepositTask extends MultiTickTask<VillagerEntityMCA> {
         if (record == null || record.depot == null) {
             return false;
         }
+        // tout ce qui est récolté part au bloc métier aussitôt, sans attendre d'en avoir beaucoup
         SimpleInventory inventory = villager.getInventory();
-        int[] movable = movable(inventory);
-        int produceSlots = 0;
-        int produceItems = 0;
-        boolean full = true;
+        int[] movable = movable(villager);
         for (int i = 0; i < inventory.size(); i++) {
-            if (inventory.getStack(i).isEmpty()) {
-                full = false;
-            } else if (movable[i] > 0) {
-                produceSlots++;
-                produceItems += movable[i];
+            if (movable[i] > 0) {
+                return true;
             }
         }
-        return produceSlots > 0 && (produceSlots >= SLOTS_BEFORE_DEPOSIT || produceItems >= ITEMS_BEFORE_DEPOSIT || full);
+        return false;
+    }
+
+    // l'objet que le PNJ tenait avant de prendre son outil reste dans son sac pour lui être rendu
+    private static int[] movable(VillagerEntityMCA villager) {
+        SimpleInventory inventory = villager.getInventory();
+        int[] movable = movable(inventory);
+        ItemStack held = WorkManager.heldOriginal(villager);
+        for (int i = 0; i < inventory.size() && !held.isEmpty(); i++) {
+            if (movable[i] > 0 && ItemStack.canCombine(inventory.getStack(i), held)) {
+                movable[i] = Math.max(0, movable[i] - held.getCount());
+                break;
+            }
+        }
+        return movable;
     }
 
     private static int[] movable(SimpleInventory inventory) {
@@ -102,7 +106,7 @@ public class DepositTask extends MultiTickTask<VillagerEntityMCA> {
         if (chest == null) {
             return false;
         }
-        if (!hasRoom(villager.getInventory(), chest)) {
+        if (!hasRoom(villager, chest)) {
             FULL.put(villager.getUuid(), world.getTime() + FULL_RECHECK_TICKS);
             return false;
         }
@@ -123,7 +127,7 @@ public class DepositTask extends MultiTickTask<VillagerEntityMCA> {
             if (chest == null && hasDepot && record.depot != null) {
                 return false;
             }
-            if (chest != null && hasRoom(inventory, chest)) {
+            if (chest != null && hasRoom(villager, chest)) {
                 return false;
             }
             FULL.put(villager.getUuid(), world.getTime() + FULL_RECHECK_TICKS);
@@ -180,8 +184,9 @@ public class DepositTask extends MultiTickTask<VillagerEntityMCA> {
         return true;
     }
 
-    private static boolean hasRoom(SimpleInventory from, Inventory to) {
-        int[] movable = movable(from);
+    private static boolean hasRoom(VillagerEntityMCA villager, Inventory to) {
+        SimpleInventory from = villager.getInventory();
+        int[] movable = movable(villager);
         for (int i = 0; i < to.size(); i++) {
             ItemStack slot = to.getStack(i);
             for (int j = 0; j < from.size(); j++) {
@@ -225,26 +230,35 @@ public class DepositTask extends MultiTickTask<VillagerEntityMCA> {
     }
 
     @Override
+    protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+        villager.getBrain().forget(MemoryModuleType.WALK_TARGET);
+        villager.getBrain().forget(MemoryModuleType.LOOK_TARGET);
+    }
+
+    @Override
     protected void keepRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
         BlockPos depot = AbstractJobTask.depotPos(villager);
         if (depot == null) {
             return;
         }
-        villager.moveTowards(depot);
         if (villager.squaredDistanceTo(Vec3d.ofCenter(depot)) <= 6.25) {
+            AbstractJobTask.arrive(villager, WorkStatus.DEPOSITING);
+            villager.lookAt(depot);
             reach.reset();
             Inventory chest = AbstractJobTask.depotInventory(world, villager);
             if (chest != null) {
-                deposit(villager.getInventory(), chest);
+                deposit(villager, chest);
                 villager.swingHand(net.minecraft.util.Hand.MAIN_HAND);
             }
         } else {
+            AbstractJobTask.walkTo(villager, depot);
             reach.giveUp(world, villager.getUuid());
         }
     }
 
-    private static void deposit(SimpleInventory from, Inventory to) {
-        int[] movable = movable(from);
+    private static void deposit(VillagerEntityMCA villager, Inventory to) {
+        SimpleInventory from = villager.getInventory();
+        int[] movable = movable(villager);
         for (int i = 0; i < from.size(); i++) {
             ItemStack stack = from.getStack(i);
             if (movable[i] <= 0) {

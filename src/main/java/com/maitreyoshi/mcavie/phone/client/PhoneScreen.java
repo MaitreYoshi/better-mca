@@ -451,7 +451,7 @@ public class PhoneScreen extends Screen {
         int sx = sx();
         int sy = sy();
         int sw = sw();
-        String clock = client != null && client.world != null ? clock(WorldCalendar.now(client.world)) : "";
+        String clock = client != null && client.world != null ? clock(WorldCalendar.flowingNow(client.world)) : "";
         context.drawText(textRenderer, clock, sx + 10, sy + 4, TEXT, false);
         round(context, sx + sw / 2 - 18, sy + 2, 36, 9, 4, 0xFF000000);
         context.fill(sx + sw / 2 + 10, sy + 5, sx + sw / 2 + 13, sy + 8, 0xFF1E2A44);
@@ -487,7 +487,7 @@ public class PhoneScreen extends Screen {
         int sx = sx();
         int sw = sw();
         int y = sy() + STATUS + 10;
-        String clock = client != null && client.world != null ? clock(WorldCalendar.now(client.world)) : "";
+        String clock = client != null && client.world != null ? clock(WorldCalendar.flowingNow(client.world)) : "";
         context.getMatrices().push();
         context.getMatrices().translate(sx + sw / 2f, y, 0);
         context.getMatrices().scale(2.5f, 2.5f, 1);
@@ -549,7 +549,7 @@ public class PhoneScreen extends Screen {
         int sx = sx();
         int sw = sw();
         int top = sy() + STATUS;
-        CalendarDate date = client != null && client.world != null ? WorldCalendar.now(client.world) : null;
+        CalendarDate date = client != null && client.world != null ? WorldCalendar.flowingNow(client.world) : null;
         if (date != null) {
             context.getMatrices().push();
             context.getMatrices().translate(sx + sw / 2f, top + 8, 0);
@@ -682,7 +682,7 @@ public class PhoneScreen extends Screen {
                 context.fill(sx, ry, sx + sw, ry + ROW, CARD_HOVER);
             }
             drawAvatar(context, sx + 8, ry + 5, 20, summary.number());
-            String time = clock(WorldCalendar.fromTicks(summary.time()));
+            String time = clock(WorldCalendar.flowingFromTicks(summary.time()));
             int timeWidth = textRenderer.getWidth(time);
             Text title = Text.literal(fit(name, sw - 50 - timeWidth));
             context.drawText(textRenderer, unread ? title.copy().formatted(Formatting.BOLD) : title, sx + 34, ry + 6, TEXT, false);

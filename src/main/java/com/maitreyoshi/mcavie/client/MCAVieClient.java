@@ -21,6 +21,8 @@ public class MCAVieClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        net.fabricmc.fabric.api.blockrenderlayer.v1.BlockRenderLayerMap.INSTANCE.putBlocks(net.minecraft.client.render.RenderLayer.getCutout(),
+                com.maitreyoshi.mcavie.work.block.WorkBlocks.all().toArray(new net.minecraft.block.Block[0]));
         CalendarHud.register();
         TreeClient.register();
         WorkClient.register();
@@ -35,7 +37,8 @@ public class MCAVieClient implements ClientModInitializer {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> VillageConfig.load());
 
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
-            for (String screen : new String[]{"net.mca.client.gui.InteractScreen", "net.mca.client.gui.DestinyScreen", "net.mca.client.gui.BlueprintScreen"}) {
+            for (String screen : new String[]{"net.mca.client.gui.InteractScreen", "net.mca.client.gui.DestinyScreen", "net.mca.client.gui.BlueprintScreen",
+                    "net.mca.network.ClientInteractionManagerImpl", "com.maitreyoshi.mcavie.village.client.PlanScreen"}) {
                 try {
                     Class.forName(screen);
                 } catch (ClassNotFoundException e) {
@@ -102,5 +105,11 @@ public class MCAVieClient implements ClientModInitializer {
 
     public static void requestRandomSurname() {
         ClientPlayNetworking.send(SurnameNetwork.RANDOM_SURNAME, PacketByteBufs.empty());
+    }
+
+    public static void requestBabySurname(int slot) {
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeVarInt(slot);
+        ClientPlayNetworking.send(SurnameNetwork.BABY_SURNAME, buf);
     }
 }

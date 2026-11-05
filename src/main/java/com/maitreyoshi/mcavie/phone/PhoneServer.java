@@ -32,7 +32,9 @@ import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Hand;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
@@ -138,6 +140,24 @@ public final class PhoneServer {
             UUID photo = buf.readUuid();
             boolean full = buf.readBoolean();
             server.execute(() -> sendPrint(player, photo, full));
+        });
+        ServerPlayNetworking.registerGlobalReceiver(PhoneNetwork.PHOTO_PLACE, (server, player, handler, buf, responseSender) -> {
+            BlockPos clicked = buf.readBlockPos();
+            Direction side = buf.readEnumConstant(Direction.class);
+            Hand hand = buf.readEnumConstant(Hand.class);
+            int width = buf.readVarInt();
+            int height = buf.readVarInt();
+            server.execute(() -> PhotoItem.place(player, clicked, side, hand, width, height));
+        });
+        ServerPlayNetworking.registerGlobalReceiver(PhoneNetwork.PHOTO_RESIZE, (server, player, handler, buf, responseSender) -> {
+            int id = buf.readVarInt();
+            int width = buf.readVarInt();
+            int height = buf.readVarInt();
+            server.execute(() -> {
+                if (player.getServerWorld().getEntityById(id) instanceof PhotoFrameEntity frame && frame.getBoundingBox().expand(8).contains(player.getPos())) {
+                    frame.resize(width, height);
+                }
+            });
         });
         ServerPlayNetworking.registerGlobalReceiver(PhoneNetwork.PORTRAIT_REQUEST, (server, player, handler, buf, responseSender) -> {
             UUID image = buf.readUuid();
@@ -435,6 +455,12 @@ public final class PhoneServer {
         }
         inventory.setStack(slot, stack);
         return true;
+    }
+
+    public static void openResize(ServerPlayerEntity player, PhotoFrameEntity frame) {
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeVarInt(frame.getId());
+        ServerPlayNetworking.send(player, PhoneNetwork.PHOTO_RESIZE_OPEN, buf);
     }
 
     public static void viewPrint(ServerPlayerEntity player, UUID photo) {

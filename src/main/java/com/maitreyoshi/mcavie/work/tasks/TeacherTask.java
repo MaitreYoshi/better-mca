@@ -5,10 +5,15 @@ import com.maitreyoshi.mcavie.life.LifeCycle;
 import com.maitreyoshi.mcavie.life.LifeRegistry;
 import com.maitreyoshi.mcavie.life.Wellbeing;
 import com.maitreyoshi.mcavie.work.Job;
+import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
+import net.minecraft.sound.SoundCategory;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
@@ -83,13 +88,15 @@ public class TeacherTask extends AbstractJobTask {
         Vec3d group = new Vec3d(x / pupils.size(), y / pupils.size(), z / pupils.size());
         BlockPos groupPos = BlockPos.ofFloored(group);
         if (villager.squaredDistanceTo(group) > STAY_SQ) {
-            villager.moveTowards(groupPos);
+            walkTo(villager, groupPos);
         } else {
-            villager.getNavigation().stop();
+            arrive(villager, WorkGesture.TEACH);
             villager.lookAt(groupPos);
         }
-        if (lessonTicks % 60 == 1) {
+        if (lessonTicks % 40 == 1) {
             villager.swingHand(Hand.MAIN_HAND);
+            world.spawnParticles(ParticleTypes.ENCHANT, villager.getX(), villager.getBodyY(1.0), villager.getZ(), 8, 0.3, 0.3, 0.3, 0.3);
+            world.playSound(null, villager.getBlockPos(), SoundEvents.ITEM_BOOK_PAGE_TURN, SoundCategory.NEUTRAL, 0.6F, 1.0F);
         }
         long today = WorldCalendar.now(world).dayIndex();
         for (VillagerEntityMCA pupil : pupils) {
@@ -101,6 +108,7 @@ public class TeacherTask extends AbstractJobTask {
                 Wellbeing.addHappiness(world, pupil.getUuid(), HAPPINESS);
                 world.spawnParticles(ParticleTypes.ENCHANT, pupil.getX(), pupil.getBodyY(1.2), pupil.getZ(), 15, 0.4, 0.4, 0.4, 0.5);
                 taughtDay.put(pupil.getUuid(), today);
+                store(villager, new ItemStack(Items.EXPERIENCE_BOTTLE));
                 gainExperience(villager, 1);
             }
         }
@@ -108,6 +116,7 @@ public class TeacherTask extends AbstractJobTask {
 
     @Override
     protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+        super.finishRunning(world, villager, time);
         lessonTicks = 0;
         nextScan = 0;
         pupils.clear();

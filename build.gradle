@@ -25,7 +25,6 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
     modImplementation "dev.architectury:architectury-fabric:${project.architectury_version}"
 
-    // Minecraft Comes Alive
     modImplementation files(project.mca_jar)
 }
 
@@ -77,4 +76,9 @@ tasks.register('treeRealCheck', JavaExec) {
 tasks.named('check') {
     dependsOn 'treeLayoutCheck'
     dependsOn 'treeSelectionCheck'
+}
+
+tasks.register('familyAgesCheck', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.maitreyoshi.mcavie.life.FamilyAgesCheck'
 }

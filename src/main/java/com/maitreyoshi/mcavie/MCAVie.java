@@ -34,7 +34,11 @@ public class MCAVie implements ModInitializer {
         com.maitreyoshi.mcavie.calendar.WorldCalendar.register();
         SurnameNetwork.registerServer();
         registerCommand();
+        com.maitreyoshi.mcavie.village.VillageTitleCommand.register();
+        com.maitreyoshi.mcavie.village.VillageRankCommand.register();
         TreeServer.register();
+        com.maitreyoshi.mcavie.work.block.WorkBlocks.register();
+        com.maitreyoshi.mcavie.work.JobProfessions.register();
         WorkNetwork.register();
         VillageConfig.load();
         SocialConfig.load();
@@ -44,6 +48,9 @@ public class MCAVie implements ModInitializer {
         com.maitreyoshi.mcavie.life.TombstonePortraits.register();
         com.maitreyoshi.mcavie.life.TombstoneBlocks.register();
         com.maitreyoshi.mcavie.aging.Aging.register();
+        com.maitreyoshi.mcavie.life.FamilyAges.register();
+        com.maitreyoshi.mcavie.book.HappinessBook.register();
+        com.maitreyoshi.mcavie.item.BetterMcaItemGroup.register();
         if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
             DevTestCommand.register();
         }
@@ -52,6 +59,17 @@ public class MCAVie implements ModInitializer {
     private static void registerCommand() {
         CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(
                 CommandManager.literal("surname")
+                        // Pas de requires() : sinon « fill » serait pris comme nom de famille par un non-opérateur.
+                        .then(CommandManager.literal("fill")
+                                .executes(ctx -> {
+                                    if (!ctx.getSource().hasPermissionLevel(2)) {
+                                        ctx.getSource().sendError(Text.translatable("command.mca_vie.fill_denied"));
+                                        return 0;
+                                    }
+                                    int filled = Surnames.fillMissing(ctx.getSource().getServer().getOverworld());
+                                    ctx.getSource().sendFeedback(() -> Text.translatable("command.mca_vie.filled", filled), true);
+                                    return filled;
+                                }))
                         .executes(ctx -> {
                             ServerPlayerEntity player = ctx.getSource().getPlayerOrThrow();
                             String surname = SurnameRegistry.get(ctx.getSource().getServer()).get(player.getUuid());
