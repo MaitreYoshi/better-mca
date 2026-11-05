@@ -58,6 +58,7 @@ public abstract class VillagerEntityMCAMixin implements AgeHolder {
         Wellbeing.update(self, mcavie$checks++ % 5 == 0);
         Social.update(self);
         WorkManager.update(self);
+        com.maitreyoshi.mcavie.work.RepairErrands.update(self);
     }
 
     @Inject(method = "convertTo", at = @At("HEAD"))

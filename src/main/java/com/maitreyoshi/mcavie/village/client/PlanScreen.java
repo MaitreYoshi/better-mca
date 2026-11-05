@@ -214,12 +214,10 @@ public class PlanScreen extends BlueprintScreen {
                 ? Text.translatable("gui.blueprint.renameVillage") : locked(VillageRights.RENAME))).build());
         rename.active = allowed(VillageRights.RENAME);
         rename.visible = isVillage;
-        ButtonWidget refresh = addDrawableChild(ButtonWidget.builder(Text.literal("⟳"), b -> {
+        addDrawableChild(ButtonWidget.builder(Text.literal("⟳"), b -> {
             NetworkHandler.sendToServer(new ReportBuildingMessage(ReportBuildingMessage.Action.FULL_SCAN));
             refreshVillage();
-        }).dimensions(fx + fw - 20, fy + 3, 16, 14).tooltip(Tooltip.of(allowed(VillageRights.RIGHTS)
-                ? Text.translatable("gui.mca_vie.plan.refresh") : locked(VillageRights.RIGHTS))).build());
-        refresh.active = allowed(VillageRights.RIGHTS);
+        }).dimensions(fx + fw - 20, fy + 3, 16, 14).tooltip(Tooltip.of(Text.translatable("gui.mca_vie.plan.refresh"))).build());
 
         if (renaming) {
             buildRename();
@@ -294,19 +292,18 @@ public class PlanScreen extends BlueprintScreen {
         int x = cx + mapSize() + 8;
         int w = cx + cw - x;
         int y = cy;
-        Rank need = VillageRights.RIGHTS;
-        button(Text.translatable("gui.blueprint.addRoom"), b -> report(ReportBuildingMessage.Action.ADD_ROOM), x, y, w, 18, need,
+        button(Text.translatable("gui.blueprint.addRoom"), b -> report(ReportBuildingMessage.Action.ADD_ROOM), x, y, w, 18, null,
                 Text.translatable("gui.blueprint.addRoom.tooltip"));
-        button(Text.translatable("gui.blueprint.addBuilding"), b -> report(ReportBuildingMessage.Action.ADD), x, y + 20, w, 18, need,
+        button(Text.translatable("gui.blueprint.addBuilding"), b -> report(ReportBuildingMessage.Action.ADD), x, y + 20, w, 18, null,
                 Text.translatable("gui.blueprint.addBuilding.tooltip"));
-        button(Text.translatable("gui.blueprint.removeBuilding"), b -> report(ReportBuildingMessage.Action.REMOVE), x, y + 40, w, 18, need,
+        button(Text.translatable("gui.blueprint.removeBuilding"), b -> report(ReportBuildingMessage.Action.REMOVE), x, y + 40, w, 18, null,
                 Text.translatable("gui.mca_vie.plan.remove.tooltip"));
         button(Text.translatable(village.isAutoScan() ? "gui.mca_vie.plan.autoscan.on" : "gui.mca_vie.plan.autoscan.off"),
-                b -> report(ReportBuildingMessage.Action.AUTO_SCAN), x, y + 60, w, 18, need, Text.translatable("gui.blueprint.autoScan.tooltip"));
+                b -> report(ReportBuildingMessage.Action.AUTO_SCAN), x, y + 60, w, 18, null, Text.translatable("gui.blueprint.autoScan.tooltip"));
         button(Text.translatable("gui.blueprint.restrictAccess"), b -> {
             NetworkHandler.sendToServer(new ReportBuildingMessage(ReportBuildingMessage.Action.FORCE_TYPE, "blocked"));
             refreshVillage();
-        }, x, y + 80, w, 18, need, Text.translatable("gui.blueprint.restrictAccess.tooltip"));
+        }, x, y + 80, w, 18, null, Text.translatable("gui.blueprint.restrictAccess.tooltip"));
     }
 
     private void report(ReportBuildingMessage.Action action) {
@@ -338,7 +335,7 @@ public class PlanScreen extends BlueprintScreen {
     private void buildRules() {
         int right = cx + cw;
         Rank[] required = rulesRequired();
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 3; i++) {
             int y = cy + i * rulesRow() - 4;
             int row = i;
             Text tip = row < 3 ? Text.translatable("gui.mca_vie.plan.rules.step") : null;
@@ -453,12 +450,18 @@ public class PlanScreen extends BlueprintScreen {
 
     private void buildMarket() {
         VillageState state = VillageState.of(village);
+        if (!com.maitreyoshi.mcavie.village.VillageMarket.AUTOMATIC_TRADE) {
+            if (state.orders.stream().anyMatch(o -> o.ready)) {
+                collectButton(state);
+            }
+            return;
+        }
         List<String> products = BlueprintPanels.marketProducts();
         int perPage = marketPerPage();
         int pages = Math.max(1, (products.size() + perPage - 1) / perPage);
         marketPage = Math.max(0, Math.min(pages - 1, marketPage));
         int colW = (cw - 4) / 2;
-        Text inactive = Text.translatable("gui.mca_vie.market.inactive");
+        Text inactive = marketInactiveReason(state);
         for (int i = 0; i < perPage; i++) {
             int index = marketPage * perPage + i;
             if (index >= products.size()) {
@@ -483,6 +486,11 @@ public class PlanScreen extends BlueprintScreen {
             rebuild();
         }).dimensions(cx + 52, y, 18, 18).build());
         next.active = marketPage < pages - 1;
+        collectButton(state);
+    }
+
+    private void collectButton(VillageState state) {
+        int y = cy + ch - 18;
         ButtonWidget collect = addDrawableChild(ButtonWidget.builder(Text.translatable("gui.mca_vie.market.collect"), b -> {
             PacketByteBuf buf = PacketByteBufs.create();
             buf.writeInt(village.getId());
@@ -948,7 +956,7 @@ public class PlanScreen extends BlueprintScreen {
         int textW = cw - 84;
         int valueX = cx + cw - 38;
         Text footer = Text.translatable("gui.mca_vie.plan.hint.rules");
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 3; i++) {
             int y = cy + i * rulesRow();
             boolean ok = allowed(required[i]);
             context.drawTextWithShadow(textRenderer, labels[i], cx, y, WHITE);
@@ -1034,17 +1042,75 @@ public class PlanScreen extends BlueprintScreen {
     }
 
 
+    /** Explique pourquoi le Marché est inactif : bâtiment manquant, rang, surface, délabrement… */
+    private Text marketInactiveReason(VillageState state) {
+        if (!state.economyActive) {
+            return Text.translatable("gui.mca_vie.market.inactive.economy");
+        }
+        Prestige.Result result = Prestige.evaluateCached(village, state.rank);
+        for (String type : new String[]{"market"}) {
+            Text reason = buildingInactiveReason(result, type);
+            if (reason != null) {
+                return reason;
+            }
+        }
+        return Text.translatable("gui.mca_vie.market.inactive");
+    }
+
+    private Text buildingInactiveReason(Prestige.Result result, String type) {
+        Text name = Text.translatable("buildingType." + type);
+        List<Building> buildings = village.getBuildingsOfType(type).toList();
+        if (buildings.isEmpty()) {
+            return Text.translatable("gui.mca_vie.market.inactive.missing", name);
+        }
+        if (Prestige.hasActive(result, village, type)) {
+            return null;
+        }
+        Prestige.Score score = result.score(buildings.get(0));
+        if (score == null || score.rule() == null) {
+            return Text.translatable("gui.mca_vie.market.inactive.reason", name, Text.translatable("gui.mca_vie.building.not_rated"));
+        }
+        Text why = switch (score.status()) {
+            case NEXT_RANK, TOO_HIGH -> Text.translatable("gui.mca_vie.market.inactive.rank", score.rule().requiredRank().getName());
+            case TOO_SMALL -> Text.translatable("gui.mca_vie.market.inactive.small", score.surface(), score.rule().minSurface);
+            case OVER_MAX -> Text.translatable("gui.mca_vie.building.over_max");
+            case DECAYED -> Text.translatable("gui.mca_vie.building.decayed");
+            default -> Text.translatable("gui.mca_vie.building.not_rated");
+        };
+        return Text.translatable("gui.mca_vie.market.inactive.reason", name, why);
+    }
+
     private Text renderMarket(DrawContext context) {
         VillageState state = VillageState.of(village);
         VillageConfig config = VillageConfig.get();
         int y = cy;
         if (!state.marketActive) {
-            context.drawTextWithShadow(textRenderer, Language.getInstance().reorder(textRenderer.trimToWidth(Text.translatable("gui.mca_vie.market.inactive"), cw)), cx, y, RED);
+            y = BlueprintPanels.wrapped(context, textRenderer, marketInactiveReason(state), cx, y, cw, RED) - LINE;
         } else {
             Text day = Text.translatable("calendar.mca_vie.day." + config.marketDayOfWeek);
             context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.market.day", day, config.marketStartHour, config.marketEndHour), cx, y, GOLD);
         }
         y += LINE;
+        if (!com.maitreyoshi.mcavie.village.VillageMarket.AUTOMATIC_TRADE) {
+            int top = y;
+            y = beginScroll(context, top);
+            int startY = y;
+            y = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.market.manual"), cx, y, cw - 6, GRAY) + 4;
+            if (state.lastMarketSales > 0 || state.lastMarketOrders > 0) {
+                y = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.market.last", state.lastMarketSales, state.lastMarketOrders), cx, y, cw - 6, GOLD) + 4;
+            }
+            y = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.market.pricelist"), cx, y, cw - 6, GOLD);
+            List<String> products = BlueprintPanels.marketProducts();
+            int colW = (cw - 10) / 2;
+            for (int i = 0; i < products.size(); i++) {
+                String id = products.get(i);
+                Text line = Text.translatable("gui.mca_vie.market.price", config.unitsPerEmerald(id), Registries.ITEM.get(Identifier.tryParse(id)).getName());
+                context.drawTextWithShadow(textRenderer, Language.getInstance().reorder(textRenderer.trimToWidth(line, colW)), cx + (i % 2) * (colW + 4), y + (i / 2) * LINE, GRAY);
+            }
+            y += (products.size() + 1) / 2 * LINE;
+            endScroll(context, top, startY, y);
+            return null;
+        }
         if (state.lastMarketSales > 0 || state.lastMarketOrders > 0) {
             context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.market.last", state.lastMarketSales, state.lastMarketOrders), cx, y, GRAY);
         }

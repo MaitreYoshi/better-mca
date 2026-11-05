@@ -67,6 +67,9 @@ public final class VillageConfig {
     public double marketSpendPerResident = 1;
     public double marketSalePrice = 1;
     public int marketHappiness = 3;
+    public int marketDiscountPercent = 20;
+    public int marketMerchants = 2;
+    public int marketMerchantTicks = 6000;
     public int orderLotPrice = 2;
     public int maxOrdersPerPlayer = 5;
     public int maxLotsPerOrder = 10;
@@ -193,6 +196,15 @@ public final class VillageConfig {
         if (config.natureUnitsPerEmerald == null) {
             config.natureUnitsPerEmerald = defaultNatureUnits();
         }
+        if (config.buildings != null) {
+            // Pas de surface minimale pour le Marché et l'Entrepôt, même avec un ancien fichier de config.
+            for (String key : new String[]{"market", "storage"}) {
+                BuildingRule rule = config.buildings.get(key);
+                if (rule != null) {
+                    rule.minSurface = 0;
+                }
+            }
+        }
         config.natureStep = Math.max(1, Math.min(100, config.natureStep));
         config.marketDayOfWeek = Math.max(1, Math.min(7, config.marketDayOfWeek));
         config.orderLotPrice = Math.max(1, config.orderLotPrice);
@@ -315,9 +327,9 @@ public final class VillageConfig {
         map.put("graveyard", new BuildingRule(0, 2, 1, 0, 0));
         map.put("inn", new BuildingRule(0, 3, 2, 30, 1));
         map.put("town_hall", new BuildingRule(1, 6, 1, 25, 2));
-        map.put("storage", new BuildingRule(1, 3, 2, 16, 1));
+        map.put("storage", new BuildingRule(1, 3, 2, 0, 1));
         map.put("chapel", new BuildingRule(1, 4, 1, 25, 1));
-        map.put("market", new BuildingRule(2, 6, 1, 36, 2));
+        map.put("market", new BuildingRule(2, 6, 1, 0, 2));
         map.put("school", new BuildingRule(2, 5, 2, 25, 2));
         map.put("infirmary", new BuildingRule(2, 5, 2, 30, 2));
         map.put("armory", new BuildingRule(3, 6, 2, 36, 3));

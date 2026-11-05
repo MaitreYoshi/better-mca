@@ -49,16 +49,19 @@ public class LumberjackTask extends AbstractJobTask {
     private static final String[] SOIL_WORDS = {"dirt", "grass", "soil", "podzol", "mycelium", "moss_block", "mud", "loam", "silt"};
     private static final int BRANCH_LEAF_RADIUS = 3;
     private static final int SAPLING_RADIUS = 8;
+    private static final int MAX_LEAVES = 400;
     private static final int RETRY_TICKS = 20;
     private static final int SCAN_JITTER = 100;
 
     private final List<BlockPos> candidates = new ArrayList<>();
     private final ZoneScan scan = new ZoneScan(SCAN_HEIGHT);
     private final Reach<BlockPos> reach = new Reach<>(REACH_TICKS, BLACKLIST_TICKS);
+    private final Reach<java.util.UUID> litterBlacklist = new Reach<>(REACH_TICKS, BLACKLIST_TICKS);
     private long nextScan = -1;
     private long nextTry;
 
     private BlockPos target;
+    private java.util.UUID pickup;
     private int chopTicks;
     private int chopTotal;
 
@@ -72,7 +75,7 @@ public class LumberjackTask extends AbstractJobTask {
             return false;
         }
         refreshScan(world, villager);
-        if (findTarget(world, villager) != null) {
+        if ((bestAxe(world, villager) != null && findTarget(world, villager) != null) || findPickup(world, villager) != null) {
             return true;
         }
         nextTry = world.getTime() + RETRY_TICKS;
@@ -81,7 +84,7 @@ public class LumberjackTask extends AbstractJobTask {
 
     @Override
     protected boolean keepWorking(ServerWorld world, VillagerEntityMCA villager) {
-        return target != null;
+        return target != null || pickup != null;
     }
 
     @Override
@@ -96,8 +99,41 @@ public class LumberjackTask extends AbstractJobTask {
         super.finishRunning(world, villager, time);
         clearBreaking(world, villager, target);
         target = null;
+        pickup = null;
         reach.reset();
         chopTicks = 0;
+    }
+
+    // il ne coupe qu'avec une hache rangée dans son billot, qui s'use à chaque bûche
+    @Override
+    @org.jetbrains.annotations.Nullable
+    protected com.maitreyoshi.mcavie.work.WorkStatus idleStatus(ServerWorld world, VillagerEntityMCA villager) {
+        return depotPos(villager) != null && bestAxe(world, villager) == null ? com.maitreyoshi.mcavie.work.WorkStatus.NO_TOOL : null;
+    }
+
+    @Override
+    protected void holdTool(VillagerEntityMCA villager) {
+        ItemStack axe = villager.getWorld() instanceof ServerWorld world ? bestAxe(world, villager) : null;
+        if (axe == null) {
+            super.holdTool(villager);
+        } else {
+            WorkManager.giveTool(villager, axe.copyWithCount(1));
+        }
+    }
+
+    @org.jetbrains.annotations.Nullable
+    private static ItemStack bestAxe(ServerWorld world, VillagerEntityMCA villager) {
+        net.minecraft.inventory.Inventory block = depotInventory(world, villager);
+        BlockState log = net.minecraft.block.Blocks.OAK_LOG.getDefaultState();
+        ItemStack best = null;
+        for (int i = 0; block != null && i < block.size(); i++) {
+            ItemStack stack = block.getStack(i);
+            if (!stack.isEmpty() && stack.isIn(ItemTags.AXES)
+                    && (best == null || stack.getMiningSpeedMultiplier(log) > best.getMiningSpeedMultiplier(log))) {
+                best = stack;
+            }
+        }
+        return best;
     }
 
     @Override
@@ -113,6 +149,9 @@ public class LumberjackTask extends AbstractJobTask {
     @Override
     protected void keepRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
         if (target == null) {
+            if (pickup != null) {
+                keepPicking(world, villager);
+            }
             return;
         }
         if (!isTrunkBase(world, target) || !inZone(villager, target)) {
@@ -156,9 +195,71 @@ public class LumberjackTask extends AbstractJobTask {
 
     private void selectTarget(ServerWorld world, VillagerEntityMCA villager) {
         clearBreaking(world, villager, target);
-        target = findTarget(world, villager);
+        target = bestAxe(world, villager) == null ? null : findTarget(world, villager);
+        pickup = target == null ? findPickup(world, villager) : null;
         reach.reset();
         chopTicks = 0;
+    }
+
+    // pousses et bâtons tombés des feuilles : il les ramasse et replante les pousses là où elles sont tombées
+    private static boolean isLitter(ItemStack stack) {
+        return stack.isIn(ItemTags.SAPLINGS) || stack.isOf(Items.STICK);
+    }
+
+    private java.util.UUID findPickup(ServerWorld world, VillagerEntityMCA villager) {
+        WorkManager.Zone zone = zone(villager);
+        int radius = zone.radius();
+        Box box = new Box(zone.center()).expand(radius, radius, radius);
+        return world.getEntitiesByClass(ItemEntity.class, box, e -> e.isAlive() && isLitter(e.getStack())
+                        && zone.contains(e.getBlockPos()) && !litterBlacklist.isBlacklisted(world, e.getUuid()))
+                .stream().min(java.util.Comparator.comparingDouble(villager::squaredDistanceTo))
+                .map(ItemEntity::getUuid).orElse(null);
+    }
+
+    private void keepPicking(ServerWorld world, VillagerEntityMCA villager) {
+        if (!(world.getEntity(pickup) instanceof ItemEntity item) || !item.isAlive() || !inZone(villager, item.getBlockPos())) {
+            pickup = findPickup(world, villager);
+            reach.reset();
+            return;
+        }
+        if (villager.squaredDistanceTo(item) > 4.0) {
+            walkTo(villager, item.getBlockPos());
+            if (litterBlacklist.giveUp(world, item.getUuid())) {
+                pickup = findPickup(world, villager);
+            }
+            return;
+        }
+        litterBlacklist.reset();
+        arrive(villager, WorkGesture.NONE);
+        BlockPos spot = item.getBlockPos();
+        ItemStack stack = item.getStack().copy();
+        item.discard();
+        villager.swingHand(Hand.MAIN_HAND);
+        if (stack.getItem() instanceof BlockItem blockItem && stack.isIn(ItemTags.SAPLINGS) && canPlantAt(world, spot)) {
+            BlockState sapling = blockItem.getBlock().getDefaultState();
+            if (sapling.canPlaceAt(world, spot)) {
+                world.setBlockState(spot, sapling, Block.NOTIFY_ALL);
+                stack.decrement(1);
+            }
+        }
+        if (!stack.isEmpty()) {
+            store(villager, stack, false);
+        }
+        pickup = findPickup(world, villager);
+    }
+
+    // laisse de la place entre les arbres : rien de ligneux ni de pousse à moins de 2 blocs
+    private static boolean canPlantAt(ServerWorld world, BlockPos pos) {
+        if (!world.getBlockState(pos).isAir() || !mayAlter(world, pos) || !isSoil(world.getBlockState(pos.down()))) {
+            return false;
+        }
+        for (BlockPos near : BlockPos.iterate(pos.add(-2, 0, -2), pos.add(2, 1, 2))) {
+            BlockState state = world.getBlockState(near);
+            if (isLog(state) || state.isIn(BlockTags.SAPLINGS)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private BlockPos findTarget(ServerWorld world, VillagerEntityMCA villager) {
@@ -282,15 +383,28 @@ public class LumberjackTask extends AbstractJobTask {
         Set<BlockPos> logs = treeLogs(world, villager, base, family);
         for (BlockPos pos : logs) {
             BlockState state = world.getBlockState(pos);
+            ItemStack axe = bestAxe(world, villager);
+            if (axe == null) {
+                break;
+            }
             if (!mayAlter(world, pos) || !world.breakBlock(pos, false, villager)) {
                 continue;
             }
-            for (ItemStack drop : blockDrops(world, villager, pos, state)) {
+            for (ItemStack drop : blockDrops(world, villager, pos, state, axe)) {
                 store(villager, drop);
+            }
+            if (axe.damage(1, world.random, null)) {
+                axe.decrement(1);
+                world.playSound(null, villager.getBlockPos(), net.minecraft.sound.SoundEvents.ENTITY_ITEM_BREAK, net.minecraft.sound.SoundCategory.NEUTRAL, 0.8F, 1.0F);
+            }
+            net.minecraft.inventory.Inventory block = depotInventory(world, villager);
+            if (block != null) {
+                block.markDirty();
             }
         }
         gainExperience(villager, 1);
 
+        clearLeaves(world, villager, logs);
         collectSaplings(world, villager, base);
         replant(world, villager, base, namespace, family);
     }
@@ -378,6 +492,40 @@ public class LumberjackTask extends AbstractJobTask {
         return false;
     }
 
+    // casse aussi le feuillage de l'arbre abattu : pousses, bâtons et pommes vont dans son sac
+    private void clearLeaves(ServerWorld world, VillagerEntityMCA villager, Set<BlockPos> logs) {
+        Set<BlockPos> leaves = new HashSet<>();
+        for (BlockPos log : logs) {
+            for (BlockPos near : BlockPos.iterate(log.add(-LEAF_RADIUS, -1, -LEAF_RADIUS), log.add(LEAF_RADIUS, LEAF_RADIUS, LEAF_RADIUS))) {
+                if (leaves.size() >= MAX_LEAVES) {
+                    break;
+                }
+                if (isLoaded(world, near) && isNaturalLeaf(world.getBlockState(near)) && !nearStandingLog(world, near)) {
+                    leaves.add(near.toImmutable());
+                }
+            }
+        }
+        for (BlockPos pos : leaves) {
+            BlockState state = world.getBlockState(pos);
+            if (!mayAlter(world, pos) || !world.breakBlock(pos, false, villager)) {
+                continue;
+            }
+            for (ItemStack drop : blockDrops(world, villager, pos, state, ItemStack.EMPTY)) {
+                store(villager, drop, false);
+            }
+        }
+    }
+
+    // ne touche pas aux feuilles d'un arbre voisin encore debout
+    private static boolean nearStandingLog(ServerWorld world, BlockPos leaf) {
+        for (BlockPos near : BlockPos.iterate(leaf.add(-2, -2, -2), leaf.add(2, 2, 2))) {
+            if (isLoaded(world, near) && isLog(world.getBlockState(near))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private static boolean isNaturalLeaf(BlockState state) {
         return isLeaves(state) && !(state.contains(LeavesBlock.PERSISTENT) && state.get(LeavesBlock.PERSISTENT));
     }
@@ -401,7 +549,7 @@ public class LumberjackTask extends AbstractJobTask {
 
     private void collectSaplings(ServerWorld world, VillagerEntityMCA villager, BlockPos base) {
         Box box = new Box(base).expand(SAPLING_RADIUS);
-        for (ItemEntity item : world.getEntitiesByClass(ItemEntity.class, box, e -> e.getStack().isIn(ItemTags.SAPLINGS))) {
+        for (ItemEntity item : world.getEntitiesByClass(ItemEntity.class, box, e -> isLitter(e.getStack()))) {
             store(villager, item.getStack().copy(), false);
             item.discard();
         }

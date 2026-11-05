@@ -21,7 +21,7 @@ public final class VillageState {
     public static final String NBT_KEY = "mca_vie";
     public static final long NONE = Long.MIN_VALUE;
     private static final int HISTORY_SIZE = 8;
-    private static final int JOURNAL_SIZE = 10;
+    private static final int JOURNAL_SIZE = 40;
 
     public VillageRank rank = VillageRank.HAMLET;
     public int descentDaysLeft = -1;
@@ -40,6 +40,8 @@ public final class VillageState {
     public double cachedIllness = 1;
     public long shareBase;
     public long withdrawnThisWeek;
+    public long withdrawnToday;
+    public long shareDay = NONE;
     public int natureShare;
     public long depositPool;
     public long depositedThisWeek;
@@ -59,6 +61,7 @@ public final class VillageState {
 
     public boolean marketActive;
     public long lastMarketWeek = NONE;
+    public long lastMerchantWeek = NONE;
     public double marketRemainder;
     public long lastMarketSales;
     public long lastMarketOrders;
@@ -312,6 +315,8 @@ public final class VillageState {
         nbt.putLongArray("decayedPos", decayed.stream().mapToLong(Long::longValue).toArray());
         nbt.putLong("shareBase", shareBase);
         nbt.putLong("withdrawnThisWeek", withdrawnThisWeek);
+        nbt.putLong("withdrawnToday", withdrawnToday);
+        nbt.putLong("shareDay", shareDay);
         nbt.putInt("natureShare", natureShare);
         nbt.putLong("depositPool", depositPool);
         nbt.putLong("depositedThisWeek", depositedThisWeek);
@@ -346,6 +351,7 @@ public final class VillageState {
         nbt.putBoolean("marketActive", marketActive);
         if (lastMarketWeek != NONE) {
             nbt.putLong("lastMarketWeek", lastMarketWeek);
+            nbt.putLong("lastMerchantWeek", lastMerchantWeek);
         }
         nbt.putDouble("marketRemainder", marketRemainder);
         nbt.putLong("lastMarketSales", lastMarketSales);
@@ -398,6 +404,8 @@ public final class VillageState {
         }
         shareBase = nbt.getLong("shareBase");
         withdrawnThisWeek = nbt.getLong("withdrawnThisWeek");
+        withdrawnToday = nbt.getLong("withdrawnToday");
+        shareDay = nbt.contains("shareDay") ? nbt.getLong("shareDay") : NONE;
         natureShare = Math.max(0, Math.min(100, nbt.getInt("natureShare")));
         depositPool = nbt.getLong("depositPool");
         depositedThisWeek = nbt.getLong("depositedThisWeek");
@@ -441,6 +449,7 @@ public final class VillageState {
 
         marketActive = nbt.getBoolean("marketActive");
         lastMarketWeek = nbt.contains("lastMarketWeek") ? nbt.getLong("lastMarketWeek") : NONE;
+        lastMerchantWeek = nbt.contains("lastMerchantWeek") ? nbt.getLong("lastMerchantWeek") : NONE;
         marketRemainder = nbt.getDouble("marketRemainder");
         lastMarketSales = nbt.getLong("lastMarketSales");
         lastMarketOrders = nbt.getLong("lastMarketOrders");

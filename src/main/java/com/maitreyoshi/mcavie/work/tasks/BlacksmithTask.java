@@ -1,6 +1,7 @@
 package com.maitreyoshi.mcavie.work.tasks;
 
 import com.maitreyoshi.mcavie.work.Job;
+import com.maitreyoshi.mcavie.work.Repairs;
 import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
@@ -8,7 +9,6 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
 import net.minecraft.particle.ParticleTypes;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundCategory;
@@ -52,9 +52,6 @@ public class BlacksmithTask extends AbstractJobTask {
             return false;
         }
         nextScan = now + SCAN_INTERVAL;
-        if (!hasIron(world, villager)) {
-            return false;
-        }
         VillagerEntityMCA found = findClient(world, villager);
         if (found != null) {
             targetId = found.getUuid();
@@ -120,22 +117,28 @@ public class BlacksmithTask extends AbstractJobTask {
         }
         Inventory chest = depotInventory(world, villager);
         ItemStack damaged = null;
+        Repairs.Cost cost = null;
         if (atDepot) {
             for (int i = 0; chest != null && i < chest.size(); i++) {
                 ItemStack stack = chest.getStack(i);
-                if (isDamaged(stack) && (damaged == null || stack.getDamage() > damaged.getDamage())) {
+                Repairs.Cost c = Repairs.costIn(stack, chest);
+                if (c != null && (damaged == null || stack.getDamage() > damaged.getDamage())) {
                     damaged = stack;
+                    cost = c;
                 }
             }
         } else if (client != null) {
             for (EquipmentSlot slot : EquipmentSlot.values()) {
                 ItemStack stack = client.getEquippedStack(slot);
-                if (isDamaged(stack) && (damaged == null || stack.getDamage() > damaged.getDamage())) {
+                Repairs.Cost c = Repairs.isHalfWorn(stack) ? Repairs.costIn(stack, chest) : null;
+                if (c != null && (damaged == null || stack.getDamage() > damaged.getDamage())) {
                     damaged = stack;
+                    cost = c;
                 }
             }
         }
-        if (damaged != null && takeIron(chest)) {
+        if (damaged != null) {
+            Repairs.pay(chest, cost);
             damaged.setDamage(0);
             if (atDepot) {
                 chest.markDirty();
@@ -170,21 +173,18 @@ public class BlacksmithTask extends AbstractJobTask {
         }
         Entity entity = world.getEntity(targetId);
         if (entity instanceof VillagerEntityMCA client && client != villager && client.isAlive()
-                && inZone(villager, client.getBlockPos()) && damageOf(client) > 0) {
+                && inZone(villager, client.getBlockPos()) && damageOf(client, depotInventory(world, villager)) > 0) {
             return client;
         }
         return null;
     }
 
-    private static boolean isDamaged(ItemStack stack) {
-        return !stack.isEmpty() && stack.isDamageable() && stack.getDamage() > 0;
-    }
-
-    private static int damageOf(VillagerEntityMCA villager) {
+    // seul l'équipement à moitié usé et que la forge peut payer vaut le déplacement
+    private static int damageOf(VillagerEntityMCA villager, Inventory forge) {
         int total = 0;
         for (EquipmentSlot slot : EquipmentSlot.values()) {
             ItemStack stack = villager.getEquippedStack(slot);
-            if (isDamaged(stack)) {
+            if (Repairs.isHalfWorn(stack) && Repairs.costIn(stack, forge) != null) {
                 total += stack.getDamage();
             }
         }
@@ -196,41 +196,17 @@ public class BlacksmithTask extends AbstractJobTask {
         WorkManager.Zone zone = zone(villager);
         int radius = zone.radius();
         Box box = new Box(zone.center()).expand(radius, radius, radius);
+        Inventory forge = depotInventory(world, villager);
+        if (forge == null) {
+            return null;
+        }
         List<VillagerEntityMCA> candidates = world.getEntitiesByClass(VillagerEntityMCA.class, box,
-                v -> v != villager && v.isAlive() && zone.contains(v.getBlockPos()) && damageOf(v) > 0
+                v -> v != villager && v.isAlive() && zone.contains(v.getBlockPos()) && damageOf(v, forge) > 0
                         && !reach.isBlacklisted(world, v.getUuid()));
         return candidates.stream()
-                .max(Comparator.<VillagerEntityMCA>comparingInt(BlacksmithTask::damageOf)
+                .max(Comparator.<VillagerEntityMCA>comparingInt(v -> damageOf(v, forge))
                         .thenComparingDouble(v -> -villager.squaredDistanceTo(v)))
                 .orElse(null);
-    }
-
-    private boolean hasIron(ServerWorld world, VillagerEntityMCA villager) {
-        Inventory chest = depotInventory(world, villager);
-        if (chest == null) {
-            return false;
-        }
-        for (int i = 0; i < chest.size(); i++) {
-            if (chest.getStack(i).isOf(Items.IRON_INGOT)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private static boolean takeIron(Inventory chest) {
-        if (chest == null) {
-            return false;
-        }
-        for (int i = 0; i < chest.size(); i++) {
-            ItemStack stack = chest.getStack(i);
-            if (stack.isOf(Items.IRON_INGOT)) {
-                stack.decrement(1);
-                chest.markDirty();
-                return true;
-            }
-        }
-        return false;
     }
 
     private boolean depotHasDamaged(ServerWorld world, VillagerEntityMCA villager) {
@@ -239,7 +215,7 @@ public class BlacksmithTask extends AbstractJobTask {
             return false;
         }
         for (int i = 0; i < chest.size(); i++) {
-            if (isDamaged(chest.getStack(i))) {
+            if (Repairs.costIn(chest.getStack(i), chest) != null) {
                 return true;
             }
         }

@@ -70,6 +70,10 @@ public class WorkRegistry extends PersistentState {
         return false;
     }
 
+    public java.util.Collection<Record> all() {
+        return java.util.Collections.unmodifiableCollection(records.values());
+    }
+
     public Job getJob(UUID uuid) {
         Record record = records.get(uuid);
         return record == null ? Job.NONE : record.job;
