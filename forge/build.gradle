@@ -66,3 +66,63 @@ remapJar {
     input.set shadowJar.archiveFile
     dependsOn shadowJar
 }
+
+remapJar {
+    archiveClassifier = 'unrelocated'
+}
+
+// Le jar MCA publiÃ© (universal, Forgix) place ses classes Forge sous forge.net.mca.
+tasks.register('relocatedJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    dependsOn remapJar
+    from(zipTree(remapJar.archiveFile))
+    configurations = []
+    relocate 'net.mca', 'forge.net.mca'
+    archiveClassifier = ''
+    manifest {
+        attributes 'MixinConfigs': 'mca_vie.mixins.json,mca_vie.tree.mixins.json,mca_vie.treeclient.mixins.json'
+    }
+}
+
+// La relocalisation de Shadow ne touche pas les descripteurs écrits dans les annotations de mixins.
+relocatedJar.configure {
+    doLast {
+        def jar = archiveFile.get().asFile
+        def tmp = new File(jar.parentFile, jar.name + '.tmp')
+        new java.util.zip.ZipFile(jar).withCloseable { zip ->
+            new java.util.zip.ZipOutputStream(new FileOutputStream(tmp)).withCloseable { out ->
+                zip.entries().each { entry ->
+                    byte[] bytes = zip.getInputStream(entry).bytes
+                    if (entry.name.endsWith('.class') && entry.name.startsWith('com/maitreyoshi/')) {
+                        def writer = new org.objectweb.asm.ClassWriter(0)
+                        def fix = { v -> v instanceof String ? v.replace('Lnet/mca/', 'Lforge/net/mca/') : v }
+                        def annotationFixer
+                        annotationFixer = { org.objectweb.asm.AnnotationVisitor av ->
+                            new org.objectweb.asm.AnnotationVisitor(org.objectweb.asm.Opcodes.ASM9, av) {
+                                void visit(String name, Object value) { super.visit(name, fix(value)) }
+                                org.objectweb.asm.AnnotationVisitor visitAnnotation(String name, String desc) { annotationFixer(super.visitAnnotation(name, desc)) }
+                                org.objectweb.asm.AnnotationVisitor visitArray(String name) { annotationFixer(super.visitArray(name)) }
+                            }
+                        }
+                        new org.objectweb.asm.ClassReader(bytes).accept(new org.objectweb.asm.ClassVisitor(org.objectweb.asm.Opcodes.ASM9, writer) {
+                            org.objectweb.asm.MethodVisitor visitMethod(int access, String name, String desc, String signature, String[] exceptions) {
+                                new org.objectweb.asm.MethodVisitor(org.objectweb.asm.Opcodes.ASM9, super.visitMethod(access, name, desc, signature, exceptions)) {
+                                    org.objectweb.asm.AnnotationVisitor visitAnnotation(String d, boolean visible) { annotationFixer(super.visitAnnotation(d, visible)) }
+                                }
+                            }
+                        }, 0)
+                        bytes = writer.toByteArray()
+                    }
+                    def copy = new java.util.zip.ZipEntry(entry.name)
+                    copy.time = entry.time
+                    out.putNextEntry(copy)
+                    out.write(bytes)
+                    out.closeEntry()
+                }
+            }
+        }
+        jar.delete()
+        tmp.renameTo(jar)
+    }
+}
+
+build.dependsOn relocatedJar
