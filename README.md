@@ -2,7 +2,7 @@ Better MCA
 
 **Your MCA villages now live, work, talk and grow over generations.** Real jobs, aging, graves, family trees and villages that grow from hamlet to metropolis.
 
-An addon for **MCA Reborn** (Fabric 1.20.1). Singleplayer and multiplayer.
+An addon for **MCA Reborn** (Fabric and Forge 1.20.1). Singleplayer and multiplayer.
 
 ## Features
 
@@ -72,6 +72,6 @@ Hire a jobless adult from the **Job** tab of their menu. Each job has its own wo
 
 ## Requirements
 
-Minecraft 1.20.1 + Fabric, MCA Reborn 7.6.26, Fabric API 0.92.6, Architectury API 9.2.14.
+Minecraft 1.20.1 + Fabric (with Fabric API 0.92.6) or Forge 47.x, MCA Reborn 7.6.26, Architectury API 9.2.14.
 
 Bug reports and ideas are very welcome!
