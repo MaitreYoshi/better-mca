@@ -1,0 +1,68 @@
+plugins {
+    id 'com.gradleup.shadow'
+}
+
+architectury {
+    platformSetupLoomIde()
+    forge()
+}
+
+loom {
+    accessWidenerPath = file("src/main/resources/mca_vie.accesswidener")
+
+    forge {
+        convertAccessWideners = true
+        mixinConfig "mca_vie.mixins.json", "mca_vie.tree.mixins.json", "mca_vie.treeclient.mixins.json"
+    }
+
+    runs {
+        client {
+            programArgs "--username", "Dev"
+        }
+    }
+}
+
+configurations {
+    common {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+    compileClasspath.extendsFrom common
+    runtimeClasspath.extendsFrom common
+    developmentForge.extendsFrom common
+
+    shadowCommon {
+        canBeResolved = true
+        canBeConsumed = false
+    }
+}
+
+dependencies {
+    forge "net.minecraftforge:forge:${rootProject.forge_version}"
+    modImplementation "dev.architectury:architectury-forge:${rootProject.architectury_version}"
+    modCompileOnly files(rootProject.mca_forge_jar)
+    runtimeOnly files(rootProject.mca_forge_dev_jar)
+    implementation(include("io.github.llamalad7:mixinextras-forge:0.5.4"))
+
+    common(project(path: ':common', configuration: 'namedElements')) { transitive = false }
+    shadowCommon(project(path: ':common', configuration: 'transformProductionForge')) { transitive = false }
+}
+
+processResources {
+    inputs.property "version", project.version
+    filesMatching("META-INF/mods.toml") {
+        expand "version": project.version
+    }
+}
+
+shadowJar {
+    exclude "fabric.mod.json"
+    exclude "architectury.common.json"
+    configurations = [project.configurations.shadowCommon]
+    archiveClassifier = 'dev-shadow'
+}
+
+remapJar {
+    input.set shadowJar.archiveFile
+    dependsOn shadowJar
+}

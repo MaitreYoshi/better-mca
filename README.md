@@ -30,14 +30,13 @@ Villagers understand buildings with several floors, and the lumberjack ignores l
 
 ## Requirements
 
-- Minecraft 1.20.1 with Fabric
+- Minecraft 1.20.1 with Fabric (plus Fabric API) or Forge 47.x
 - Minecraft Comes Alive 7.6.26
-- Fabric API
 - Architectury API
 
 ## Building
 
-The build compiles against a local MCA jar. Set `mca_jar` in `gradle.properties` to the path of `minecraft-comes-alive-7.6.26+1.20.1.jar`, then run `./gradlew build` with JDK 17 or newer.
+The project is split into `common`, `fabric` and `forge` modules (Architectury). It compiles against local MCA jars: set `mca_common_jar`, `mca_fabric_jar`, `mca_forge_jar` and `mca_forge_dev_jar` in `gradle.properties`, then run `./gradlew build` with JDK 17 or newer. The jars to publish are `fabric/build/libs/better-mca-fabric-<version>.jar` and `forge/build/libs/better-mca-forge-<version>.jar`.
 
 ## License
 

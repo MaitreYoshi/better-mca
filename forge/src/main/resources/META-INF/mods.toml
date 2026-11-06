@@ -1,0 +1,37 @@
+modLoader = "javafml"
+loaderVersion = "[47,)"
+license = "GPL-3.0-only"
+
+[[mods]]
+modId = "mca_vie"
+version = "${version}"
+displayName = "Better MCA"
+authors = "MaitreYoshi"
+description = '''
+Addon pour Minecraft Comes Alive : noms de famille, calendrier, âges réalistes, bonheur et santé, arbre généalogique et métiers pour les villageois.
+'''
+
+[[dependencies.mca_vie]]
+    modId = "forge"
+    mandatory = true
+    versionRange = "[47,)"
+    ordering = "NONE"
+    side = "BOTH"
+[[dependencies.mca_vie]]
+    modId = "minecraft"
+    mandatory = true
+    versionRange = "[1.20.1,1.21)"
+    ordering = "NONE"
+    side = "BOTH"
+[[dependencies.mca_vie]]
+    modId = "architectury"
+    mandatory = true
+    versionRange = "[9.2.14,)"
+    ordering = "AFTER"
+    side = "BOTH"
+[[dependencies.mca_vie]]
+    modId = "mca"
+    mandatory = true
+    versionRange = "[7.6.26,7.7)"
+    ordering = "AFTER"
+    side = "BOTH"

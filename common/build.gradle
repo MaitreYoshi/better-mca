@@ -1,0 +1,47 @@
+architectury {
+    common rootProject.enabled_platforms.split(',')
+}
+
+dependencies {
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+    modImplementation "dev.architectury:architectury:${rootProject.architectury_version}"
+    modImplementation files(rootProject.mca_common_jar)
+}
+
+tasks.named('test') {
+    failOnNoDiscoveredTests = false
+}
+
+tasks.register('treeLayoutCheck', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.maitreyoshi.mcavie.tree.client.TreeLayoutCheck'
+    args System.getProperty('treeSvg', "${buildDir}/tree-svg")
+}
+
+tasks.register('treeSelectionCheck', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.maitreyoshi.mcavie.tree.TreeSelectionCheck'
+}
+
+tasks.register('treeRealCheck', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.maitreyoshi.mcavie.tree.client.TreeRealCheck'
+    ['treeData', 'treeRoot', 'treeSvg', 'treeShown', 'treeEvery'].each { key ->
+        if (System.getProperty(key) != null) {
+            systemProperty key, System.getProperty(key)
+        }
+    }
+    if (System.getProperty('treeSvg') == null) {
+        systemProperty 'treeSvg', "${buildDir}/tree-real-svg"
+    }
+}
+
+tasks.named('check') {
+    dependsOn 'treeLayoutCheck'
+    dependsOn 'treeSelectionCheck'
+}
+
+tasks.register('familyAgesCheck', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.maitreyoshi.mcavie.life.FamilyAgesCheck'
+}
