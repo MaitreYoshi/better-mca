@@ -14,3 +14,4 @@ RESUME-*.md
 
 .gw-lf.sh
 blockbench/*.tar
+run-*/

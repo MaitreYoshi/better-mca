@@ -16,11 +16,4 @@ pluginManagement {
     }
 }
 
-// Forge est exclu pendant le dev (build plus rapide). Pour le réactiver : with_forge=true dans gradle.properties
-// ou -Pwith_forge=true sur la ligne de commande.
-include 'common', 'fabric'
-if (providers.gradleProperty('with_forge').getOrElse('false').toBoolean()) {
-    include 'forge'
-}
-
 rootProject.name = 'mca-vie'
