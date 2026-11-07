@@ -91,6 +91,8 @@ public class PhoneRegistry extends PersistentState {
         public final Set<Integer> contacts = new LinkedHashSet<>();
         public final Map<Integer, Conversation> conversations = new LinkedHashMap<>();
         public final List<Photo> gallery = new ArrayList<>();
+        public final Map<Integer, String> folders = new LinkedHashMap<>();
+        public int nextFolder = 1;
 
         public boolean references(UUID photo) {
             for (Photo entry : gallery) {
@@ -145,9 +147,21 @@ public class PhoneRegistry extends PersistentState {
                 NbtCompound entry = new NbtCompound();
                 entry.putUuid("id", photo.id());
                 entry.putLong("time", photo.time());
+                if (photo.folder() != 0) {
+                    entry.putInt("folder", photo.folder());
+                }
                 galleryList.add(entry);
             }
             nbt.put("gallery", galleryList);
+            NbtList folderList = new NbtList();
+            folders.forEach((id, name) -> {
+                NbtCompound entry = new NbtCompound();
+                entry.putInt("id", id);
+                entry.putString("name", name);
+                folderList.add(entry);
+            });
+            nbt.put("folders", folderList);
+            nbt.putInt("nextFolder", nextFolder);
             return nbt;
         }
 
@@ -169,10 +183,16 @@ public class PhoneRegistry extends PersistentState {
                 NbtCompound entry = (NbtCompound) element;
                 phone.conversations.put(entry.getInt("number"), Conversation.fromNbt(entry));
             }
+            for (NbtElement element : nbt.getList("folders", NbtElement.COMPOUND_TYPE)) {
+                NbtCompound entry = (NbtCompound) element;
+                phone.folders.put(entry.getInt("id"), entry.getString("name"));
+            }
+            phone.nextFolder = Math.max(1, nbt.getInt("nextFolder"));
             for (NbtElement element : nbt.getList("gallery", NbtElement.COMPOUND_TYPE)) {
                 NbtCompound entry = (NbtCompound) element;
                 if (entry.containsUuid("id")) {
-                    phone.gallery.add(new Photo(entry.getUuid("id"), entry.getLong("time")));
+                    int folder = entry.getInt("folder");
+                    phone.gallery.add(new Photo(entry.getUuid("id"), entry.getLong("time"), phone.folders.containsKey(folder) ? folder : 0));
                 }
             }
             return phone;
@@ -227,6 +247,9 @@ public class PhoneRegistry extends PersistentState {
     public record Message(boolean outgoing, String text, long time, @Nullable UUID photo) {
     }
 
-    public record Photo(UUID id, long time) {
+    public record Photo(UUID id, long time, int folder) {
+        public Photo(UUID id, long time) {
+            this(id, time, 0);
+        }
     }
 }

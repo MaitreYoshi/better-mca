@@ -16,6 +16,8 @@ import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,13 +31,13 @@ public final class PhoneClient {
     public record Message(boolean outgoing, String text, long time, @Nullable UUID photo) {
     }
 
-    public record Photo(UUID id, long time) {
+    public record Photo(UUID id, long time, int folder) {
     }
 
     public record Person(String name, @Nullable UUID uuid, String skin) {
     }
 
-    public record State(int number, boolean access, boolean owner, boolean hasCode, List<Integer> contacts, Map<Integer, Person> people, List<Summary> conversations, List<Photo> gallery) {
+    public record State(int number, boolean access, boolean owner, boolean hasCode, List<Integer> contacts, Map<Integer, Person> people, List<Summary> conversations, List<Photo> gallery, Map<Integer, String> folders) {
         public String nameOf(int other) {
             Person person = people.get(other);
             return person == null || person.name().isEmpty() ? String.format("%03d", other) : person.name();
@@ -65,6 +67,7 @@ public final class PhoneClient {
             Map<Integer, Person> people = new HashMap<>();
             List<Summary> conversations = new ArrayList<>();
             List<Photo> gallery = new ArrayList<>();
+            Map<Integer, String> folders = new LinkedHashMap<>();
             if (access) {
                 owner = buf.readBoolean();
                 hasCode = buf.readBoolean();
@@ -85,10 +88,14 @@ public final class PhoneClient {
                 }
                 count = buf.readVarInt();
                 for (int i = 0; i < count; i++) {
-                    gallery.add(new Photo(buf.readUuid(), buf.readVarLong()));
+                    folders.put(buf.readVarInt(), buf.readString());
+                }
+                count = buf.readVarInt();
+                for (int i = 0; i < count; i++) {
+                    gallery.add(new Photo(buf.readUuid(), buf.readVarLong(), buf.readVarInt()));
                 }
             }
-            State state = new State(number, access, owner, hasCode, List.copyOf(contacts), Map.copyOf(people), List.copyOf(conversations), List.copyOf(gallery));
+            State state = new State(number, access, owner, hasCode, List.copyOf(contacts), Map.copyOf(people), List.copyOf(conversations), List.copyOf(gallery), Collections.unmodifiableMap(folders));
             client.execute(() -> {
                 CameraMode.update(state);
                 if (client.currentScreen instanceof PhoneScreen screen && screen.number() == number) {

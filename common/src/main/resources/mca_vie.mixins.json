@@ -47,6 +47,7 @@
     "client.CameraHudMixin",
     "client.CameraMouseMixin",
     "client.CameraZoomMixin",
+    "client.CameraSelfieMixin",
     "client.ChatHudMixin",
     "client.CreateWorldGameTabMixin",
     "client.DestinyScreenMixin",

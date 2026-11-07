@@ -122,6 +122,16 @@ public final class PhoneServer {
                     other = buf.readVarInt();
                     text = buf.readString(PhoneNetwork.MAX_TEXT);
                 }
+                case PhoneNetwork.OP_FOLDER_CREATE -> text = buf.readString(PhoneNetwork.MAX_FOLDER_NAME);
+                case PhoneNetwork.OP_FOLDER_RENAME -> {
+                    other = buf.readVarInt();
+                    text = buf.readString(PhoneNetwork.MAX_FOLDER_NAME);
+                }
+                case PhoneNetwork.OP_FOLDER_DELETE -> other = buf.readVarInt();
+                case PhoneNetwork.OP_MOVE_PHOTO -> {
+                    photo = buf.readUuid();
+                    other = buf.readVarInt();
+                }
                 default -> {
                 }
             }
@@ -302,6 +312,47 @@ public final class PhoneServer {
                 player.sendMessage(Text.translatable(giveToInventory(player, stack)
                         ? "msg.mca_vie.phone.printed" : "msg.mca_vie.phone.printed_ground"), true);
                 ServerPlayNetworking.send(player, PhoneNetwork.PRINTED, PacketByteBufs.empty());
+            }
+            case PhoneNetwork.OP_FOLDER_CREATE -> {
+                String name = folderName(text);
+                if (name.isEmpty()) {
+                    return;
+                }
+                if (phone.folders.size() >= PhoneNetwork.MAX_FOLDERS) {
+                    error(player, "msg.mca_vie.phone.folders_full");
+                    return;
+                }
+                phone.folders.put(phone.nextFolder++, name);
+                registry.markDirty();
+                sendState(player, number, phone, false);
+            }
+            case PhoneNetwork.OP_FOLDER_RENAME -> {
+                String name = folderName(text);
+                if (!name.isEmpty() && phone.folders.containsKey(other)) {
+                    phone.folders.put(other, name);
+                    registry.markDirty();
+                }
+                sendState(player, number, phone, false);
+            }
+            case PhoneNetwork.OP_FOLDER_DELETE -> {
+                if (phone.folders.remove(other) != null) {
+                    phone.gallery.replaceAll(p -> p.folder() == other ? new Photo(p.id(), p.time()) : p);
+                    registry.markDirty();
+                }
+                sendState(player, number, phone, false);
+            }
+            case PhoneNetwork.OP_MOVE_PHOTO -> {
+                if (photo == null || (other != 0 && !phone.folders.containsKey(other))) {
+                    return;
+                }
+                for (int i = 0; i < phone.gallery.size(); i++) {
+                    Photo entry = phone.gallery.get(i);
+                    if (entry.id().equals(photo) && entry.folder() != other) {
+                        phone.gallery.set(i, new Photo(entry.id(), entry.time(), other));
+                        registry.markDirty();
+                    }
+                }
+                sendState(player, number, phone, false);
             }
             case PhoneNetwork.OP_DELETE_PHOTO -> {
                 if (photo != null && phone.gallery.removeIf(p -> p.id().equals(photo))) {
@@ -590,6 +641,11 @@ public final class PhoneServer {
         return true;
     }
 
+    private static String folderName(String text) {
+        String name = clean(text);
+        return name.length() > PhoneNetwork.MAX_FOLDER_NAME ? name.substring(0, PhoneNetwork.MAX_FOLDER_NAME).trim() : name;
+    }
+
     private static String clean(String text) {
         return SharedConstants.stripInvalidChars(text).trim();
     }
@@ -640,10 +696,16 @@ public final class PhoneServer {
                 buf.writeString(preview);
                 buf.writeVarLong(conversation.lastTime);
             }
+            buf.writeVarInt(phone.folders.size());
+            phone.folders.forEach((id, name) -> {
+                buf.writeVarInt(id);
+                buf.writeString(name);
+            });
             buf.writeVarInt(phone.gallery.size());
             for (Photo photo : phone.gallery) {
                 buf.writeUuid(photo.id());
                 buf.writeVarLong(photo.time());
+                buf.writeVarInt(photo.folder());
             }
         }
         ServerPlayNetworking.send(player, PhoneNetwork.STATE, buf);

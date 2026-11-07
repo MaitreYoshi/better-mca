@@ -44,6 +44,10 @@ public class JobScreen extends Screen {
 
     private Job selected;
     private int scroll;
+    private int detailScroll;
+    private int detailOverflow;
+    @Nullable
+    private Job detailFor;
     private int left;
     private int top;
     private int panelWidth;
@@ -210,6 +214,16 @@ public class JobScreen extends Screen {
         }
         y += 22;
 
+        if (detailFor != selected) {
+            detailFor = selected;
+            detailScroll = 0;
+        }
+        int clipTop = y;
+        int clipBottom = top + panelHeight - BUTTON_HEIGHT - PAD - 4;
+        context.enableScissor(x, clipTop, x + w, clipBottom);
+        y -= detailScroll;
+        int contentTop = y;
+
         int textWidth = isCurrent ? w - 40 : w;
         for (OrderedText line : textRenderer.wrapLines(Text.translatable("job.mca_vie.desc." + selected.id()), textWidth)) {
             context.drawTextWithShadow(textRenderer, line, x, y, 0xD0D0D0);
@@ -232,7 +246,17 @@ public class JobScreen extends Screen {
         }
 
         if (isCurrent && info != null && selected.isCraft()) {
-            renderProgress(context, info, x, y, w);
+            y = renderProgress(context, info, x, y, w);
+        }
+        context.disableScissor();
+        detailOverflow = Math.max(0, y - contentTop - (clipBottom - clipTop));
+        detailScroll = Math.min(detailScroll, detailOverflow);
+        if (detailOverflow > 0) {
+            int track = clipBottom - clipTop;
+            int thumb = Math.max(10, track * track / (track + detailOverflow));
+            int thumbY = clipTop + (track - thumb) * detailScroll / detailOverflow;
+            context.fill(x + w + 2, clipTop, x + w + 4, clipBottom, 0xFF2A2A2A);
+            context.fill(x + w + 2, thumbY, x + w + 4, thumbY + thumb, 0xFFAAAAAA);
         }
     }
 
@@ -250,7 +274,7 @@ public class JobScreen extends Screen {
         return y + 18;
     }
 
-    private void renderProgress(DrawContext context, WorkClient.Info info, int x, int y, int w) {
+    private int renderProgress(DrawContext context, WorkClient.Info info, int x, int y, int w) {
         int level = Math.max(1, Math.min(5, info.level()));
         Text levelName = Text.translatable("job.mca_vie.level." + level).formatted(Formatting.GOLD);
         int next = WorkManager.nextLevelExperience(level);
@@ -272,6 +296,7 @@ public class JobScreen extends Screen {
             context.drawTextWithShadow(textRenderer, line, x, y, 0xFFFFFF);
             y += 10;
         }
+        return y;
     }
 
     private static ItemStack iconOf(Job job) {
@@ -320,6 +345,10 @@ public class JobScreen extends Screen {
     public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
         if (mouseX < left + LIST_WIDTH) {
             scroll = Math.max(0, Math.min(Math.max(0, jobs.length - visibleRows()), scroll - (int) Math.signum(amount)));
+            return true;
+        }
+        if (detailOverflow > 0) {
+            detailScroll = Math.max(0, Math.min(detailOverflow, detailScroll - (int) Math.signum(amount) * 10));
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, amount);

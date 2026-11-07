@@ -11,6 +11,7 @@ import com.maitreyoshi.mcavie.compat.client.WorldRenderEvents;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.option.Perspective;
 import net.minecraft.client.texture.NativeImage;
 import net.minecraft.client.util.ScreenshotRecorder;
 import net.minecraft.network.PacketByteBuf;
@@ -43,6 +44,9 @@ public final class CameraMode {
     private static double zoom = 1;
     private static double targetZoom = 1;
     private static boolean hudWasHidden;
+    private static boolean selfie;
+    @Nullable
+    private static Perspective previousPerspective;
 
     private CameraMode() {
     }
@@ -66,6 +70,15 @@ public final class CameraMode {
         return state == null ? 1 : zoom;
     }
 
+    public static boolean selfie() {
+        return state != null && selfie;
+    }
+
+    private static void toggleSelfie(MinecraftClient client) {
+        selfie = !selfie;
+        client.options.setPerspective(selfie ? Perspective.THIRD_PERSON_FRONT : Perspective.FIRST_PERSON);
+    }
+
     public static void scroll(double amount) {
         targetZoom = Math.max(1, Math.min(MAX_ZOOM, targetZoom * Math.pow(ZOOM_STEP, amount)));
     }
@@ -79,6 +92,9 @@ public final class CameraMode {
         MinecraftClient client = MinecraftClient.getInstance();
         hudWasHidden = client.options.hudHidden;
         client.options.hudHidden = false;
+        selfie = false;
+        previousPerspective = client.options.getPerspective();
+        client.options.setPerspective(Perspective.FIRST_PERSON);
         client.setScreen(null);
     }
 
@@ -91,8 +107,14 @@ public final class CameraMode {
     public static void stop(boolean reopen) {
         State phone = state;
         if (phone != null) {
-            MinecraftClient.getInstance().options.hudHidden = hudWasHidden;
+            MinecraftClient client = MinecraftClient.getInstance();
+            client.options.hudHidden = hudWasHidden;
+            if (previousPerspective != null) {
+                client.options.setPerspective(previousPerspective);
+            }
         }
+        selfie = false;
+        previousPerspective = null;
         state = null;
         capture = false;
         zoom = 1;
@@ -125,6 +147,17 @@ public final class CameraMode {
             back = true;
         }
         client.options.useKey.setPressed(false);
+        boolean flip = false;
+        while (client.options.swapHandsKey.wasPressed()) {
+            flip = !flip;
+        }
+        if (flip) {
+            toggleSelfie(client);
+        }
+        Perspective wanted = selfie ? Perspective.THIRD_PERSON_FRONT : Perspective.FIRST_PERSON;
+        if (client.options.getPerspective() != wanted) {
+            client.options.setPerspective(wanted);
+        }
         if (back) {
             stop(true);
         } else if (shot && flash == 0) {
@@ -250,6 +283,9 @@ public final class CameraMode {
             context.fill(width / 2 - 4, height / 2, width / 2 + 5, height / 2 + 1, 0x90FFFFFF);
             context.fill(width / 2, height / 2 - 4, width / 2 + 1, height / 2 + 5, 0x90FFFFFF);
             context.fill(x + m + 4, y + m + 4, x + m + 8, y + m + 8, 0xFFE5484D);
+            if (selfie) {
+                context.drawTextWithShadow(client.textRenderer, Text.translatable("gui.mca_vie.phone.selfie"), x + m + 12, y + m + 4, 0xFFFFFF);
+            }
             String level = String.format("x%.1f", zoom);
             int lw = client.textRenderer.getWidth(level);
             context.fill(x + w - m - lw - 12, y + m + 4, x + w - m - 4, y + m + 18, 0x90000000);
@@ -260,7 +296,7 @@ public final class CameraMode {
             context.fill(barX, barTop, barX + 2, barBottom, 0x60FFFFFF);
             int knob = barBottom - (int) ((barBottom - barTop) * Math.log(zoom) / Math.log(MAX_ZOOM));
             context.fill(barX - 3, knob - 1, barX + 5, knob + 2, 0xFFFFFFFF);
-            Text hint = Text.translatable("gui.mca_vie.phone.camera_hint");
+            Text hint = Text.translatable("gui.mca_vie.phone.camera_hint", client.options.swapHandsKey.getBoundKeyLocalizedText());
             int tw = client.textRenderer.getWidth(hint);
             context.fill(width / 2 - tw / 2 - 6, y + h - m - 18, width / 2 + tw / 2 + 6, y + h - m - 4, 0x90000000);
             context.drawCenteredTextWithShadow(client.textRenderer, hint, width / 2, y + h - m - 15, 0xFFFFFF);

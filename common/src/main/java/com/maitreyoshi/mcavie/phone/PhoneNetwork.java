@@ -31,6 +31,10 @@ public final class PhoneNetwork {
     public static final int OP_SAVE_PHOTO = 10;
     public static final int OP_PRINT_PHOTO = 11;
     public static final int OP_SET_PORTRAIT = 12;
+    public static final int OP_FOLDER_CREATE = 13;
+    public static final int OP_FOLDER_RENAME = 14;
+    public static final int OP_FOLDER_DELETE = 15;
+    public static final int OP_MOVE_PHOTO = 16;
 
     public static final int MAX_TEXT = 200;
     public static final int MAX_CONTACTS = 100;
@@ -44,7 +48,10 @@ public final class PhoneNetwork {
     public static final int MAX_FULL_BYTES = 600000;
     public static final int MAX_THUMB_BYTES = 40000;
     public static final int PHOTO_CHUNK = 30000;
-    public static final int MAX_PHOTOS = 50;
+    // Garde-fou disque (~650 Ko par photo) : assez haut pour ne plus gener en jeu.
+    public static final int MAX_PHOTOS = 1000;
+    public static final int MAX_FOLDERS = 64;
+    public static final int MAX_FOLDER_NAME = 24;
     public static final int PORTRAIT_SIZE = 128;
 
     private PhoneNetwork() {

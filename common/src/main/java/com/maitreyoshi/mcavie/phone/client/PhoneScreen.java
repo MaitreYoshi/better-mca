@@ -7,6 +7,7 @@ import com.maitreyoshi.mcavie.phone.client.PhoneClient.Message;
 import com.maitreyoshi.mcavie.phone.client.PhoneClient.State;
 import com.maitreyoshi.mcavie.phone.client.PhoneClient.Summary;
 import com.maitreyoshi.mcavie.tree.client.TreeClient;
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.PlayerSkinDrawer;
 import net.minecraft.client.gui.screen.Screen;
@@ -21,6 +22,7 @@ import org.lwjgl.glfw.GLFW;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
@@ -46,28 +48,42 @@ public class PhoneScreen extends Screen {
     private static final int MUTED = 0xFF8B909A;
     private static final int[] AVATARS = {0xFFE5484D, 0xFFF76B15, 0xFFFFB224, 0xFF30A46C, 0xFF12A594, 0xFF0090FF, 0xFF6E56CF, 0xFFD6409F};
 
-    private enum View { LOCK, HOME, CONTACTS, ADD_CONTACT, MESSAGES, NEW_MESSAGE, CONVERSATION, SETTINGS, SET_CODE, CAMERA, TREE, GALLERY, PICK_CONTACT }
+    private enum View { LOCK, HOME, CONTACTS, ADD_CONTACT, MESSAGES, NEW_MESSAGE, CONVERSATION, SETTINGS, SET_CODE, CAMERA, TREE, GALLERY, PICK_CONTACT, FOLDER_NAME }
 
-    private interface Icon {
-        void draw(DrawContext context, int x, int y, int size);
-    }
-
-    private record App(String key, int top, int bottom, View view, IntSupplier badge, Icon icon) {
+    private record App(String key, View view, IntSupplier badge) {
+        Identifier texture() {
+            return new Identifier("mca_vie", "textures/gui/phone/app_" + key + ".png");
+        }
     }
 
     private record Hit(int x, int y, int w, int h, Runnable action) {
     }
 
+    private record Cell(int x, int y, int w, int h, UUID id) {
+    }
+
+    private record Drop(int x, int y, int w, int h, int folder) {
+    }
+
     private final List<App> apps = List.of(
-            new App("messages", 0xFF4ADE80, 0xFF16A34A, View.MESSAGES, () -> this.state.unread(), PhoneScreen::drawBubbleIcon),
-            new App("contacts", 0xFF60A5FA, 0xFF2563EB, View.CONTACTS, () -> 0, PhoneScreen::drawPersonIcon),
-            new App("camera", 0xFF52525B, 0xFF18181B, View.CAMERA, () -> 0, PhoneScreen::drawCameraIcon),
-            new App("gallery", 0xFFFBBF24, 0xFFEA580C, View.GALLERY, () -> 0, PhoneScreen::drawPictureIcon),
-            new App("tree", 0xFF86EFAC, 0xFF15803D, View.TREE, () -> 0, PhoneScreen::drawTreeIcon),
-            new App("settings", 0xFFA1A1AA, 0xFF52525B, View.SETTINGS, () -> 0, PhoneScreen::drawGearIcon)
+            new App("messages", View.MESSAGES, () -> this.state.unread()),
+            new App("contacts", View.CONTACTS, () -> 0),
+            new App("camera", View.CAMERA, () -> 0),
+            new App("gallery", View.GALLERY, () -> 0),
+            new App("tree", View.TREE, () -> 0),
+            new App("settings", View.SETTINGS, () -> 0)
     );
 
     private final List<Hit> hits = new ArrayList<>();
+    private final List<Cell> cells = new ArrayList<>();
+    private final List<Drop> drops = new ArrayList<>();
+    private int folder;
+    private int editingFolder;
+    private String folderInput = "";
+    private UUID pressed;
+    private double pressX;
+    private double pressY;
+    private boolean dragging;
     private State state;
     private View view;
     private int other = -1;
@@ -114,6 +130,10 @@ public class PhoneScreen extends Screen {
         if (view == View.PICK_CONTACT && state.gallery().stream().noneMatch(p -> p.id().equals(photo))) {
             switchTo(View.GALLERY);
             return;
+        }
+        if (folder != 0 && !state.folders().containsKey(folder)) {
+            folder = 0;
+            scroll = 0;
         }
         if (view == View.SET_CODE) {
             switchTo(View.SETTINGS);
@@ -196,6 +216,11 @@ public class PhoneScreen extends Screen {
     private void switchTo(View next) {
         view = next;
         scroll = 0;
+        pressed = null;
+        dragging = false;
+        if (next == View.HOME) {
+            folder = 0;
+        }
         clearAndInit();
     }
 
@@ -204,7 +229,7 @@ public class PhoneScreen extends Screen {
             case ADD_CONTACT -> View.CONTACTS;
             case NEW_MESSAGE, CONVERSATION -> View.MESSAGES;
             case SET_CODE -> View.SETTINGS;
-            case PICK_CONTACT -> View.GALLERY;
+            case PICK_CONTACT, FOLDER_NAME -> View.GALLERY;
             default -> View.HOME;
         };
     }
@@ -231,6 +256,7 @@ public class PhoneScreen extends Screen {
         mainField = null;
         switch (view) {
             case CONVERSATION -> mainField = field(sx() + 14, contentBottom() - 20, sw() - 48, PhoneNetwork.MAX_TEXT, draft, s -> draft = s, false);
+            case FOLDER_NAME -> mainField = field(sx() + 14, contentTop() + 30, sw() - 28, PhoneNetwork.MAX_FOLDER_NAME, folderInput, s -> folderInput = s, false);
             default -> {
             }
         }
@@ -332,19 +358,70 @@ public class PhoneScreen extends Screen {
                 return true;
             }
         }
+        if (view == View.GALLERY) {
+            for (Cell cell : cells) {
+                if (x >= cell.x() && x < cell.x() + cell.w() && y >= cell.y() && y < cell.y() + cell.h()) {
+                    pressed = cell.id();
+                    pressX = x;
+                    pressY = y;
+                    dragging = false;
+                    return true;
+                }
+            }
+        }
         return false;
+    }
+
+    @Override
+    public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+        if (pressed != null && button == 0) {
+            if (!dragging && Math.abs(x - pressX) + Math.abs(y - pressY) > 4) {
+                dragging = true;
+            }
+            return true;
+        }
+        return super.mouseDragged(x, y, button, dx, dy);
+    }
+
+    @Override
+    public boolean mouseReleased(double x, double y, int button) {
+        if (pressed != null && button == 0) {
+            UUID id = pressed;
+            boolean wasDragging = dragging;
+            pressed = null;
+            dragging = false;
+            if (!wasDragging) {
+                openPhoto(id, true);
+                return true;
+            }
+            for (Drop drop : drops) {
+                if (x >= drop.x() && x < drop.x() + drop.w() && y >= drop.y() && y < drop.y() + drop.h()) {
+                    int target = drop.folder();
+                    if (target != folder) {
+                        send(PhoneNetwork.OP_MOVE_PHOTO, buf -> {
+                            buf.writeUuid(id);
+                            buf.writeVarInt(target);
+                        });
+                    }
+                    break;
+                }
+            }
+            return true;
+        }
+        return super.mouseReleased(x, y, button);
     }
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && view != View.HOME && view != View.LOCK) {
-            switchTo(parent());
+            goBack();
             return true;
         }
         if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
             switch (view) {
                 case CONVERSATION -> sendMessage();
                 case ADD_CONTACT -> addContact();
+                case FOLDER_NAME -> submitFolder();
                 case NEW_MESSAGE -> {
                     int number = parseNumber(numberInput);
                     if (number >= 0) {
@@ -387,6 +464,8 @@ public class PhoneScreen extends Screen {
         this.mouseX = mouseX;
         this.mouseY = mouseY;
         hits.clear();
+        cells.clear();
+        drops.clear();
         renderBackground(context);
 
         int px = phoneLeft();
@@ -420,6 +499,7 @@ public class PhoneScreen extends Screen {
             case SET_CODE -> renderSetCode(context);
             case GALLERY -> renderGallery(context);
             case PICK_CONTACT -> renderPickContact(context);
+            case FOLDER_NAME -> renderFolderName(context);
             case CAMERA, TREE -> {
             }
         }
@@ -435,6 +515,14 @@ public class PhoneScreen extends Screen {
         }
 
         super.render(context, mouseX, mouseY, delta);
+
+        if (dragging && pressed != null) {
+            context.getMatrices().push();
+            context.getMatrices().translate(0, 0, 200);
+            context.fill(mouseX - 17, mouseY - 10, mouseX + 17, mouseY + 10, 0xFFFFFFFF);
+            drawPhoto(context, pressed, mouseX - 16, mouseY - 9, 32, 18);
+            context.getMatrices().pop();
+        }
 
         if (toast != null && ticks < toastUntil) {
             List<OrderedText> lines = textRenderer.wrapLines(toast, sw - 28);
@@ -477,7 +565,7 @@ public class PhoneScreen extends Screen {
         if (back) {
             boolean hover = hovered(sx + 2, y + 2, 22, HEADER - 4);
             drawChevron(context, sx + 10, y + HEADER / 2, hover ? ACCENT_HOVER : ACCENT);
-            hits.add(new Hit(sx + 2, y + 2, 22, HEADER - 4, () -> switchTo(parent())));
+            hits.add(new Hit(sx + 2, y + 2, 22, HEADER - 4, this::goBack));
         }
         String trimmed = fit(title.getString(), sw - 56);
         context.drawCenteredTextWithShadow(textRenderer, Text.literal(trimmed).formatted(Formatting.BOLD), sx + sw / 2, y + 8, TEXT);
@@ -598,8 +686,9 @@ public class PhoneScreen extends Screen {
         if (hover) {
             round(context, x - 2, y - 2, size + 4, size + 4, size / 4 + 2, 0x50FFFFFF);
         }
-        roundGradient(context, x, y, size, size, size / 4, app.top(), app.bottom());
-        app.icon().draw(context, x, y, size);
+        RenderSystem.enableBlend();
+        context.drawTexture(app.texture(), x, y, size, size, 0, 0, 128, 128, 128, 128);
+        RenderSystem.disableBlend();
         int badge = app.badge().getAsInt();
         if (badge > 0) {
             String text = badge > 99 ? "99+" : String.valueOf(badge);
@@ -848,41 +937,166 @@ public class PhoneScreen extends Screen {
     }
 
     private void renderGallery(DrawContext context) {
-        renderHeader(context, Text.translatable("gui.mca_vie.phone.app.gallery"), true);
-        List<PhoneClient.Photo> gallery = state.gallery();
+        String folderName = folder == 0 ? null : state.folders().get(folder);
         int sx = sx();
         int sw = sw();
+        int hy = sy() + STATUS;
+        renderHeader(context, folderName == null ? Text.translatable("gui.mca_vie.phone.app.gallery") : Text.literal(fit(folderName, sw - 92)), true);
+        if (folder == 0) {
+            boolean hover = hovered(sx + sw - 22, hy + 4, 16, 16);
+            int color = hover ? ACCENT_HOVER : ACCENT;
+            context.fill(sx + sw - 18, hy + HEADER / 2 - 1, sx + sw - 8, hy + HEADER / 2 + 1, color);
+            context.fill(sx + sw - 14, hy + HEADER / 2 - 5, sx + sw - 12, hy + HEADER / 2 + 5, color);
+            hits.add(new Hit(sx + sw - 22, hy + 4, 16, 16, () -> editFolder(0)));
+        } else {
+            boolean renameHover = hovered(sx + sw - 40, hy + 4, 16, 16);
+            context.drawText(textRenderer, "✎", sx + sw - 36, hy + 8, renameHover ? ACCENT_HOVER : ACCENT, false);
+            hits.add(new Hit(sx + sw - 40, hy + 4, 16, 16, () -> editFolder(folder)));
+            boolean deleteHover = hovered(sx + sw - 22, hy + 4, 16, 16);
+            drawCross(context, sx + sw - 18, hy + 8, deleteHover ? DANGER : MUTED);
+            hits.add(new Hit(sx + sw - 22, hy + 4, 16, 16, this::deleteFolder));
+        }
+        List<PhoneClient.Photo> gallery = state.gallery().stream().filter(p -> p.folder() == folder).toList();
+        List<Map.Entry<Integer, String>> folders = new ArrayList<>();
+        if (folder == 0) {
+            folders.addAll(state.folders().entrySet());
+            folders.sort(Map.Entry.comparingByValue(String.CASE_INSENSITIVE_ORDER));
+        }
         int top = contentTop() + 2;
         int bottom = contentBottom();
-        if (gallery.isEmpty()) {
+        if (gallery.isEmpty() && folders.isEmpty() && folder == 0) {
             for (OrderedText line : textRenderer.wrapLines(Text.translatable("gui.mca_vie.phone.no_photos"), sw - 20)) {
                 context.drawCenteredTextWithShadow(textRenderer, line, sx + sw / 2, top + 28, MUTED);
                 top += 10;
             }
             return;
         }
+        int rowH = 18;
+        int listRows = folder == 0 ? folders.size() : 1;
         int gap = 2;
         int cellW = (sw - 4 - gap * 2) / 3;
         int cellH = cellW * PhoneNetwork.THUMB_HEIGHT / PhoneNetwork.THUMB_WIDTH;
         int rows = (gallery.size() + 2) / 3;
-        scroll = Math.min(scroll, Math.max(0, rows * (cellH + gap) - (bottom - top)));
+        int listH = listRows * rowH + (listRows > 0 ? gap : 0);
+        int emptyH = gallery.isEmpty() ? 30 : 0;
+        scroll = Math.min(scroll, Math.max(0, listH + rows * (cellH + gap) + emptyH - (bottom - top)));
         context.enableScissor(sx, top, sx + sw, bottom);
+        int y = top - scroll;
+        if (folder == 0) {
+            for (Map.Entry<Integer, String> entry : folders) {
+                int id = entry.getKey();
+                long count = state.gallery().stream().filter(p -> p.folder() == id).count();
+                folderRow(context, sx, y, sw, rowH, top, bottom, id, entry.getValue(), String.valueOf(count), () -> {
+                    folder = id;
+                    scroll = 0;
+                });
+                y += rowH;
+            }
+        } else {
+            folderRow(context, sx, y, sw, rowH, top, bottom, 0, "↑ " + Text.translatable("gui.mca_vie.phone.app.gallery").getString(), "", this::goBack);
+            y += rowH;
+        }
+        if (listRows > 0) {
+            y += gap;
+        }
+        if (gallery.isEmpty()) {
+            for (OrderedText line : textRenderer.wrapLines(Text.translatable("gui.mca_vie.phone.folder_empty"), sw - 20)) {
+                context.drawCenteredTextWithShadow(textRenderer, line, sx + sw / 2, y + 8, MUTED);
+                y += 10;
+            }
+        }
         for (int i = 0; i < gallery.size(); i++) {
             int px = sx + 2 + (i % 3) * (cellW + gap);
-            int py = top + (i / 3) * (cellH + gap) - scroll;
+            int py = y + (i / 3) * (cellH + gap);
             if (py + cellH < top || py > bottom) {
                 continue;
             }
             UUID id = gallery.get(i).id();
             drawPhoto(context, id, px, py, cellW, cellH);
-            if (hovered(px, py, cellW, cellH)) {
+            if (dragging && id.equals(pressed)) {
+                context.fill(px, py, px + cellW, py + cellH, 0xA0000000);
+            } else if (!dragging && hovered(px, py, cellW, cellH)) {
                 context.fill(px, py, px + cellW, py + cellH, 0x30FFFFFF);
             }
             if (py >= top && py + cellH <= bottom) {
-                hits.add(new Hit(px, py, cellW, cellH, () -> openPhoto(id, true)));
+                cells.add(new Cell(px, py, cellW, cellH, id));
             }
         }
         context.disableScissor();
+    }
+
+    private void folderRow(DrawContext context, int sx, int y, int sw, int h, int top, int bottom, int id, String name, String count, Runnable open) {
+        if (y + h < top || y > bottom) {
+            return;
+        }
+        boolean hover = hovered(sx, y, sw, h);
+        if (dragging && hover) {
+            context.fill(sx, y, sx + sw, y + h, 0x803B82F6);
+        } else if (hover) {
+            context.fill(sx, y, sx + sw, y + h, CARD_HOVER);
+        }
+        int ix = sx + 8;
+        int iy = y + (h - 9) / 2;
+        context.fill(ix, iy, ix + 5, iy + 2, 0xFFD69A2D);
+        context.fill(ix, iy + 1, ix + 12, iy + 9, 0xFFF0B840);
+        context.drawText(textRenderer, fit(name, sw - 50), sx + 26, y + (h - 8) / 2, TEXT, false);
+        if (!count.isEmpty()) {
+            context.drawText(textRenderer, count, sx + sw - 8 - textRenderer.getWidth(count), y + (h - 8) / 2, MUTED, false);
+        }
+        context.fill(sx + 26, y + h - 1, sx + sw, y + h, LINE);
+        if (visible(y, h, top, bottom)) {
+            hits.add(new Hit(sx, y, sw, h, open));
+            drops.add(new Drop(sx, y, sw, h, id));
+        }
+    }
+
+    private void renderFolderName(DrawContext context) {
+        renderHeader(context, Text.translatable(editingFolder == 0 ? "gui.mca_vie.phone.new_folder" : "gui.mca_vie.phone.rename_folder"), true);
+        int sx = sx();
+        int sw = sw();
+        int top = contentTop();
+        context.drawText(textRenderer, Text.translatable("gui.mca_vie.phone.folder_name"), sx + 10, top + 14, MUTED, false);
+        round(context, sx + 8, top + 26, sw - 16, 16, 6, CARD);
+        pill(context, sx + 20, top + 52, sw - 40, Text.translatable("gui.mca_vie.phone.folder_ok"), !folderInput.trim().isEmpty(), this::submitFolder);
+    }
+
+    private void editFolder(int id) {
+        editingFolder = id;
+        folderInput = id == 0 ? "" : state.folders().getOrDefault(id, "");
+        switchTo(View.FOLDER_NAME);
+    }
+
+    private void submitFolder() {
+        String name = folderInput.trim();
+        if (name.isEmpty()) {
+            return;
+        }
+        int id = editingFolder;
+        if (id == 0) {
+            send(PhoneNetwork.OP_FOLDER_CREATE, buf -> buf.writeString(name));
+        } else {
+            send(PhoneNetwork.OP_FOLDER_RENAME, buf -> {
+                buf.writeVarInt(id);
+                buf.writeString(name);
+            });
+        }
+        switchTo(View.GALLERY);
+    }
+
+    private void deleteFolder() {
+        int id = folder;
+        send(PhoneNetwork.OP_FOLDER_DELETE, buf -> buf.writeVarInt(id));
+        folder = 0;
+        scroll = 0;
+    }
+
+    private void goBack() {
+        if (view == View.GALLERY && folder != 0) {
+            folder = 0;
+            scroll = 0;
+            return;
+        }
+        switchTo(parent());
     }
 
     private void renderPickContact(DrawContext context) {
@@ -1094,75 +1308,5 @@ public class PhoneScreen extends Screen {
         context.fill(x + 1, y + 1, x + 2, y + 4, TEXT);
         context.fill(x + 6, y + 1, x + 7, y + 4, TEXT);
         context.fill(x, y + 4, x + 8, y + 10, TEXT);
-    }
-
-    private static void drawBubbleIcon(DrawContext context, int x, int y, int size) {
-        int pad = size / 5;
-        round(context, x + pad, y + pad, size - 2 * pad, size - 2 * pad - size / 8, size / 6, 0xFFFFFFFF);
-        int tail = size / 8;
-        for (int i = 0; i < tail; i++) {
-            context.fill(x + pad + 2, y + size - pad - tail + i, x + pad + 2 + tail - i, y + size - pad - tail + i + 1, 0xFFFFFFFF);
-        }
-    }
-
-    private static void drawPersonIcon(DrawContext context, int x, int y, int size) {
-        int head = size / 3;
-        round(context, x + (size - head) / 2, y + size / 5, head, head, head / 2, 0xFFFFFFFF);
-        int body = size / 2 + 2;
-        round(context, x + (size - body) / 2, y + size / 5 + head + 1, body, size / 4, size / 8, 0xFFFFFFFF);
-    }
-
-    private static void drawCameraIcon(DrawContext context, int x, int y, int size) {
-        int bw = size * 2 / 3;
-        int bh = size / 2;
-        int bx = x + (size - bw) / 2;
-        int by = y + (size - bh) / 2 + 1;
-        context.fill(bx + bw / 4, by - 2, bx + bw / 2, by, 0xFFFFFFFF);
-        round(context, bx, by, bw, bh, 2, 0xFFFFFFFF);
-        int lens = bh * 2 / 3;
-        round(context, x + (size - lens) / 2, by + (bh - lens) / 2, lens, lens, lens / 2, 0xFF27272A);
-        int inner = Math.max(2, lens / 2);
-        round(context, x + (size - inner) / 2, by + (bh - inner) / 2, inner, inner, inner / 2, 0xFF60A5FA);
-    }
-
-    private static void drawPictureIcon(DrawContext context, int x, int y, int size) {
-        int pad = size / 5;
-        int w = size - 2 * pad;
-        int h = w * 3 / 4;
-        int px = x + pad;
-        int py = y + (size - h) / 2;
-        round(context, px, py, w, h, 2, 0xFFFFFFFF);
-        context.fill(px + 2, py + 2, px + w - 2, py + h - 2, 0xFF7DD3FC);
-        round(context, px + w - 2 - w / 4, py + 3, w / 6, w / 6, w / 12, 0xFFFDE047);
-        for (int i = 0; i < h / 2; i++) {
-            context.fill(px + w / 3 - i, py + h - 2 - h / 2 + i, px + w / 3 + i + 1, py + h - 2 - h / 2 + i + 1, 0xFF16A34A);
-        }
-    }
-
-    private static void drawTreeIcon(DrawContext context, int x, int y, int size) {
-        int node = Math.max(4, size / 5);
-        int cx = x + size / 2;
-        int top = y + size / 5;
-        int bottom = y + size - size / 5 - node;
-        int left = x + size / 5;
-        int right = x + size - size / 5 - node;
-        context.fill(cx, top + node, cx + 1, bottom - node / 2, 0xFFFFFFFF);
-        context.fill(left + node / 2, bottom - node / 2, right + node / 2 + 1, bottom - node / 2 + 1, 0xFFFFFFFF);
-        context.fill(left + node / 2, bottom - node / 2, left + node / 2 + 1, bottom, 0xFFFFFFFF);
-        context.fill(right + node / 2, bottom - node / 2, right + node / 2 + 1, bottom, 0xFFFFFFFF);
-        round(context, cx - node / 2, top, node, node, 1, 0xFFFFFFFF);
-        round(context, left, bottom, node, node, 1, 0xFFFFFFFF);
-        round(context, right, bottom, node, node, 1, 0xFFFFFFFF);
-    }
-
-    private static void drawGearIcon(DrawContext context, int x, int y, int size) {
-        int c = size / 2;
-        int outer = size / 3;
-        int tooth = Math.max(2, size / 10);
-        context.fill(x + c - tooth, y + c - outer - tooth, x + c + tooth, y + c + outer + tooth, 0xFFFFFFFF);
-        context.fill(x + c - outer - tooth, y + c - tooth, x + c + outer + tooth, y + c + tooth, 0xFFFFFFFF);
-        round(context, x + c - outer, y + c - outer, outer * 2, outer * 2, outer, 0xFFFFFFFF);
-        int inner = Math.max(2, outer / 2);
-        round(context, x + c - inner, y + c - inner, inner * 2, inner * 2, inner, 0xFF71717A);
     }
 }
