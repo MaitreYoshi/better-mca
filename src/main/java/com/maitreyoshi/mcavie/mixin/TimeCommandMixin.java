@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.life.History;
 import net.minecraft.server.command.ServerCommandSource;
@@ -12,7 +14,6 @@ import net.minecraft.server.command.TimeCommand;
 import net.minecraft.server.world.ServerWorld;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Redirect;
 
 @Mixin(TimeCommand.class)
 public abstract class TimeCommandMixin {
@@ -44,13 +45,13 @@ public abstract class TimeCommandMixin {
         History.simulate(world, mcavie$dayBefore, WorldCalendar.now(world).dayIndex());
     }
 
-    @Redirect(method = "executeSet", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/ServerWorld;setTimeOfDay(J)V"))
-    private static void mcavie$keepDay(ServerWorld world, long time) {
+    @WrapOperation(method = "executeSet", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/world/ServerWorld;setTimeOfDay(J)V"))
+    private static void mcavie$keepDay(ServerWorld world, long time, Operation<Void> original) {
         long current = world.getTimeOfDay();
         long target = Math.floorDiv(current, WorldCalendar.TICKS_PER_DAY) * WorldCalendar.TICKS_PER_DAY + Math.floorMod(time, WorldCalendar.TICKS_PER_DAY);
         if (target < current) {
             target += WorldCalendar.TICKS_PER_DAY;
         }
-        world.setTimeOfDay(target);
+        original.call(world, target);
     }
 }

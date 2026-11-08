@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.mixin.client;
 
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.maitreyoshi.mcavie.phone.client.CameraMode;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.Mouse;
@@ -7,7 +9,6 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Mouse.class)
@@ -21,9 +22,9 @@ public abstract class CameraMouseMixin {
         }
     }
 
-    @Redirect(method = "updateMouse", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;changeLookDirection(DD)V"))
-    private void mcavie$zoomLook(ClientPlayerEntity player, double x, double y) {
+    @WrapOperation(method = "updateMouse", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/network/ClientPlayerEntity;changeLookDirection(DD)V"))
+    private void mcavie$zoomLook(ClientPlayerEntity player, double x, double y, Operation<Void> original) {
         double zoom = CameraMode.zoom();
-        player.changeLookDirection(x / zoom, y / zoom);
+        original.call(player, x / zoom, y / zoom);
     }
 }
