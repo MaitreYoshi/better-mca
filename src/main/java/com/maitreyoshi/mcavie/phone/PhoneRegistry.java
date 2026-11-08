@@ -93,6 +93,10 @@ public class PhoneRegistry extends PersistentState {
         public final List<Photo> gallery = new ArrayList<>();
         public final Map<Integer, String> folders = new LinkedHashMap<>();
         public int nextFolder = 1;
+        public String wallpaper = "";
+        public final List<AgendaEvent> agenda = new ArrayList<>();
+        public int nextEvent = 1;
+        public long agendaDay = -1;
 
         public boolean references(UUID photo) {
             for (Photo entry : gallery) {
@@ -162,6 +166,21 @@ public class PhoneRegistry extends PersistentState {
             });
             nbt.put("folders", folderList);
             nbt.putInt("nextFolder", nextFolder);
+            if (!wallpaper.isEmpty()) {
+                nbt.putString("wallpaper", wallpaper);
+            }
+            NbtList agendaList = new NbtList();
+            for (AgendaEvent event : agenda) {
+                NbtCompound entry = new NbtCompound();
+                entry.putInt("id", event.id());
+                entry.putLong("day", event.day());
+                entry.putBoolean("yearly", event.yearly());
+                entry.putString("title", event.title());
+                agendaList.add(entry);
+            }
+            nbt.put("agenda", agendaList);
+            nbt.putInt("nextEvent", nextEvent);
+            nbt.putLong("agendaDay", agendaDay);
             return nbt;
         }
 
@@ -188,6 +207,13 @@ public class PhoneRegistry extends PersistentState {
                 phone.folders.put(entry.getInt("id"), entry.getString("name"));
             }
             phone.nextFolder = Math.max(1, nbt.getInt("nextFolder"));
+            phone.wallpaper = nbt.getString("wallpaper");
+            for (NbtElement element : nbt.getList("agenda", NbtElement.COMPOUND_TYPE)) {
+                NbtCompound entry = (NbtCompound) element;
+                phone.agenda.add(new AgendaEvent(entry.getInt("id"), entry.getLong("day"), entry.getBoolean("yearly"), entry.getString("title")));
+            }
+            phone.nextEvent = Math.max(1, nbt.getInt("nextEvent"));
+            phone.agendaDay = nbt.contains("agendaDay") ? nbt.getLong("agendaDay") : -1;
             for (NbtElement element : nbt.getList("gallery", NbtElement.COMPOUND_TYPE)) {
                 NbtCompound entry = (NbtCompound) element;
                 if (entry.containsUuid("id")) {
@@ -245,6 +271,9 @@ public class PhoneRegistry extends PersistentState {
     }
 
     public record Message(boolean outgoing, String text, long time, @Nullable UUID photo) {
+    }
+
+    public record AgendaEvent(int id, long day, boolean yearly, String title) {
     }
 
     public record Photo(UUID id, long time, int folder) {

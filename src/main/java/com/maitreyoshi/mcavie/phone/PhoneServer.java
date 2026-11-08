@@ -27,8 +27,6 @@ import net.minecraft.registry.Registries;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Hand;
@@ -128,6 +126,15 @@ public final class PhoneServer {
                     text = buf.readString(PhoneNetwork.MAX_FOLDER_NAME);
                 }
                 case PhoneNetwork.OP_FOLDER_DELETE -> other = buf.readVarInt();
+                case PhoneNetwork.OP_SET_WALLPAPER -> text = buf.readString(PhoneNetwork.MAX_WALLPAPER);
+                case PhoneNetwork.OP_AGENDA_ADD -> {
+                    // jour du calendrier (pas un jour de jeu) + annuel en bit de poids faible
+                    long day = buf.readVarLong();
+                    boolean yearly = buf.readBoolean();
+                    text = buf.readString(PhoneNetwork.MAX_EVENT_TITLE);
+                    other = (int) Math.max(0, Math.min(Integer.MAX_VALUE / 2, day)) * 2 + (yearly ? 1 : 0);
+                }
+                case PhoneNetwork.OP_AGENDA_REMOVE -> other = buf.readVarInt();
                 case PhoneNetwork.OP_MOVE_PHOTO -> {
                     photo = buf.readUuid();
                     other = buf.readVarInt();
@@ -198,6 +205,8 @@ public final class PhoneServer {
             LAST_PRINT.remove(uuid);
             UPLOADS.remove(uuid);
         }));
+        PhoneAgenda.register();
+        PhoneEmployees.register();
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             UNLOCKED.clear();
             LAST_UNLOCK.clear();
@@ -356,6 +365,9 @@ public final class PhoneServer {
             }
             case PhoneNetwork.OP_DELETE_PHOTO -> {
                 if (photo != null && phone.gallery.removeIf(p -> p.id().equals(photo))) {
+                    if (phone.wallpaper.startsWith(photo.toString())) {
+                        phone.wallpaper = "";
+                    }
                     registry.markDirty();
                     release(player.getServer(), registry, photo);
                 }
@@ -380,6 +392,38 @@ public final class PhoneServer {
             }
             case PhoneNetwork.OP_REMOVE_CONTACT -> {
                 if (phone.contacts.remove(Integer.valueOf(other))) {
+                    registry.markDirty();
+                }
+                sendState(player, number, phone, false);
+            }
+            case PhoneNetwork.OP_SET_WALLPAPER -> {
+                if (!player.getUuid().equals(phone.owner) || !validWallpaper(phone, text)) {
+                    return;
+                }
+                phone.wallpaper = text;
+                registry.markDirty();
+                player.sendMessage(Text.translatable("msg.mca_vie.phone.wallpaper_set"), true);
+                sendState(player, number, phone, false);
+            }
+            case PhoneNetwork.OP_AGENDA_ADD -> {
+                String title = clean(text);
+                if (title.length() > PhoneNetwork.MAX_EVENT_TITLE) {
+                    title = title.substring(0, PhoneNetwork.MAX_EVENT_TITLE).trim();
+                }
+                if (title.isEmpty() || other < 0) {
+                    return;
+                }
+                if (phone.agenda.size() >= PhoneNetwork.MAX_EVENTS) {
+                    error(player, "msg.mca_vie.phone.agenda_full");
+                    return;
+                }
+                phone.agenda.add(new PhoneRegistry.AgendaEvent(phone.nextEvent++, other >> 1, (other & 1) != 0, title));
+                registry.markDirty();
+                player.sendMessage(Text.translatable("msg.mca_vie.phone.agenda_added"), true);
+                sendState(player, number, phone, false);
+            }
+            case PhoneNetwork.OP_AGENDA_REMOVE -> {
+                if (phone.agenda.removeIf(e -> e.id() == other)) {
                     registry.markDirty();
                 }
                 sendState(player, number, phone, false);
@@ -434,12 +478,19 @@ public final class PhoneServer {
         }
     }
 
+    /** Le son est choisi et joue cote client selon les reglages du telephone. */
+    public static void ring(ServerPlayerEntity player, int kind) {
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeVarInt(kind);
+        ServerPlayNetworking.send(player, PhoneNetwork.NOTIFY, buf);
+    }
+
     private static void notify(MinecraftServer server, PhoneRegistry registry, int number, Phone phone, int from, boolean photo) {
         for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
             if (!carries(player, number)) {
                 continue;
             }
-            player.playSound(SoundEvents.BLOCK_NOTE_BLOCK_BELL.value(), SoundCategory.PLAYERS, 0.8f, 1.6f);
+            ring(player, PhoneNetwork.NOTIFY_MESSAGE);
             if (canAccess(player, number, phone)) {
                 player.sendMessage(Text.translatable(photo ? "msg.mca_vie.phone.new_photo_from" : "msg.mca_vie.phone.new_from", displayName(registry, from)), true);
                 sendState(player, number, phone, false);
@@ -656,6 +707,26 @@ public final class PhoneServer {
         ServerPlayNetworking.send(player, PhoneNetwork.ERROR, buf);
     }
 
+    private static boolean validWallpaper(Phone phone, String key) {
+        if (key.isEmpty()) {
+            return true;
+        }
+        if (key.startsWith("preset:")) {
+            try {
+                int index = Integer.parseInt(key.substring(7));
+                return index >= 0 && index < PhoneNetwork.WALLPAPERS;
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }
+        int at = key.indexOf('@');
+        String id = at < 0 ? key : key.substring(0, at);
+        if (at >= 0 && !key.substring(at + 1).matches("[0-9.,]+")) {
+            return false;
+        }
+        return phone.gallery.stream().anyMatch(p -> p.id().toString().equals(id));
+    }
+
     private static void sendState(ServerPlayerEntity player, int number, Phone phone, boolean open) {
         boolean access = canAccess(player, number, phone);
         PhoneRegistry registry = PhoneRegistry.get(player.getServer());
@@ -706,6 +777,14 @@ public final class PhoneServer {
                 buf.writeUuid(photo.id());
                 buf.writeVarLong(photo.time());
                 buf.writeVarInt(photo.folder());
+            }
+            buf.writeString(phone.wallpaper);
+            buf.writeVarInt(phone.agenda.size());
+            for (PhoneRegistry.AgendaEvent event : phone.agenda) {
+                buf.writeVarInt(event.id());
+                buf.writeVarLong(event.day());
+                buf.writeBoolean(event.yearly());
+                buf.writeString(event.title());
             }
         }
         ServerPlayNetworking.send(player, PhoneNetwork.STATE, buf);

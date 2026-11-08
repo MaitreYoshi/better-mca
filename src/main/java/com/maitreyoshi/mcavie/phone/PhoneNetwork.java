@@ -17,6 +17,9 @@ public final class PhoneNetwork {
     public static final Identifier PHOTO_PLACE = MCAVie.id("photo_place");
     public static final Identifier PHOTO_RESIZE = MCAVie.id("photo_resize");
     public static final Identifier PHOTO_RESIZE_OPEN = MCAVie.id("photo_resize_open");
+    public static final Identifier NOTIFY = MCAVie.id("phone_notify");
+    public static final int NOTIFY_MESSAGE = 0;
+    public static final int NOTIFY_REMINDER = 1;
 
     public static final int OP_REFRESH = 0;
     public static final int OP_UNLOCK = 1;
@@ -35,6 +38,13 @@ public final class PhoneNetwork {
     public static final int OP_FOLDER_RENAME = 14;
     public static final int OP_FOLDER_DELETE = 15;
     public static final int OP_MOVE_PHOTO = 16;
+    public static final int OP_SET_WALLPAPER = 17;
+    public static final int OP_AGENDA_ADD = 18;
+    public static final int OP_AGENDA_REMOVE = 19;
+    public static final int MAX_EVENTS = 100;
+    public static final int MAX_EVENT_TITLE = 48;
+    public static final int WALLPAPERS = 6;
+    public static final int MAX_WALLPAPER = 64;
 
     public static final int MAX_TEXT = 200;
     public static final int MAX_CONTACTS = 100;
