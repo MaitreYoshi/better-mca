@@ -82,3 +82,8 @@ tasks.register('familyAgesCheck', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'com.maitreyoshi.mcavie.life.FamilyAgesCheck'
 }
+
+tasks.register('employeeDialoguesCheck', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.maitreyoshi.mcavie.phone.EmployeeDialoguesCheck'
+}

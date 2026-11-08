@@ -1,0 +1,241 @@
+je prenais juste de tes nouvelles	checking_in
+je voulais savoir comment tu allais	checking_in
+des news ?	checking_in
+tu donnes plus de nouvelles	checking_in
+juste un petit coucou	checking_in
+je passais voir si tout va bien	checking_in
+wsh bien ou quoi	how_are_you
+ça dit quoi frérot	how_are_you
+koi de 9	how_are_you
+quoi de neuf ?	how_are_you
+ça roule ?	how_are_you
+sa va ?	how_are_you
+t'es en forme ?	how_are_you
+la forme ?	how_are_you
+tranquillou ?	how_are_you
+cv ?	how_are_you
+comment tu vas ?	how_are_you
+ça gaze ?	how_are_you
+wesh	greeting
+yo la team	greeting
+cc toi	greeting
+bjr	greeting
+bsr	greeting
+salut mon pote	greeting
+hey	greeting
+bien ou bien	greeting
+à plus	goodbye
+ciao	goodbye
+bye	goodbye
+tchao	goodbye
+la bise	goodbye
+je file, à plus tard	goodbye
+bonne nuit	goodnight
+dors bien	goodnight
+je vais me coucher	goodnight
+t'es un vrai teubé	insult
+espèce de golmon	insult
+quel boloss	insult
+t'es qu'un tocard	insult
+t'es un bouffon	insult
+tête de gland	insult
+ftg	insult
+sac à merde	insult
+baltringue	insult
+ferme-la	insult
+ferme ta gueule	insult
+fils de pute	insult
+connard	insult
+conard	insult
+t'es un gogol	insult
+va te faire voir	insult
+casse-toi	order_fire
+dégage	order_fire
+t'es un boss	compliment
+t'es une légende	compliment
+ça déchire	compliment
+masterclass	compliment
+t'assures	compliment
+gg wp	compliment
+stylé	compliment
+t'es de ouf	compliment
+tu gères	compliment
+merci	thanks
+mrc	thanks
+mci	thanks
+thx	thanks
+merci frérot	thanks
+t'es un ange	thanks
+cimer	thanks
+merci bcp	thanks
+dsl	apology
+désolé mec	apology
+mon bad	apology
+pardon	apology
+je m'excuse	apology
+je rigole	joking
+c'était pour rire	joking
+je plaisante	joking
+je déconne	joking
+tkt c'est rien	no_worries
+c'est pas grave	no_worries
+t'inquiète	no_worries
+pas de souci	no_worries
+tqt	no_worries
+grouille toi	hurry
+magne-toi	hurry
+dépêche toi	hurry
+bouge-toi	hurry
+jpp de toi mdr	laugh
+mdr	laugh
+ptdr	laugh
+hahaha	laugh
+lol	laugh
+t'as mangé ?	hungry
+j'ai la dalle	hungry
+t'as faim ?	hungry
+je suis crevé	tired
+t'es fatigué ?	tired
+j'ai sommeil	tired
+je m'ennuie	bored
+je suis triste	sad
+j'ai le cafard	sad
+ça va pas	sad
+je suis déprimé	sad
+je suis content	happy
+je suis trop content	happy
+je t'aime	love_light
+jtm	love_light
+tu me manques	miss_you
+on est potes ?	friend_ask
+tu veux être mon pote ?	friend_ask
+t'as quel âge ?	age_ask
+t'en as marre ?	fed_up
+ton plat préféré ?	fav_food
+tu fais quoi le week-end ?	weekend
+tu fais quoi ce soir ?	tonight_plans
+on fait la fête ?	party
+t'as vu le match ?	match
+ça te dit une bière ?	drink
+c'est chaud	tough
+c'est la hess	tough
+quelle galère	tough
+ah ouais ?	react_wow
+sérieux ?	react_wow
+de ouf	react_wow
+oh la vache	react_wow
+ça marche	react_ok
+nickel	react_ok
+parfait	react_ok
+impec	react_ok
+ok d'acc	yes
+ouais	yes
+hein ?	what_huh
+j'ai pas compris	what_huh
+tu peux répéter	what_huh
+bof	hesitate
+mouais	hesitate
+hmm	hesitate
+tu me saoules	annoyed
+tu m'énerves	annoyed
+t'es relou	annoyed
+bien vu	nice_one
+joli coup	nice_one
+la nuit tombe	night_falls
+il fait nuit	night_falls
+il pleut	weather
+fais gaffe à toi	take_care
+prends soin de toi	take_care
+sois prudent	take_care
+t'as cassé ton outil ?	broke_tool
+t'as besoin de quoi ?	need_what
+t'as besoin d'aide ?	need_help
+je peux t'aider ?	need_help
+osef	dont_care
+je m'en fous	dont_care
+c'est chelou	weird
+t'es zarbi	weird
+je suis vénère	angry_me
+je stresse	stressed
+j'ai peur	stressed
+je suis malade	sick_me
+j'ai une bonne nouvelle	good_news
+j'ai un problème	bad_news
+j'ai une mauvaise nouvelle	bad_news
+j'ai une question	ask_question
+tu peux me rendre un service ?	favor
+stp	please
+s'il te plaît	please
+on se voit ce soir ?	wanna_hang
+tu mens	liar
+t'es un menteur	liar
+fais-moi confiance	trust_me
+le boulot ça va ?	work_going
+je suis occupé	busy_me
+on en reparle plus tard	busy_me
+j'arrive	busy_me
+attends	wait
+minute papillon	wait
+c'est quoi ça ?	explain_q
+ça veut dire quoi ?	explain_q
+dis-moi tout	tell_me
+frérot	bro
+poto	bro
+promis	promise
+je te jure	promise
+dis-moi un secret	secret
+t'es payé combien ?	salary
+je vais t'augmenter	raise
+prends ta journée	vacation
+fais une pause	break
+je t'offre un cadeau	gift
+tfk	ask_status
+t'es où là	ask_where
+t ou	ask_where
+ton mari ?	ask_family
+t'as des gosses ?	ask_family
+tes parents ?	ask_family
+t'es célibataire ?	ask_family
+t'aimes ton taf ?	job_ask
+tu kiffes quoi ?	who_are_you
+ta couleur préférée ?	color_fav
+pk ?	ask_why
+pourquoi ?	ask_why
+et toi ?	ask_you
+oui	yes
+non	no
+allo	are_you_there
+réponds	reply_me
+tu me reçois ?	can_hear
+bonne journée	good_day
+tu écoutes quoi comme musique ?	music
+ton téléphone	phone
+va te faire voir	insult
+je vais te tuer	threat
+je vais au marché	!insult,offensive,threat,order_fire
+il fait beau aujourd'hui	!insult,offensive,threat,order_fire
+tu as fini ta journée ?	!insult,offensive,threat,order_fire
+j'ai récolté du blé ce matin	!insult,offensive,threat,order_fire
+le village est calme	!insult,offensive,threat,order_fire
+on va construire une maison	!insult,offensive,threat,order_fire
+j'ai trouvé un diamant	!insult,offensive,threat,order_fire
+tu peux me donner du pain	!insult,offensive,threat,order_fire
+je suis allé voir le forgeron	!insult,offensive,threat,order_fire
+demain je plante des carottes	!insult,offensive,threat,order_fire
+c'est le fils du boulanger	!insult,offensive,threat,order_fire
+il y a un nouveau voisin	!insult,offensive,threat,order_fire
+l'hiver arrive	!insult,offensive,threat,order_fire
+mon cheval est rapide	!insult,offensive,threat,order_fire
+passe-moi la pelle	!insult,offensive,threat,order_fire
+j'ai une idée pour le village	!insult,offensive,threat,order_fire
+la rivière est gelée	!insult,offensive,threat,order_fire
+tu connais la route du nord	!insult,offensive,threat,order_fire
+je construis un pont	!insult,offensive,threat,order_fire
+les moutons sont dans l'enclos	!insult,offensive,threat,order_fire
+je vais cueillir des pommes	!insult,offensive,threat,order_fire
+il y a une cloche dans le village	!insult,offensive,threat,order_fire
+le pigeon est sur le toit	!insult,offensive,threat,order_fire
+la Mongolie est loin d'ici	!insult,offensive,threat,order_fire
+je suis le fils de ton voisin	!insult,offensive,threat,order_fire
+on mange du poisson ce soir	!insult,offensive,threat,order_fire
+J'ai vu un gland sur le chemin	!insult,offensive,threat,order_fire
