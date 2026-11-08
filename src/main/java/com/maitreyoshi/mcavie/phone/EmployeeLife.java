@@ -3,6 +3,7 @@ package com.maitreyoshi.mcavie.phone;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.maitreyoshi.mcavie.MCAVie;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.InputStream;
@@ -109,7 +110,7 @@ public final class EmployeeLife {
         try (InputStream in = EmployeeLife.class.getResourceAsStream(EmployeeDialogues.PATH + "life_" + lang + ".json")) {
             return in == null ? null : new EmployeeLife(new InputStreamReader(in, StandardCharsets.UTF_8));
         } catch (Exception e) {
-            com.maitreyoshi.mcavie.MCAVie.LOGGER.error("Répliques de vie illisibles ({})", lang, e);
+            MCAVie.LOGGER.error("Répliques de vie illisibles ({})", lang, e);
             return null;
         }
     }

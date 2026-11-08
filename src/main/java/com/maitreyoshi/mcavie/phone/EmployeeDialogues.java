@@ -19,7 +19,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 
-
 public final class EmployeeDialogues {
     public static final String PATH = "/data/mca_vie/employee_dialogues/";
     private static final Map<String, EmployeeDialogues> CACHE = new HashMap<>();
@@ -277,7 +276,7 @@ public final class EmployeeDialogues {
                         b.append(' ');
                         // « Euh, Sérieusement » -> « Euh, sérieusement »
                         if (b.charAt(b.length() - 2) == ',' && piece.length() > 1
-                                && Character.isUpperCase(piece.charAt(0)) && Character.isLowerCase(piece.charAt(1))) {
+                                && Character.isUpperCase(piece.charAt(0)) && (Character.isLowerCase(piece.charAt(1)) || piece.charAt(1) == '\'')) {
                             piece = Character.toLowerCase(piece.charAt(0)) + piece.substring(1);
                         }
                     }

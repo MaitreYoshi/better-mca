@@ -478,7 +478,7 @@ public final class PhoneServer {
         }
     }
 
-    /** Le son est choisi et joue cote client selon les reglages du telephone. */
+    /** Le son est choisi et joué côté client selon les réglages du téléphone. */
     public static void ring(ServerPlayerEntity player, int kind) {
         PacketByteBuf buf = PacketByteBufs.create();
         buf.writeVarInt(kind);

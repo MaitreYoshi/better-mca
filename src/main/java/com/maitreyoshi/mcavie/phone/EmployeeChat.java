@@ -1,25 +1,35 @@
 package com.maitreyoshi.mcavie.phone;
 
 import com.maitreyoshi.mcavie.MCAVie;
+import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
+import com.maitreyoshi.mcavie.life.LifeCycle;
+import com.maitreyoshi.mcavie.life.LifeRegistry;
 import com.maitreyoshi.mcavie.work.Job;
+import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
 import com.maitreyoshi.mcavie.work.WorkStatus;
+import java.util.Locale;
 import net.mca.entity.VillagerEntityMCA;
+import net.mca.entity.ai.Memories;
 import net.mca.entity.ai.relationship.Gender;
 import net.mca.entity.ai.relationship.RelationshipState;
 import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
+import net.mca.server.world.data.Village;
 import net.minecraft.item.Item;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtString;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.registry.Registries;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableTextContent;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Util;
 import net.minecraft.util.math.BlockPos;
@@ -31,6 +41,8 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 // Messagerie de l'appli Employés : réponses par mots-clés (EmployeeDialogues), ordres par texte, conséquences sur les cœurs.
 public final class EmployeeChat {
@@ -47,6 +59,7 @@ public final class EmployeeChat {
     private static final int RESIGN_TENSION = 9;
     private static final int BLOCK_TENSION = 6;
     private static final Random RANDOM = new Random();
+    private static final Pattern TOKEN = Pattern.compile("\\{t:([a-zA-Z0-9_.:-]+)}");
 
     private EmployeeChat() {
     }
@@ -57,13 +70,20 @@ public final class EmployeeChat {
     static void register() {
         ServerPlayNetworking.registerGlobalReceiver(REQUEST, (server, player, handler, buf, responseSender) -> {
             UUID uuid = buf.readUuid();
-            server.execute(() -> sendLog(player, uuid));
+            server.execute(() -> {
+                if (PhoneEmployees.allowed(player)) {
+                    sendLog(player, uuid);
+                }
+            });
         });
         ServerPlayNetworking.registerGlobalReceiver(SEND, (server, player, handler, buf, responseSender) -> {
             UUID uuid = buf.readUuid();
             String text = buf.readString(MAX_TEXT);
             String lang = buf.readString(16);
             server.execute(() -> {
+                if (!PhoneEmployees.allowed(player)) {
+                    return;
+                }
                 receive(player, uuid, text, lang);
                 sendLog(player, uuid);
                 PhoneEmployees.send(player);
@@ -75,7 +95,7 @@ public final class EmployeeChat {
     static void snapshot(VillagerEntityMCA villager, WorkRegistry.Record record) {
         chat(record).putInt("mood", villager.getVillagerBrain().getMoodValue());
         if (record.employer != null) {
-            net.mca.entity.ai.Memories memories = villager.getVillagerBrain().getMemories().get(record.employer);
+            Memories memories = villager.getVillagerBrain().getMemories().get(record.employer);
             chat(record).putInt("hearts", memories != null ? memories.getHearts() : 0);
         }
     }
@@ -106,9 +126,20 @@ public final class EmployeeChat {
         int size = buf.readVarInt();
         List<Line> lines = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            lines.add(new Line(buf.readBoolean(), buf.readString()));
+            boolean outgoing = buf.readBoolean();
+            String text = buf.readString();
+            lines.add(new Line(outgoing, outgoing ? text : localize(text)));
         }
         return lines;
+    }
+
+    // le serveur dédié n'a pas les traductions : les noms traduisibles partent en jetons, résolus par le client
+    private static String token(Text text) {
+        return text.getContent() instanceof TranslatableTextContent content ? "{t:" + content.getKey() + "}" : text.getString();
+    }
+
+    private static String localize(String text) {
+        return TOKEN.matcher(text).replaceAll(m -> Matcher.quoteReplacement(Text.translatable(m.group(1)).getString()));
     }
 
     private static void log(NbtCompound chat, boolean outgoing, String text) {
@@ -130,7 +161,7 @@ public final class EmployeeChat {
         if (record == null || !player.getUuid().equals(record.employer) || record.job == Job.NONE) {
             return;
         }
-        String text = raw.length() > MAX_TEXT ? raw.substring(0, MAX_TEXT) : raw.trim();
+        String text = raw.trim();
         NbtCompound chat = chat(record);
         EmployeeDialogues dialogues = EmployeeDialogues.get(lang);
         long now = server.getOverworld().getTime();
@@ -368,7 +399,7 @@ public final class EmployeeChat {
     private static void answer(NbtCompound chat, String text) {
         chat.putString("lastReply", text);
         NbtList recent = chat.getList("recent", NbtElement.STRING_TYPE);
-        recent.add(net.minecraft.nbt.NbtString.of(text));
+        recent.add(NbtString.of(text));
         while (recent.size() > 3) {
             recent.remove(0);
         }
@@ -396,9 +427,9 @@ public final class EmployeeChat {
             MinecraftServer server = player.getServer();
             int hour = (int) ((server.getOverworld().getTimeOfDay() + 6000) % 24000 / 1000);
             String part = EmployeeLife.partOfDay(hour);
-            int status = villager != null ? statusOf(villager) : record.lastStatus;
+            boolean working = villager != null ? WorkManager.isWorking(villager) : record.lastStatus >= 0;
             // PNJ non chargé : présumé endormi la nuit, sauf s'il travaillait à son dernier passage
-            String activity = villager != null && villager.isSleeping() ? "sleeping" : status >= 0 ? "working"
+            String activity = villager != null && villager.isSleeping() ? "sleeping" : working ? "working"
                     : villager == null && "night".equals(part) ? "sleeping" : "idle";
             int hearts = villager != null ? villager.getVillagerBrain().getMemoriesForPlayer(player).getHearts()
                     : chat.contains("hearts") ? chat.getInt("hearts") : 20;
@@ -414,25 +445,25 @@ public final class EmployeeChat {
             }
             boolean warm = chat.getInt("warm") > 0 && chat.getInt("tension") < 2;
             String mood = warm ? "good" : EmployeeLife.adjustMood(mood(chat), EmployeeLife.State.relation(hearts, kin));
-            return new EmployeeLife.State(activity, kin, hearts, part, record.job.name().toLowerCase(java.util.Locale.ROOT), mood, warm, profile(server, tree, node));
+            return new EmployeeLife.State(activity, kin, hearts, part, record.job.name().toLowerCase(Locale.ROOT), mood, warm, profile(server, tree, node));
         }
 
         private EmployeeLife.Profile profile(MinecraftServer server, FamilyTree tree, @Nullable FamilyTreeNode node) {
-            net.minecraft.server.world.ServerWorld world = server.getOverworld();
+            ServerWorld world = server.getOverworld();
             String weather = world.isThundering() ? "thunder" : world.isRaining() ? "rain" : "clear";
             String village = villager != null
-                    ? villager.getResidency().getHomeVillage().map(net.mca.server.world.data.Village::getName).orElse(null) : null;
+                    ? villager.getResidency().getHomeVillage().map(Village::getName).orElse(null) : null;
             if (node == null) {
                 return new EmployeeLife.Profile(false, null, false, List.of(), null, null, List.of(), village, weather);
             }
-            long today = com.maitreyoshi.mcavie.calendar.WorldCalendar.now(world).dayIndex();
+            long today = WorldCalendar.now(world).dayIndex();
             return new EmployeeLife.Profile(node.gender() == Gender.FEMALE, person(server, tree, node.partner(), today),
                     node.getRelationshipState() == RelationshipState.WIDOW,
                     people(server, tree, node.children(), today), person(server, tree, node.father(), today),
                     person(server, tree, node.mother(), today), people(server, tree, node.siblings(), today), village, weather);
         }
 
-        private List<EmployeeLife.Person> people(MinecraftServer server, FamilyTree tree, java.util.Set<UUID> ids, long today) {
+        private List<EmployeeLife.Person> people(MinecraftServer server, FamilyTree tree, Set<UUID> ids, long today) {
             List<EmployeeLife.Person> list = new ArrayList<>();
             for (UUID id : ids) {
                 EmployeeLife.Person person = person(server, tree, id, today);
@@ -452,9 +483,9 @@ public final class EmployeeChat {
             if (other == null) {
                 return null;
             }
-            Long birth = com.maitreyoshi.mcavie.life.LifeRegistry.get(server).getBirthDay(id);
+            Long birth = LifeRegistry.get(server).getBirthDay(id);
             return new EmployeeLife.Person(other.getName(), other.gender() == Gender.FEMALE, !other.isDeceased(), other.isPlayer(),
-                    birth == null ? null : com.maitreyoshi.mcavie.life.LifeCycle.ageInYears(birth, today));
+                    birth == null ? null : LifeCycle.ageInYears(birth, today));
         }
 
         String mood(NbtCompound chat) {
@@ -485,19 +516,19 @@ public final class EmployeeChat {
         }
         float health = c.villager != null ? c.villager.getHealth() : r.lastHealth;
         float max = c.villager != null ? c.villager.getMaxHealth() : r.lastMaxHealth;
-        int status = c.villager != null ? statusOf(c.villager) : r.lastStatus;
+        int status = c.villager != null ? PhoneEmployees.statusOf(c.villager) : r.lastStatus;
         long time = (server.getOverworld().getTimeOfDay() + 6000) % 24000;
         FamilyTree tree = FamilyTree.get(server.getOverworld());
         FamilyTreeNode node = tree.getOrEmpty(c.uuid).orElse(null);
         String partner = node != null && !node.partner().equals(Util.NIL_UUID)
                 ? tree.getOrEmpty(node.partner()).map(FamilyTreeNode::getName).orElse("?")
-                : Text.translatable("gui.mca_vie.phone.employees.nobody").getString();
+                : token(Text.translatable("gui.mca_vie.phone.employees.nobody"));
         int children = node != null ? node.children().size() : 0;
         return text.replace("{joueur}", c.player.getName().getString())
                 .replace("{nom}", name)
-                .replace("{metier}", r.job.getName().getString())
-                .replace("{etat}", (status < 0 ? Text.translatable("gui.mca_vie.phone.employees.resting")
-                        : WorkStatus.byId(status).getText()).getString())
+                .replace("{metier}", token(r.job.getName()))
+                .replace("{etat}", token(status < 0 ? Text.translatable("gui.mca_vie.phone.employees.resting")
+                        : WorkStatus.byId(status).getText()))
                 .replace("{lieu}", pos != null ? pos.getX() + ", " + pos.getY() + ", " + pos.getZ() : "?")
                 .replace("{distance}", distance)
                 .replace("{recolte}", harvest(server, r))
@@ -507,17 +538,10 @@ public final class EmployeeChat {
                 .replace("{enfants}", String.valueOf(children));
     }
 
-    private static int statusOf(VillagerEntityMCA villager) {
-        if (com.maitreyoshi.mcavie.work.WorkManager.isWorking(villager)) {
-            return com.maitreyoshi.mcavie.work.WorkManager.getStatus(villager).ordinal();
-        }
-        return -1;
-    }
-
     private static String harvest(MinecraftServer server, WorkRegistry.Record record) {
         NbtCompound report = PhoneEmployees.report(server, record);
         if (report.isEmpty()) {
-            return Text.translatable("gui.mca_vie.phone.employees.report_none").getString();
+            return token(Text.translatable("gui.mca_vie.phone.employees.report_none"));
         }
         List<String> keys = new ArrayList<>(report.getKeys());
         keys.sort(Comparator.comparingInt(report::getInt).reversed());
@@ -527,7 +551,7 @@ public final class EmployeeChat {
             if (b.length() > 0) {
                 b.append(", ");
             }
-            b.append(report.getInt(keys.get(i))).append(' ').append(item.getName().getString());
+            b.append(report.getInt(keys.get(i))).append(' ').append(token(item.getName()));
         }
         return b.toString();
     }

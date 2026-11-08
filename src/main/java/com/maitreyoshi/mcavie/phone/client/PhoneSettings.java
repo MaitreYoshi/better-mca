@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Properties;
 import java.util.Set;
 
-/** Preferences locales du telephone (cote client, partagees par tous les telephones du joueur). */
+/** Préférences locales du téléphone (côté client, partagées par tous les téléphones du joueur). */
 public final class PhoneSettings {
     private static final String FILE = "mca_vie_phone.properties";
     public static final int KIND_MESSAGE = 0;
@@ -59,7 +59,7 @@ public final class PhoneSettings {
         Properties p = new Properties();
         try (Reader reader = Files.newBufferedReader(path)) {
             p.load(reader);
-        } catch (IOException e) {
+        } catch (IOException | IllegalArgumentException e) {
             return;
         }
         messageSound = clamp(p.getProperty("message_sound"), 0, SOUNDS.length - 1, 0);
@@ -87,7 +87,7 @@ public final class PhoneSettings {
         try {
             Files.createDirectories(path().getParent());
             try (Writer writer = Files.newBufferedWriter(path())) {
-                p.store(writer, "Better MCA - reglages du telephone");
+                p.store(writer, "Better MCA - réglages du téléphone");
             }
         } catch (IOException ignored) {
         }

@@ -31,6 +31,11 @@ public final class EmployeeLooks {
     private EmployeeLooks() {
     }
 
+    public static void clear() {
+        CACHE.clear();
+        cacheWorld = null;
+    }
+
     @Nullable
     public static LivingEntity get(PhoneEmployees.Employee employee) {
         ClientWorld world = MinecraftClient.getInstance().world;

@@ -1,18 +1,34 @@
 package com.maitreyoshi.mcavie.work;
 
+import com.maitreyoshi.mcavie.aging.AgingConfig;
+import com.maitreyoshi.mcavie.phone.PhoneEmployees;
 import com.maitreyoshi.mcavie.village.VillageDecrees;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.life.Wellbeing;
+import com.maitreyoshi.mcavie.village.VillageJustice;
+import com.maitreyoshi.mcavie.village.VillageMarket;
+import com.maitreyoshi.mcavie.work.block.WorkBlocks;
+import com.maitreyoshi.mcavie.work.block.WorkstationBlock;
+import com.maitreyoshi.mcavie.work.block.WorkstationBlockEntity;
 import com.maitreyoshi.mcavie.work.tasks.DepositTask;
 import com.maitreyoshi.mcavie.compat.ServerEntityEvents;
 import com.maitreyoshi.mcavie.compat.ServerLifecycleEvents;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.ai.ActivityMCA;
 import net.mca.entity.ai.Chore;
 import net.mca.entity.ai.MoveState;
 import net.mca.entity.ai.relationship.AgeState;
+import net.mca.server.world.data.FamilyTreeNode;
+import net.minecraft.block.entity.BlockEntity;
+import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.entity.ai.brain.Activity;
 import net.minecraft.entity.ai.brain.Brain;
+import net.minecraft.registry.tag.ItemTags;
+import net.minecraft.util.Identifier;
+import net.minecraft.util.math.random.Random;
 import org.jetbrains.annotations.Nullable;
 import net.minecraft.inventory.SimpleInventory;
 import net.minecraft.item.ItemStack;
@@ -153,7 +169,7 @@ public final class WorkManager {
 
         WorkRegistry.Record employee = findRecord(villager);
         if (employee != null) {
-            com.maitreyoshi.mcavie.phone.PhoneEmployees.update(villager, world, employee);
+            PhoneEmployees.update(villager, world, employee);
         }
         Job job = WorkRegistry.get(world.getServer()).getJob(villager.getUuid());
         syncProfession(villager, job);
@@ -166,8 +182,8 @@ public final class WorkManager {
                 && hasWorkstation
                 && (AgeState.byCurrentAge(villager.getBreedingAge()) == AgeState.ADULT || age >= APPRENTICE_AGE)
                 && isWorkTime(world)
-                && !com.maitreyoshi.mcavie.village.VillageMarket.isMarketDayFor(villager, world)
-                && !com.maitreyoshi.mcavie.village.VillageJustice.isImprisoned(villager)
+                && !VillageMarket.isMarketDayFor(villager, world)
+                && !VillageJustice.isImprisoned(villager)
                 && !villager.isSleeping()
                 && !Wellbeing.isSick(world, villager.getUuid())
                 && villager.getVillagerBrain().getCurrentJob() == Chore.NONE
@@ -203,7 +219,7 @@ public final class WorkManager {
 
     public static void giveTool(VillagerEntityMCA villager, Job job) {
         ItemStack hand = villager.getMainHandStack();
-        if (job == Job.MINER && isMarkedTool(hand) && hand.isIn(net.minecraft.registry.tag.ItemTags.PICKAXES)) {
+        if (job == Job.MINER && isMarkedTool(hand) && hand.isIn(ItemTags.PICKAXES)) {
             return;
         }
         giveTool(villager, job.tool());
@@ -212,7 +228,7 @@ public final class WorkManager {
     public static void giveTool(VillagerEntityMCA villager, ItemStack tool) {
         ItemStack hand = villager.getMainHandStack();
         if (tool.isEmpty() || (hand.isOf(tool.getItem())
-                && net.minecraft.enchantment.EnchantmentHelper.get(hand).equals(net.minecraft.enchantment.EnchantmentHelper.get(tool)))) {
+                && EnchantmentHelper.get(hand).equals(EnchantmentHelper.get(tool)))) {
             return;
         }
         ItemStack original = ItemStack.EMPTY;
@@ -288,7 +304,7 @@ public final class WorkManager {
         WorkRegistry.Record record = registry.get(villager.getUuid());
         Job job = record == null ? Job.NONE : record.job;
 
-        if (age >= com.maitreyoshi.mcavie.aging.AgingConfig.get().retirementAge) {
+        if (age >= AgingConfig.get().retirementAge) {
             if (job != Job.RETIRED) {
                 String profession = villager.getProfessionName();
                 String former = job != Job.NONE ? "job.mca_vie." + job.id()
@@ -319,19 +335,19 @@ public final class WorkManager {
 
     private static Job chooseApprenticeship(VillagerEntityMCA villager, ServerWorld world) {
         WorkRegistry registry = WorkRegistry.get(world.getServer());
-        net.mca.server.world.data.FamilyTreeNode node = villager.getRelationships().getFamilyEntry();
-        java.util.List<Job> parentJobs = new java.util.ArrayList<>();
+        FamilyTreeNode node = villager.getRelationships().getFamilyEntry();
+        List<Job> parentJobs = new ArrayList<>();
         for (UUID parent : new UUID[]{node.father(), node.mother()}) {
             Job parentJob = registry.getJob(parent);
             if (parentJob.isCraft()) {
                 parentJobs.add(parentJob);
             }
         }
-        net.minecraft.util.math.random.Random random = world.getRandom();
+        Random random = world.getRandom();
         if (!parentJobs.isEmpty() && random.nextFloat() < 0.6f) {
             return parentJobs.get(random.nextInt(parentJobs.size()));
         }
-        Job[] crafts = java.util.Arrays.stream(Job.values()).filter(Job::isCraft).toArray(Job[]::new);
+        Job[] crafts = Arrays.stream(Job.values()).filter(Job::isCraft).toArray(Job[]::new);
         return crafts[random.nextInt(crafts.length)];
     }
 
@@ -401,12 +417,12 @@ public final class WorkManager {
     public static final int WORKSTATION_SEARCH_RADIUS = 32;
 
     public static boolean linkNearestWorkstation(VillagerEntityMCA villager, ServerWorld world, WorkRegistry.Record record) {
-        com.maitreyoshi.mcavie.work.block.WorkstationBlock wanted = com.maitreyoshi.mcavie.work.block.WorkBlocks.forJob(record.job);
+        WorkstationBlock wanted = WorkBlocks.forJob(record.job);
         if (wanted == null) {
             return false;
         }
         WorkRegistry registry = WorkRegistry.get(world.getServer());
-        net.minecraft.util.Identifier dimension = world.getRegistryKey().getValue();
+        Identifier dimension = world.getRegistryKey().getValue();
         BlockPos origin = villager.getBlockPos();
         int chunkRadius = (WORKSTATION_SEARCH_RADIUS >> 4) + 1;
         int cx = origin.getX() >> 4;
@@ -418,10 +434,10 @@ public final class WorkManager {
                 if (!world.isChunkLoaded(cx + dx, cz + dz)) {
                     continue;
                 }
-                for (net.minecraft.block.entity.BlockEntity entity : world.getChunk(cx + dx, cz + dz).getBlockEntities().values()) {
+                for (BlockEntity entity : world.getChunk(cx + dx, cz + dz).getBlockEntities().values()) {
                     BlockPos pos = entity.getPos();
                     double distance = pos.getSquaredDistance(origin);
-                    if (entity instanceof com.maitreyoshi.mcavie.work.block.WorkstationBlockEntity && distance <= bestDistance
+                    if (entity instanceof WorkstationBlockEntity && distance <= bestDistance
                             && entity.getCachedState().isOf(wanted) && !registry.isClaimed(dimension, pos, villager.getUuid())) {
                         bestDistance = distance;
                         best = pos;

@@ -788,6 +788,7 @@
   "msg.mca_vie.rights.denied": "Your rank is too low (%s required).",
   "msg.mca_vie.force.missing": "Some required blocks for this building type are missing.",
 
+  "buildingType.storage": "Storehouse",
   "buildingType.storage.description": "A lectern and 4 chests. Receives taxes paid in kind and supplies the Market.",
   "buildingType.town_hall": "Town Hall",
   "buildingType.town_hall.description": "Key building of a Village. Seat of decrees and of the Mayor's share.",

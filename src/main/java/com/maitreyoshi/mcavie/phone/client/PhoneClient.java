@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.phone.client;
 
+import com.maitreyoshi.mcavie.phone.EmployeeChat;
+import com.maitreyoshi.mcavie.phone.PhoneEmployees;
 import com.maitreyoshi.mcavie.phone.PhoneNetwork;
 import com.maitreyoshi.mcavie.phone.PhoneServer;
 import com.maitreyoshi.mcavie.phone.PhotoFrameEntity;
@@ -15,6 +17,7 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 
+import com.maitreyoshi.mcavie.compat.client.ClientPlayConnectionEvents;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -116,11 +119,11 @@ public final class PhoneClient {
                 }
             });
         });
-        ClientPlayNetworking.registerGlobalReceiver(com.maitreyoshi.mcavie.phone.PhoneEmployees.LIST, (client, handler, buf, responseSender) -> {
+        ClientPlayNetworking.registerGlobalReceiver(PhoneEmployees.LIST, (client, handler, buf, responseSender) -> {
             int count = buf.readVarInt();
-            List<com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee> list = new ArrayList<>();
+            List<PhoneEmployees.Employee> list = new ArrayList<>();
             for (int i = 0; i < count; i++) {
-                list.add(com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee.read(buf));
+                list.add(PhoneEmployees.Employee.read(buf));
             }
             client.execute(() -> {
                 if (client.currentScreen instanceof PhoneScreen screen) {
@@ -128,9 +131,9 @@ public final class PhoneClient {
                 }
             });
         });
-        ClientPlayNetworking.registerGlobalReceiver(com.maitreyoshi.mcavie.phone.EmployeeChat.LOG, (client, handler, buf, responseSender) -> {
-            java.util.UUID uuid = buf.readUuid();
-            List<com.maitreyoshi.mcavie.phone.EmployeeChat.Line> lines = com.maitreyoshi.mcavie.phone.EmployeeChat.readLog(buf);
+        ClientPlayNetworking.registerGlobalReceiver(EmployeeChat.LOG, (client, handler, buf, responseSender) -> {
+            UUID uuid = buf.readUuid();
+            List<EmployeeChat.Line> lines = EmployeeChat.readLog(buf);
             client.execute(() -> {
                 if (client.currentScreen instanceof PhoneScreen screen) {
                     screen.applyEmployeeChat(uuid, lines);
@@ -167,6 +170,10 @@ public final class PhoneClient {
             int kind = buf.readVarInt();
             client.execute(() -> PhoneSettings.notify(kind == PhoneNetwork.NOTIFY_REMINDER ? PhoneSettings.KIND_REMINDER : PhoneSettings.KIND_MESSAGE));
         });
+        ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> client.execute(() -> {
+            PhoneMap.clear();
+            EmployeeLooks.clear();
+        }));
         CameraMode.register();
         ClientTickEvents.END_CLIENT_TICK.register(client -> PhonePhotos.tick());
         EntityRendererRegistry.register(() -> PhoneServer.PHOTO_FRAME, PhotoFrameRenderer::new);

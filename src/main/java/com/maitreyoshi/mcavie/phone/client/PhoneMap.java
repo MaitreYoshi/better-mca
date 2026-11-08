@@ -21,7 +21,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-
 public final class PhoneMap {
     public static final Identifier TEXTURE = new Identifier("mca_vie", "phone_map");
     private static final int MAX_RADIUS = 12;
@@ -39,6 +38,13 @@ public final class PhoneMap {
     private static boolean dirty;
 
     private PhoneMap() {
+    }
+
+    /** Oublie le monde quitté ; la texture est réutilisée à la prochaine ouverture. */
+    public static void clear() {
+        world = null;
+        CACHE.clear();
+        order = List.of();
     }
 
     /** Taille de la texture en pixels (= blocs). */

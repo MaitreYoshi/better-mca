@@ -1,6 +1,7 @@
 package com.maitreyoshi.mcavie.work.tasks;
 
 import com.google.common.collect.ImmutableMap;
+import com.maitreyoshi.mcavie.phone.PhoneEmployees;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
 import net.mca.entity.VillagerEntityMCA;
@@ -17,6 +18,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Hand;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 
@@ -248,7 +250,7 @@ public class DepositTask extends MultiTickTask<VillagerEntityMCA> {
             Inventory chest = AbstractJobTask.depotInventory(world, villager);
             if (chest != null) {
                 deposit(villager, chest);
-                villager.swingHand(net.minecraft.util.Hand.MAIN_HAND);
+                villager.swingHand(Hand.MAIN_HAND);
             }
         } else {
             AbstractJobTask.walkTo(villager, depot);
@@ -267,7 +269,7 @@ public class DepositTask extends MultiTickTask<VillagerEntityMCA> {
             int keep = stack.getCount() - movable[i];
             ItemStack rest = insert(to, stack.copyWithCount(movable[i]));
             if (movable[i] > rest.getCount()) {
-                com.maitreyoshi.mcavie.phone.PhoneEmployees.recordDeposit(villager, stack.getItem(), movable[i] - rest.getCount());
+                PhoneEmployees.recordDeposit(villager, stack.getItem(), movable[i] - rest.getCount());
             }
             stack.setCount(keep + rest.getCount());
         }

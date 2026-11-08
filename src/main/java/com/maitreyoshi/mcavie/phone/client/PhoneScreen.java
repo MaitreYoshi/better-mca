@@ -2,18 +2,31 @@ package com.maitreyoshi.mcavie.phone.client;
 
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar.CalendarDate;
+import com.maitreyoshi.mcavie.compat.PacketByteBufs;
+import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
+import com.maitreyoshi.mcavie.phone.EmployeeChat;
 import com.maitreyoshi.mcavie.phone.PhoneAgenda;
+import com.maitreyoshi.mcavie.phone.PhoneEmployees;
 import com.maitreyoshi.mcavie.phone.PhoneNetwork;
 import com.maitreyoshi.mcavie.phone.client.PhoneClient.Message;
 import com.maitreyoshi.mcavie.phone.client.PhoneClient.State;
 import com.maitreyoshi.mcavie.phone.client.PhoneClient.Summary;
 import com.maitreyoshi.mcavie.tree.client.TreeClient;
+import com.maitreyoshi.mcavie.work.Job;
+import com.maitreyoshi.mcavie.work.WorkStatus;
 import com.mojang.blaze3d.systems.RenderSystem;
+import java.awt.Color;
+import java.util.concurrent.ThreadLocalRandom;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.PlayerSkinDrawer;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.network.PacketByteBuf;
+import net.minecraft.registry.Registries;
 import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -138,15 +151,15 @@ public class PhoneScreen extends Screen {
     private long agendaSelected = Long.MIN_VALUE;
     private String eventInput = "";
     private boolean eventYearly;
-    private List<com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee> employees = List.of();
+    private List<PhoneEmployees.Employee> employees = List.of();
     private boolean employeesLoaded;
     private UUID employee;
     private boolean confirmFire;
-    private List<com.maitreyoshi.mcavie.phone.EmployeeChat.Line> employeeChat = List.of();
+    private List<EmployeeChat.Line> employeeChat = List.of();
     private boolean employeeChatLoaded;
     // réponse du PNJ retenue quelques instants pendant qu'il « écrit »
     private boolean awaitingReply;
-    private List<com.maitreyoshi.mcavie.phone.EmployeeChat.Line> pendingChat;
+    private List<EmployeeChat.Line> pendingChat;
     private long revealTick;
 
     public PhoneScreen(State state) {
@@ -376,7 +389,7 @@ public class PhoneScreen extends Screen {
         mainField = null;
         switch (view) {
             case CONVERSATION -> mainField = field(sx() + 14, contentBottom() - 20, sw() - 48, PhoneNetwork.MAX_TEXT, draft, s -> draft = s, false);
-            case EMPLOYEE_CHAT -> mainField = field(sx() + 14, contentBottom() - 20, sw() - 48, com.maitreyoshi.mcavie.phone.EmployeeChat.MAX_TEXT, draft, s -> draft = s, false);
+            case EMPLOYEE_CHAT -> mainField = field(sx() + 14, contentBottom() - 20, sw() - 48, EmployeeChat.MAX_TEXT, draft, s -> draft = s, false);
             case FOLDER_NAME -> mainField = field(sx() + 14, contentTop() + 30, sw() - 28, PhoneNetwork.MAX_FOLDER_NAME, folderInput, s -> folderInput = s, false);
             case AGENDA_EDIT -> mainField = field(sx() + 14, contentTop() + 30, sw() - 28, PhoneNetwork.MAX_EVENT_TITLE, eventInput, s -> eventInput = s, false);
             default -> {
@@ -1971,13 +1984,13 @@ public class PhoneScreen extends Screen {
     }
 
     private void requestEmployees() {
-        com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking.send(com.maitreyoshi.mcavie.phone.PhoneEmployees.REQUEST,
-                com.maitreyoshi.mcavie.compat.PacketByteBufs.create());
+        ClientPlayNetworking.send(PhoneEmployees.REQUEST,
+                PacketByteBufs.create());
     }
 
-    public void applyEmployees(List<com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee> list) {
-        List<com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee> sorted = new ArrayList<>(list);
-        sorted.sort(Comparator.comparing(com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee::name, String.CASE_INSENSITIVE_ORDER));
+    public void applyEmployees(List<PhoneEmployees.Employee> list) {
+        List<PhoneEmployees.Employee> sorted = new ArrayList<>(list);
+        sorted.sort(Comparator.comparing(PhoneEmployees.Employee::name, String.CASE_INSENSITIVE_ORDER));
         employees = List.copyOf(sorted);
         employeesLoaded = true;
         if ((view == View.EMPLOYEE || view == View.EMPLOYEE_CHAT) && findEmployee() == null) {
@@ -1985,25 +1998,25 @@ public class PhoneScreen extends Screen {
         }
     }
 
-    private com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee findEmployee() {
+    private PhoneEmployees.Employee findEmployee() {
         return employees.stream().filter(e -> e.uuid().equals(employee)).findFirst().orElse(null);
     }
 
-    private static Text employeeStatus(com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee e) {
+    private static Text employeeStatus(PhoneEmployees.Employee e) {
         return e.status() < 0 ? Text.translatable("gui.mca_vie.phone.employees.resting")
-                : com.maitreyoshi.mcavie.work.WorkStatus.byId(e.status()).getText();
+                : WorkStatus.byId(e.status()).getText();
     }
 
-    private static boolean employeeAlert(com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee e) {
+    private static boolean employeeAlert(PhoneEmployees.Employee e) {
         return e.alerts() != 0 || e.health() < e.maxHealth() * 0.5f
-                || e.status() == com.maitreyoshi.mcavie.work.WorkStatus.INVENTORY_FULL.ordinal()
-                || e.status() == com.maitreyoshi.mcavie.work.WorkStatus.NO_WORKSTATION.ordinal()
-                || e.status() == com.maitreyoshi.mcavie.work.WorkStatus.NO_TOOL.ordinal();
+                || e.status() == WorkStatus.INVENTORY_FULL.ordinal()
+                || e.status() == WorkStatus.NO_WORKSTATION.ordinal()
+                || e.status() == WorkStatus.NO_TOOL.ordinal();
     }
 
-    private Text employeeWhere(com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee e) {
+    private Text employeeWhere(PhoneEmployees.Employee e) {
         String pos = e.pos().getX() + ", " + e.pos().getY() + ", " + e.pos().getZ();
-        var player = net.minecraft.client.MinecraftClient.getInstance().player;
+        var player = MinecraftClient.getInstance().player;
         if (player != null && player.getWorld().getRegistryKey().getValue().toString().equals(e.dimension())) {
             int distance = (int) Math.sqrt(player.getBlockPos().getSquaredDistance(e.pos()));
             return Text.translatable("gui.mca_vie.phone.employees.where", pos, distance);
@@ -2011,7 +2024,7 @@ public class PhoneScreen extends Screen {
         return Text.literal(pos);
     }
 
-    private static Text employeeSeen(com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee e) {
+    private static Text employeeSeen(PhoneEmployees.Employee e) {
         if (e.loaded()) {
             return Text.translatable("gui.mca_vie.phone.employees.live");
         }
@@ -2052,7 +2065,7 @@ public class PhoneScreen extends Screen {
             }
             drawEmployeeHead(context, e, sx + 6, ry + 5, 20);
             context.drawText(textRenderer, fit(e.name(), sw - 50), sx + 30, ry + 6, e.loaded() ? TEXT : MUTED, false);
-            String line = com.maitreyoshi.mcavie.work.Job.byId(e.job()).getName().getString() + " · "
+            String line = Job.byId(e.job()).getName().getString() + " · "
                     + (e.loaded() ? employeeStatus(e).getString() : Text.translatable("gui.mca_vie.phone.employees.away").getString());
             context.drawText(textRenderer, fit(line, sw - 50), sx + 30, ry + 17, MUTED, false);
             if (employeeAlert(e)) {
@@ -2088,16 +2101,16 @@ public class PhoneScreen extends Screen {
         scissor(context, sx, top, sx + sw, bottom);
         int frameH = 84;
         round(context, x, y, w, frameH, 8, CARD);
-        net.minecraft.entity.LivingEntity look = com.maitreyoshi.mcavie.phone.client.EmployeeLooks.get(e);
+        LivingEntity look = EmployeeLooks.get(e);
         if (look != null) {
             scissor(context, x, Math.max(y, top), x + w, Math.min(y + frameH, bottom));
-            com.maitreyoshi.mcavie.phone.client.EmployeeLooks.drawBody(context, look, x, y, w, frameH, mouseX, mouseY);
+            EmployeeLooks.drawBody(context, look, x, y, w, frameH, mouseX, mouseY);
             context.disableScissor();
         } else {
             drawEmployeeInitial(context, e, x + w / 2 - 16, y + frameH / 2 - 16, 32);
         }
         y += frameH + 8;
-        var job = com.maitreyoshi.mcavie.work.Job.byId(e.job());
+        var job = Job.byId(e.job());
         context.drawItem(job.icon(), x, y);
         context.drawText(textRenderer, fit(job.getName().getString(), w - 22), x + 22, y + 4, TEXT, false);
         y += 24;
@@ -2145,9 +2158,9 @@ public class PhoneScreen extends Screen {
                 return;
             }
             confirmFire = false;
-            PacketByteBuf buf = com.maitreyoshi.mcavie.compat.PacketByteBufs.create();
+            PacketByteBuf buf = PacketByteBufs.create();
             buf.writeUuid(id);
-            com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking.send(com.maitreyoshi.mcavie.phone.PhoneEmployees.FIRE, buf);
+            ClientPlayNetworking.send(PhoneEmployees.FIRE, buf);
             switchTo(View.EMPLOYEES);
         }));
         context.disableScissor();
@@ -2156,29 +2169,29 @@ public class PhoneScreen extends Screen {
     }
 
     // tête du PNJ (entité du monde ou reconstruite depuis son apparence), sinon pastille avec l'initiale
-    private void drawEmployeeHead(DrawContext context, com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee e, int x, int y, int box) {
-        net.minecraft.entity.LivingEntity look = com.maitreyoshi.mcavie.phone.client.EmployeeLooks.get(e);
+    private void drawEmployeeHead(DrawContext context, PhoneEmployees.Employee e, int x, int y, int box) {
+        LivingEntity look = EmployeeLooks.get(e);
         if (look == null) {
             drawEmployeeInitial(context, e, x, y, box);
             return;
         }
         round(context, x, y, box, box, 4, CARD);
         scissor(context, x, y, x + box, y + box);
-        com.maitreyoshi.mcavie.phone.client.EmployeeLooks.drawHead(context, look, x, y, box);
+        EmployeeLooks.drawHead(context, look, x, y, box);
         context.disableScissor();
     }
 
-    private void drawEmployeeInitial(DrawContext context, com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee e, int x, int y, int box) {
-        int color = 0xFF000000 | (java.awt.Color.HSBtoRGB((e.uuid().hashCode() & 0xFFFF) / 65535f, 0.45f, 0.75f) & 0xFFFFFF);
+    private void drawEmployeeInitial(DrawContext context, PhoneEmployees.Employee e, int x, int y, int box) {
+        int color = 0xFF000000 | (Color.HSBtoRGB((e.uuid().hashCode() & 0xFFFF) / 65535f, 0.45f, 0.75f) & 0xFFFFFF);
         round(context, x, y, box, box, box / 2, color);
-        String initial = e.name().isEmpty() ? "?" : e.name().substring(0, e.name().offsetByCodePoints(0, 1)).toUpperCase(java.util.Locale.ROOT);
+        String initial = e.name().isEmpty() ? "?" : e.name().substring(0, e.name().offsetByCodePoints(0, 1)).toUpperCase(Locale.ROOT);
         centered(context, initial, x + box / 2, y + (box - 8) / 2, WHITE);
     }
 
     private static final String[] EMPLOYEE_ORDERS = {"follow", "stay", "home", "work"};
 
     // fiche employé : ordre actif/en attente, boutons d'ordres, messagerie, rapport du jour
-    private int renderEmployeeExtras(DrawContext context, com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee e, int x, int y, int w) {
+    private int renderEmployeeExtras(DrawContext context, PhoneEmployees.Employee e, int x, int y, int w) {
         UUID id = e.uuid();
         if (!e.order().isEmpty()) {
             context.drawText(textRenderer, fit(Text.translatable("gui.mca_vie.phone.employees.order_active",
@@ -2210,7 +2223,7 @@ public class PhoneScreen extends Screen {
         hits.add(new Hit(x, y, w, 20, () -> openEmployeeChat()));
         y += 28;
         context.drawText(textRenderer, Text.translatable("gui.mca_vie.phone.employees.report"), x, y, MUTED, false);
-        net.minecraft.nbt.NbtCompound report = e.report();
+        NbtCompound report = e.report();
         int total = 0;
         for (String key : report.getKeys()) {
             total += report.getInt(key);
@@ -2230,18 +2243,18 @@ public class PhoneScreen extends Screen {
         for (int i = 0; i < shown; i++) {
             int cx = x + (i % perRow) * cell;
             int cy = y + (i / perRow) * 20;
-            var item = net.minecraft.registry.Registries.ITEM.get(net.minecraft.util.Identifier.tryParse(keys.get(i)));
-            context.drawItem(new net.minecraft.item.ItemStack(item), cx, cy);
+            var item = Registries.ITEM.get(Identifier.tryParse(keys.get(i)));
+            context.drawItem(new ItemStack(item), cx, cy);
             context.drawText(textRenderer, String.valueOf(report.getInt(keys.get(i))), cx + 17, cy + 5, TEXT, false);
         }
         return y + ((shown + perRow - 1) / perRow) * 20 + 4;
     }
 
     private void sendEmployeeOrder(UUID id, String order) {
-        PacketByteBuf buf = com.maitreyoshi.mcavie.compat.PacketByteBufs.create();
+        PacketByteBuf buf = PacketByteBufs.create();
         buf.writeUuid(id);
         buf.writeString(order);
-        com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking.send(com.maitreyoshi.mcavie.phone.PhoneEmployees.ORDER, buf);
+        ClientPlayNetworking.send(PhoneEmployees.ORDER, buf);
     }
 
     private void openEmployeeChat() {
@@ -2251,12 +2264,12 @@ public class PhoneScreen extends Screen {
         employeeChatLoaded = false;
         draft = "";
         switchTo(View.EMPLOYEE_CHAT);
-        PacketByteBuf buf = com.maitreyoshi.mcavie.compat.PacketByteBufs.create();
+        PacketByteBuf buf = PacketByteBufs.create();
         buf.writeUuid(employee);
-        com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking.send(com.maitreyoshi.mcavie.phone.EmployeeChat.REQUEST, buf);
+        ClientPlayNetworking.send(EmployeeChat.REQUEST, buf);
     }
 
-    public void applyEmployeeChat(UUID id, List<com.maitreyoshi.mcavie.phone.EmployeeChat.Line> lines) {
+    public void applyEmployeeChat(UUID id, List<EmployeeChat.Line> lines) {
         if (view == View.EMPLOYEE_CHAT && id.equals(employee)) {
             employeeChatLoaded = true;
             int lastOutgoing = -1;
@@ -2272,7 +2285,7 @@ public class PhoneScreen extends Screen {
                 }
                 employeeChat = lines.subList(0, lastOutgoing + 1);
                 pendingChat = lines;
-                revealTick = ticks + 30 + java.util.concurrent.ThreadLocalRandom.current().nextInt(21) + Math.min(20, length / 6);
+                revealTick = ticks + 30 + ThreadLocalRandom.current().nextInt(21) + Math.min(20, length / 6);
             } else {
                 employeeChat = lines;
                 pendingChat = null;
@@ -2292,15 +2305,15 @@ public class PhoneScreen extends Screen {
             pendingChat = null;
         }
         awaitingReply = true;
-        List<com.maitreyoshi.mcavie.phone.EmployeeChat.Line> lines = new ArrayList<>(employeeChat);
-        lines.add(new com.maitreyoshi.mcavie.phone.EmployeeChat.Line(true, message));
+        List<EmployeeChat.Line> lines = new ArrayList<>(employeeChat);
+        lines.add(new EmployeeChat.Line(true, message));
         employeeChat = lines;
-        PacketByteBuf buf = com.maitreyoshi.mcavie.compat.PacketByteBufs.create();
+        PacketByteBuf buf = PacketByteBufs.create();
         buf.writeUuid(employee);
-        buf.writeString(message.length() > com.maitreyoshi.mcavie.phone.EmployeeChat.MAX_TEXT
-                ? message.substring(0, com.maitreyoshi.mcavie.phone.EmployeeChat.MAX_TEXT) : message);
-        buf.writeString(net.minecraft.client.MinecraftClient.getInstance().getLanguageManager().getLanguage());
-        com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking.send(com.maitreyoshi.mcavie.phone.EmployeeChat.SEND, buf);
+        buf.writeString(message.length() > EmployeeChat.MAX_TEXT
+                ? message.substring(0, EmployeeChat.MAX_TEXT) : message);
+        buf.writeString(MinecraftClient.getInstance().getLanguageManager().getLanguage());
+        ClientPlayNetworking.send(EmployeeChat.SEND, buf);
         draft = "";
         scroll = 0;
         if (mainField != null) {

@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.WeakHashMap;
 
 // Appli « Employés » : liste des PNJ dont le joueur est l'employeur (registre des métiers) et licenciement à distance.
 // Un PNJ dont le chunk n'est pas chargé est décrit par son dernier instantané ; un licenciement s'applique à son rechargement.
@@ -52,6 +53,10 @@ public final class PhoneEmployees {
     private static final long ALERT_COOLDOWN = 1200;
     private static final int HOME_REACHED = 6;
     private static final int SNAPSHOT_INTERVAL = 5;
+    private static final int RATE_WINDOW = 20;
+    private static final int RATE_MAX = 20;
+    // [début de la fenêtre, paquets reçus] ; seulement lu et écrit sur le thread serveur
+    private static final Map<ServerPlayerEntity, long[]> RATE = new WeakHashMap<>();
 
     private PhoneEmployees() {
     }
@@ -91,10 +96,17 @@ public final class PhoneEmployees {
 
     public static void register() {
         ServerPlayNetworking.registerGlobalReceiver(REQUEST, (server, player, handler, buf, responseSender) ->
-                server.execute(() -> send(player)));
+                server.execute(() -> {
+                    if (allowed(player)) {
+                        send(player);
+                    }
+                }));
         ServerPlayNetworking.registerGlobalReceiver(FIRE, (server, player, handler, buf, responseSender) -> {
             UUID uuid = buf.readUuid();
             server.execute(() -> {
+                if (!allowed(player)) {
+                    return;
+                }
                 fire(player, uuid);
                 send(player);
             });
@@ -103,6 +115,9 @@ public final class PhoneEmployees {
             UUID uuid = buf.readUuid();
             String order = buf.readString(16);
             server.execute(() -> {
+                if (!allowed(player)) {
+                    return;
+                }
                 Boolean loaded = order(player, uuid, order);
                 if (loaded != null) {
                     player.sendMessage(Text.translatable(loaded ? "msg.mca_vie.employee.order." + order
@@ -205,6 +220,20 @@ public final class PhoneEmployees {
         int bit = Integer.numberOfTrailingZeros(Integer.highestOneBit(fresh));
         PhoneServer.ring(employer, PhoneNetwork.NOTIFY_MESSAGE);
         employer.sendMessage(Text.translatable("msg.mca_vie.employee.alert." + ALERT_KEYS[bit], villager.getName()), true);
+    }
+
+    // appelé sur le thread serveur pour chaque paquet de l'appli
+    static boolean allowed(ServerPlayerEntity player) {
+        if (!hasPhone(player)) {
+            return false;
+        }
+        long now = player.getServer().getTicks();
+        long[] rate = RATE.computeIfAbsent(player, p -> new long[2]);
+        if (now - rate[0] >= RATE_WINDOW) {
+            rate[0] = now;
+            rate[1] = 0;
+        }
+        return ++rate[1] <= RATE_MAX;
     }
 
     private static boolean hasPhone(ServerPlayerEntity player) {
@@ -311,7 +340,7 @@ public final class PhoneEmployees {
         return nbt;
     }
 
-    private static int statusOf(VillagerEntityMCA villager) {
+    static int statusOf(VillagerEntityMCA villager) {
         if (WorkManager.isWorking(villager)) {
             return WorkManager.getStatus(villager).ordinal();
         }
@@ -370,6 +399,7 @@ public final class PhoneEmployees {
         MinecraftServer server = player.getServer();
         long now = server.getOverworld().getTime();
         List<Employee> list = new ArrayList<>();
+        FamilyTree tree = FamilyTree.get(server.getOverworld());
         for (Map.Entry<UUID, WorkRegistry.Record> entry : WorkRegistry.get(server).entries()) {
             WorkRegistry.Record record = entry.getValue();
             if (!player.getUuid().equals(record.employer) || record.job == Job.NONE) {
@@ -377,6 +407,10 @@ public final class PhoneEmployees {
             }
             UUID uuid = entry.getKey();
             VillagerEntityMCA villager = find(server, uuid);
+            // un mort ne figure plus dans la liste ; sa fiche reste pour le cas où il serait ressuscité
+            if (villager == null && tree.getOrEmpty(uuid).map(FamilyTreeNode::isDeceased).orElse(false)) {
+                continue;
+            }
             if (villager != null) {
                 list.add(new Employee(uuid, villager.getName().getString(), record.job.ordinal(), statusOf(villager), true,
                         villager.getHealth(), villager.getMaxHealth(), villager.getBlockPos(),
