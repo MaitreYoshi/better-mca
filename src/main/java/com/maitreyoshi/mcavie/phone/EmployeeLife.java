@@ -13,7 +13,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -98,13 +97,9 @@ public final class EmployeeLife {
 
     @Nullable
     public static EmployeeLife get(String language) {
-        String lang = language == null ? "fr_fr" : language.toLowerCase(Locale.ROOT);
+        String lang = EmployeeDialogues.supported(language);
         if (!CACHE.containsKey(lang)) {
-            EmployeeLife life = load(lang);
-            if (life == null) {
-                life = load(lang.startsWith("fr") ? "fr_fr" : "en_us");
-            }
-            CACHE.put(lang, life);
+            CACHE.put(lang, load(lang));
         }
         return CACHE.get(lang);
     }

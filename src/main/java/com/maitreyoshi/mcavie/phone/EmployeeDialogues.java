@@ -87,18 +87,13 @@ public final class EmployeeDialogues {
         return list;
     }
 
+    // la langue vient du client : seuls les fichiers livrés sont acceptés, ce qui borne le cache
+    static String supported(@Nullable String language) {
+        return language == null || language.toLowerCase(Locale.ROOT).startsWith("fr") ? "fr_fr" : "en_us";
+    }
+
     public static EmployeeDialogues get(String language) {
-        String lang = language == null ? "fr_fr" : language.toLowerCase(Locale.ROOT);
-        return CACHE.computeIfAbsent(lang, l -> {
-            EmployeeDialogues d = load(l);
-            if (d == null) {
-                d = load(l.startsWith("fr") ? "fr_fr" : "en_us");
-            }
-            if (d == null) {
-                d = load("fr_fr");
-            }
-            return d;
-        });
+        return CACHE.computeIfAbsent(supported(language), EmployeeDialogues::load);
     }
 
     @Nullable
