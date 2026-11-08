@@ -266,6 +266,9 @@ public class DepositTask extends MultiTickTask<VillagerEntityMCA> {
             }
             int keep = stack.getCount() - movable[i];
             ItemStack rest = insert(to, stack.copyWithCount(movable[i]));
+            if (movable[i] > rest.getCount()) {
+                com.maitreyoshi.mcavie.phone.PhoneEmployees.recordDeposit(villager, stack.getItem(), movable[i] - rest.getCount());
+            }
             stack.setCount(keep + rest.getCount());
         }
         from.markDirty();

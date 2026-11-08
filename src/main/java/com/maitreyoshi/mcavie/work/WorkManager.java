@@ -151,6 +151,10 @@ public final class WorkManager {
         int age = ageInYears(villager, world);
         updateCareer(villager, world, age);
 
+        WorkRegistry.Record employee = findRecord(villager);
+        if (employee != null) {
+            com.maitreyoshi.mcavie.phone.PhoneEmployees.update(villager, world, employee);
+        }
         Job job = WorkRegistry.get(world.getServer()).getJob(villager.getUuid());
         syncProfession(villager, job);
         WorkRegistry.Record work = findRecord(villager);
