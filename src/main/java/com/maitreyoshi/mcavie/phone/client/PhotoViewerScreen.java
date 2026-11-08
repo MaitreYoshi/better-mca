@@ -57,6 +57,12 @@ public class PhotoViewerScreen extends Screen {
                     close();
                 }));
             }
+            if (canDelete && parent.state().owner()) {
+                actions.add(new Action("gui.mca_vie.phone.set_wallpaper", () -> {
+                    parent.startCrop(id);
+                    close();
+                }));
+            }
             if (canDelete) {
                 actions.add(new Action("gui.mca_vie.phone.delete_photo", () -> {
                     parent.deletePhoto(id);

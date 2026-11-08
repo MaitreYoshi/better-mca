@@ -37,7 +37,10 @@ public final class PhoneClient {
     public record Person(String name, @Nullable UUID uuid, String skin) {
     }
 
-    public record State(int number, boolean access, boolean owner, boolean hasCode, List<Integer> contacts, Map<Integer, Person> people, List<Summary> conversations, List<Photo> gallery, Map<Integer, String> folders) {
+    public record Event(int id, long day, boolean yearly, String title) {
+    }
+
+    public record State(int number, boolean access, boolean owner, boolean hasCode, List<Integer> contacts, Map<Integer, Person> people, List<Summary> conversations, List<Photo> gallery, Map<Integer, String> folders, String wallpaper, List<Event> agenda) {
         public String nameOf(int other) {
             Person person = people.get(other);
             return person == null || person.name().isEmpty() ? String.format("%03d", other) : person.name();
@@ -68,6 +71,8 @@ public final class PhoneClient {
             List<Summary> conversations = new ArrayList<>();
             List<Photo> gallery = new ArrayList<>();
             Map<Integer, String> folders = new LinkedHashMap<>();
+            String wallpaper = "";
+            List<Event> agenda = new ArrayList<>();
             if (access) {
                 owner = buf.readBoolean();
                 hasCode = buf.readBoolean();
@@ -94,8 +99,13 @@ public final class PhoneClient {
                 for (int i = 0; i < count; i++) {
                     gallery.add(new Photo(buf.readUuid(), buf.readVarLong(), buf.readVarInt()));
                 }
+                wallpaper = buf.readString();
+                count = buf.readVarInt();
+                for (int i = 0; i < count; i++) {
+                    agenda.add(new Event(buf.readVarInt(), buf.readVarLong(), buf.readBoolean(), buf.readString()));
+                }
             }
-            State state = new State(number, access, owner, hasCode, List.copyOf(contacts), Map.copyOf(people), List.copyOf(conversations), List.copyOf(gallery), Collections.unmodifiableMap(folders));
+            State state = new State(number, access, owner, hasCode, List.copyOf(contacts), Map.copyOf(people), List.copyOf(conversations), List.copyOf(gallery), Collections.unmodifiableMap(folders), wallpaper, List.copyOf(agenda));
             client.execute(() -> {
                 CameraMode.update(state);
                 if (client.currentScreen instanceof PhoneScreen screen && screen.number() == number) {
@@ -103,6 +113,27 @@ public final class PhoneClient {
                 } else if (open) {
                     CameraMode.stop(false);
                     client.setScreen(new PhoneScreen(state));
+                }
+            });
+        });
+        ClientPlayNetworking.registerGlobalReceiver(com.maitreyoshi.mcavie.phone.PhoneEmployees.LIST, (client, handler, buf, responseSender) -> {
+            int count = buf.readVarInt();
+            List<com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee> list = new ArrayList<>();
+            for (int i = 0; i < count; i++) {
+                list.add(com.maitreyoshi.mcavie.phone.PhoneEmployees.Employee.read(buf));
+            }
+            client.execute(() -> {
+                if (client.currentScreen instanceof PhoneScreen screen) {
+                    screen.applyEmployees(list);
+                }
+            });
+        });
+        ClientPlayNetworking.registerGlobalReceiver(com.maitreyoshi.mcavie.phone.EmployeeChat.LOG, (client, handler, buf, responseSender) -> {
+            java.util.UUID uuid = buf.readUuid();
+            List<com.maitreyoshi.mcavie.phone.EmployeeChat.Line> lines = com.maitreyoshi.mcavie.phone.EmployeeChat.readLog(buf);
+            client.execute(() -> {
+                if (client.currentScreen instanceof PhoneScreen screen) {
+                    screen.applyEmployeeChat(uuid, lines);
                 }
             });
         });
@@ -131,6 +162,10 @@ public final class PhoneClient {
             boolean jpeg = buf.readBoolean();
             byte[] data = buf.readByteArray(PhoneNetwork.MAX_FULL_BYTES);
             client.execute(() -> PhonePhotos.store(id, full, jpeg, data));
+        });
+        ClientPlayNetworking.registerGlobalReceiver(PhoneNetwork.NOTIFY, (client, handler, buf, responseSender) -> {
+            int kind = buf.readVarInt();
+            client.execute(() -> PhoneSettings.notify(kind == PhoneNetwork.NOTIFY_REMINDER ? PhoneSettings.KIND_REMINDER : PhoneSettings.KIND_MESSAGE));
         });
         CameraMode.register();
         ClientTickEvents.END_CLIENT_TICK.register(client -> PhonePhotos.tick());
