@@ -18,7 +18,7 @@ import java.util.UUID;
 public final class RelationsClient {
     private static final Map<UUID, Relations> CACHE = new HashMap<>();
 
-    public record Entry(UUID uuid, String name, boolean female, int score, long lastSeen, int tag, int entityId) {
+    public record Entry(UUID uuid, String name, boolean female, int score, long lastSeen, int tag, boolean openable) {
     }
 
     public record Relations(long today, List<Entry> entries) {
@@ -34,7 +34,7 @@ public final class RelationsClient {
             int count = buf.readVarInt();
             List<Entry> entries = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
-                entries.add(new Entry(buf.readUuid(), buf.readString(), buf.readBoolean(), buf.readVarInt(), buf.readVarLong(), buf.readVarInt(), buf.readVarInt()));
+                entries.add(new Entry(buf.readUuid(), buf.readString(), buf.readBoolean(), buf.readVarInt(), buf.readVarLong(), buf.readVarInt(), buf.readBoolean()));
             }
             entries.sort(Comparator.comparingInt((Entry e) -> e.score() >= 0 ? 0 : 1)
                     .thenComparingInt(e -> e.score() >= 0 ? -e.score() : e.score())

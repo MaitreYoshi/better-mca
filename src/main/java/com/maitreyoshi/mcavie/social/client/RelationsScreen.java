@@ -16,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 public class RelationsScreen extends Screen {
     private static final Identifier ICONS = new Identifier("textures/gui/icons.png");
@@ -23,9 +24,9 @@ public class RelationsScreen extends Screen {
     private static final int HALF_WIDTH = 150;
     private static final int TOP = 40;
     private static final int HEARTS = 5;
-    private static final double CLICK_DISTANCE_SQ = 60 * 60;
 
-    private final Entity villager;
+    private final UUID villager;
+    private final Text villagerName;
     @Nullable
     private final Screen root;
     @Nullable
@@ -39,15 +40,20 @@ public class RelationsScreen extends Screen {
     }
 
     public RelationsScreen(Entity villager, @Nullable Screen parent) {
-        super(Text.translatable("gui.mca_vie.relations.title", villager.getName()));
+        this(villager.getUuid(), villager.getName(), parent);
+    }
+
+    public RelationsScreen(UUID villager, Text name, @Nullable Screen parent) {
+        super(Text.translatable("gui.mca_vie.relations.title", name));
         this.villager = villager;
+        this.villagerName = name;
         this.previousScreen = parent instanceof RelationsScreen relations ? relations : null;
         this.root = previousScreen != null ? previousScreen.root : parent;
     }
 
     @Override
     protected void init() {
-        RelationsClient.request(villager.getUuid());
+        RelationsClient.request(villager);
         requestedAt = System.currentTimeMillis();
         int bottom = height - 28;
         previous = addDrawableChild(ButtonWidget.builder(Text.literal("<"), b -> page--)
@@ -57,7 +63,7 @@ public class RelationsScreen extends Screen {
         addDrawableChild(ButtonWidget.builder(Text.translatable("gui.back"), b -> close())
                 .dimensions(width / 2 - 50, bottom, 100, 20).build());
         if (previousScreen != null) {
-            String name = textRenderer.trimToWidth(previousScreen.villager.getName().getString(), 90);
+            String name = textRenderer.trimToWidth(previousScreen.villagerName.getString(), 90);
             addDrawableChild(ButtonWidget.builder(Text.literal("‹ " + name), b -> {
                 if (client != null) {
                     client.setScreen(previousScreen);
@@ -108,20 +114,20 @@ public class RelationsScreen extends Screen {
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
         context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 16, 0xFFFFFF);
-        Relations relations = RelationsClient.get(villager.getUuid());
+        Relations relations = RelationsClient.get(villager);
         List<Row> rows = visibleRows(relations);
         super.render(context, mouseX, mouseY, delta);
 
         if (relations == null) {
             if (System.currentTimeMillis() - requestedAt > 1000) {
-                RelationsClient.request(villager.getUuid());
+                RelationsClient.request(villager);
                 requestedAt = System.currentTimeMillis();
             }
             context.drawCenteredTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.relations.loading"), width / 2, TOP + 10, 0xAAAAAA);
             return;
         }
         if (relations.entries().isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.relations.empty", villager.getName()), width / 2, TOP + 10, 0xAAAAAA);
+            context.drawCenteredTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.relations.empty", villagerName), width / 2, TOP + 10, 0xAAAAAA);
             return;
         }
         int pages = pages(relations);
@@ -151,7 +157,7 @@ public class RelationsScreen extends Screen {
             x += 10;
             int limit = left + HALF_WIDTH * 2 - HEARTS * 9 - 6;
             String trimmed = textRenderer.trimToWidth(entry.name(), limit - x);
-            MutableText name = Text.literal(trimmed).formatted(over && clickable(entry) != null ? Formatting.YELLOW : Formatting.WHITE);
+            MutableText name = Text.literal(trimmed).formatted(over && entry.openable() ? Formatting.YELLOW : Formatting.WHITE);
             context.drawTextWithShadow(textRenderer, name, x, y + 3, 0xFFFFFF);
             x += textRenderer.getWidth(name) + 6;
             if (entry.tag() != SocialNetwork.TAG_NONE) {
@@ -187,18 +193,6 @@ public class RelationsScreen extends Screen {
         }
     }
 
-    @Nullable
-    private Entity clickable(Entry entry) {
-        if (entry.entityId() < 0 || client == null || client.world == null || client.player == null) {
-            return null;
-        }
-        Entity other = client.world.getEntityById(entry.entityId());
-        if (other == null || !other.getUuid().equals(entry.uuid()) || other.squaredDistanceTo(client.player) > CLICK_DISTANCE_SQ) {
-            return null;
-        }
-        return other;
-    }
-
     private List<Text> tooltip(Entry entry, long today) {
         List<Text> lines = new ArrayList<>();
         lines.add(Text.literal(entry.name()).formatted(Formatting.WHITE));
@@ -208,7 +202,7 @@ public class RelationsScreen extends Screen {
         lines.add((days <= 0 ? Text.translatable("gui.mca_vie.relations.seen_today")
                 : days == 1 ? Text.translatable("gui.mca_vie.relations.seen_yesterday")
                 : Text.translatable("gui.mca_vie.relations.seen_days", days)).formatted(Formatting.GRAY));
-        if (clickable(entry) != null) {
+        if (entry.openable()) {
             lines.add(Text.translatable("gui.mca_vie.relations.click").formatted(Formatting.YELLOW));
         }
         return lines;
@@ -219,7 +213,7 @@ public class RelationsScreen extends Screen {
         if (super.mouseClicked(mouseX, mouseY, button)) {
             return true;
         }
-        Relations relations = RelationsClient.get(villager.getUuid());
+        Relations relations = RelationsClient.get(villager);
         if (button != 0 || relations == null || client == null || client.world == null) {
             return false;
         }
@@ -230,11 +224,10 @@ public class RelationsScreen extends Screen {
             return false;
         }
         Entry entry = rows.get(i).entry();
-        Entity other = entry == null ? null : clickable(entry);
-        if (other == null) {
+        if (entry == null || !entry.openable()) {
             return false;
         }
-        client.setScreen(new RelationsScreen(other, this));
+        client.setScreen(new RelationsScreen(entry.uuid(), Text.literal(entry.name()), this));
         return true;
     }
 

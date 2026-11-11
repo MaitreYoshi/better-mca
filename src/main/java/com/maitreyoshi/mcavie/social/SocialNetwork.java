@@ -16,10 +16,13 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public final class SocialNetwork {
@@ -35,6 +38,9 @@ public final class SocialNetwork {
     private static final double MAX_DISTANCE_SQ = 64 * 64;
     private static final long REQUEST_COOLDOWN = 10;
     private static final Map<UUID, Long> LAST_REQUEST = new HashMap<>();
+    /** Villageois que le joueur peut consulter à distance : ceux listés dans une fiche déjà envoyée. */
+    private static final Map<UUID, Set<UUID>> REACHABLE = new HashMap<>();
+    private static final int MAX_REACHABLE = 2048;
 
     private SocialNetwork() {
     }
@@ -49,30 +55,43 @@ public final class SocialNetwork {
                     return;
                 }
                 LAST_REQUEST.put(player.getUuid(), time);
-                if (player.getServerWorld().getEntity(uuid) instanceof VillagerEntityMCA villager && villager.squaredDistanceTo(player) <= MAX_DISTANCE_SQ) {
-                    send(player, villager);
+                VillagerEntityMCA villager = player.getServerWorld().getEntity(uuid) instanceof VillagerEntityMCA v ? v : null;
+                if (villager != null && villager.squaredDistanceTo(player) <= MAX_DISTANCE_SQ) {
+                    REACHABLE.remove(player.getUuid());
+                    send(player, uuid, villager);
+                } else if (REACHABLE.getOrDefault(player.getUuid(), Set.of()).contains(uuid)) {
+                    send(player, uuid, villager);
                 }
             });
         });
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> server.execute(() -> LAST_REQUEST.remove(handler.player.getUuid())));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> server.execute(() -> {
+            LAST_REQUEST.remove(handler.player.getUuid());
+            REACHABLE.remove(handler.player.getUuid());
+        }));
         SocialConversation.register();
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
             LAST_REQUEST.clear();
+            REACHABLE.clear();
             SocialChat.clear();
         });
     }
 
-    private static void send(ServerPlayerEntity player, VillagerEntityMCA villager) {
+    /** {@code villager} peut être null : villageois non chargé ou mort, ses liens restent dans le registre. */
+    private static void send(ServerPlayerEntity player, UUID owner, @Nullable VillagerEntityMCA villager) {
         ServerWorld world = player.getServerWorld();
-        Map<UUID, Link> links = SocialRegistry.get(world.getServer()).links(villager.getUuid());
+        Map<UUID, Link> links = SocialRegistry.get(world.getServer()).links(owner);
         FamilyTree tree = FamilyTree.get(world);
-        Optional<FamilyTreeNode> node = tree.getOrEmpty(villager.getUuid());
-        Optional<Social.House> house = Social.house(villager);
+        Optional<FamilyTreeNode> node = tree.getOrEmpty(owner);
+        Optional<Social.House> house = villager == null ? Optional.empty() : Social.house(villager);
         WorkRegistry work = WorkRegistry.get(world.getServer());
-        WorkRegistry.Record ownWork = work.get(villager.getUuid());
+        WorkRegistry.Record ownWork = work.get(owner);
+        Set<UUID> reachable = REACHABLE.computeIfAbsent(player.getUuid(), k -> new HashSet<>());
+        if (reachable.size() > MAX_REACHABLE) {
+            reachable.clear();
+        }
 
         PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeUuid(villager.getUuid());
+        buf.writeUuid(owner);
         buf.writeVarLong(WorldCalendar.now(world).dayIndex());
         buf.writeVarInt(links.size());
         links.forEach((other, link) -> {
@@ -82,7 +101,12 @@ public final class SocialNetwork {
             buf.writeVarInt(link.score);
             buf.writeVarLong(link.lastSeen);
             buf.writeVarInt(tag(world, node, house, ownWork, work, other, link));
-            buf.writeVarInt(world.getEntity(other) instanceof VillagerEntityMCA loaded ? loaded.getId() : -1);
+            boolean villagerOther = world.getServer().getPlayerManager().getPlayer(other) == null
+                    && tree.getOrEmpty(other).map(n -> !n.isPlayer()).orElse(true);
+            if (villagerOther) {
+                reachable.add(other);
+            }
+            buf.writeBoolean(villagerOther);
         });
         ServerPlayNetworking.send(player, RELATIONS, buf);
     }
