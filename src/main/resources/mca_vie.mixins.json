@@ -44,6 +44,8 @@
     "client.AbstractDynamicScreenMixin",
     "client.BipedWorkPoseMixin",
     "client.ClientInteractionManagerMixin",
+    "client.CameraArmPoseMixin",
+    "client.CameraHeldItemMixin",
     "client.CameraHudMixin",
     "client.CameraMouseMixin",
     "client.CameraZoomMixin",
