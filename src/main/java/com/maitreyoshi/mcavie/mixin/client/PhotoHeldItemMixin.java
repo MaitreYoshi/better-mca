@@ -3,7 +3,9 @@ package com.maitreyoshi.mcavie.mixin.client;
 import com.llamalad7.mixinextras.injector.ModifyExpressionValue;
 import com.maitreyoshi.mcavie.phone.PhotoItem;
 import com.maitreyoshi.mcavie.phone.PhoneServer;
+import com.maitreyoshi.mcavie.phone.client.CameraMode;
 import com.maitreyoshi.mcavie.phone.client.PhotoItemRenderer;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
 import net.minecraft.client.render.VertexConsumerProvider;
 import net.minecraft.client.render.item.HeldItemRenderer;
@@ -22,6 +24,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class PhotoHeldItemMixin {
     @Unique
     private boolean mcavie$photo;
+
+    // Iris (shaders) appelle ce rendu directement, sans passer par GameRenderer.renderHand.
+    @Inject(method = "renderItem(FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider$Immediate;Lnet/minecraft/client/network/ClientPlayerEntity;I)V", at = @At("HEAD"), cancellable = true)
+    private void mcavie$hideInCamera(float tickDelta, MatrixStack matrices, VertexConsumerProvider.Immediate consumers, ClientPlayerEntity player, int light, CallbackInfo ci) {
+        if (CameraMode.active()) {
+            ci.cancel();
+        }
+    }
 
     @Inject(method = "renderFirstPersonItem", at = @At("HEAD"))
     private void mcavie$rememberPhoto(AbstractClientPlayerEntity player, float tickDelta, float pitch, Hand hand, float swingProgress, ItemStack item,
