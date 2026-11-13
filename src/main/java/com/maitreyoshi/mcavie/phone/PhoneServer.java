@@ -316,8 +316,8 @@ public final class PhoneServer {
                 long date = phone.gallery.stream().filter(p -> p.id().equals(photo)).map(Photo::time).findFirst()
                         .orElse(player.level().getServer().overworld().getOverworldClockTime());
                 ItemStack stack = PhotoItem.create(print, player.getGameProfile().name(), date);
-                player.displayClientMessage(Component.translatable(giveToInventory(player, stack)
-                        ? "msg.mca_vie.phone.printed" : "msg.mca_vie.phone.printed_ground"), true);
+                player.sendOverlayMessage(Component.translatable(giveToInventory(player, stack)
+                        ? "msg.mca_vie.phone.printed" : "msg.mca_vie.phone.printed_ground"));
                 ServerPlayNetworking.send(player, PhoneNetwork.PRINTED, PacketByteBufs.empty());
             }
             case PhoneNetwork.OP_FOLDER_CREATE -> {

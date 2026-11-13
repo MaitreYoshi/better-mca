@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.conczin.mca.server.world.data.FamilyTree;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -24,7 +25,6 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
@@ -36,7 +36,14 @@ import java.util.UUID;
 
 /** Autel du souvenir : posé au mur, la photo d'un défunt le fait revenir en fantôme la nuit. */
 public class GhostAltarBlock extends BaseEntityBlock {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    private static final com.mojang.serialization.MapCodec<GhostAltarBlock> CODEC = simpleCodec(GhostAltarBlock::new);
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     private static final Map<Direction, VoxelShape> SHAPES = new EnumMap<>(Direction.class);
 
     static {
@@ -117,6 +124,15 @@ public class GhostAltarBlock extends BaseEntityBlock {
     }
 
     @Override
+    protected InteractionResult useItemOn(net.minecraft.world.item.ItemStack mcavieStack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        return use(state, world, pos, player, hand, hit);
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
+        return use(state, world, pos, player, InteractionHand.MAIN_HAND, hit);
+    }
+
     public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (!(world.getBlockEntity(pos) instanceof GhostAltarBlockEntity altar)) {
             return InteractionResult.PASS;

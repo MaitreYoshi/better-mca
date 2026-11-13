@@ -302,8 +302,8 @@ public final class VillageMarket {
         order.paid = price;
         state.orders.add(order);
         village.markDirty();
-        player.displayClientMessage(Component.translatable("msg.mca_vie.market.ordered", lots * config.unitsPerEmerald(itemId),
-                BuiltInRegistries.ITEM.get(Identifier.tryParse(itemId)).getDescription(), price), true);
+        player.sendOverlayMessage(Component.translatable("msg.mca_vie.market.ordered", lots * config.unitsPerEmerald(itemId),
+                BuiltInRegistries.ITEM.get(Identifier.tryParse(itemId)).getDescription(), price));
     }
 
     public static void collect(ServerPlayer player, int villageId) {

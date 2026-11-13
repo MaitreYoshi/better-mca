@@ -120,8 +120,8 @@ public final class PhoneEmployees {
                 }
                 Boolean loaded = order(player, uuid, order);
                 if (loaded != null) {
-                    player.displayClientMessage(Component.translatable(loaded ? "msg.mca_vie.employee.order." + order
-                            : "msg.mca_vie.employee.order_pending", nameOf(server, uuid, WorkRegistry.get(server).get(uuid))), true);
+                    player.sendOverlayMessage(Component.translatable(loaded ? "msg.mca_vie.employee.order." + order
+                            : "msg.mca_vie.employee.order_pending", nameOf(server, uuid, WorkRegistry.get(server).get(uuid))));
                 }
                 send(player);
             });

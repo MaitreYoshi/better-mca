@@ -70,9 +70,9 @@ public final class WorkNetwork {
                     record.employer = player.getUUID();
                 }
                 WorkRegistry.get(server).setDirty();
-                player.displayClientMessage(job == Job.NONE
+                player.sendOverlayMessage(job == Job.NONE
                         ? Component.translatable("job.mca_vie.fired", villager.getName())
-                        : Component.translatable("job.mca_vie.hired", villager.getName(), job.getName()), true);
+                        : Component.translatable("job.mca_vie.hired", villager.getName(), job.getName()));
             }));
         });
 
@@ -186,8 +186,8 @@ public final class WorkNetwork {
             int y = world.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(x), (int) Math.floor(z));
             world.sendParticles(player, net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, true, false, x, y + 0.2, z, 1, 0.0, 0.0, 0.0, 0.0);
         }
-        player.displayClientMessage(Component.translatable("job.mca_vie.shown", villager.getName(),
-                depot.getX(), depot.getY(), depot.getZ()).withStyle(ChatFormatting.GREEN), false);
+        player.sendSystemMessage(Component.translatable("job.mca_vie.shown", villager.getName(),
+                depot.getX(), depot.getY(), depot.getZ()).withStyle(ChatFormatting.GREEN));
     }
 
     public static boolean canManage(ServerPlayer player, VillagerEntityMCA villager) {

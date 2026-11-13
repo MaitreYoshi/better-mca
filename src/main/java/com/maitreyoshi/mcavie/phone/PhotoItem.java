@@ -15,7 +15,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -33,30 +33,31 @@ public class PhotoItem extends Item {
 
     public static ItemStack create(UUID photo, String author, long date) {
         ItemStack stack = new ItemStack(PhoneServer.PHOTO);
-        CompoundTag nbt = stack.getOrCreateTagElement(PHOTO_KEY);
+        CompoundTag nbt = new CompoundTag();
         Nbt.putUUID(nbt, "id", photo);
         nbt.putString("author", author);
         nbt.putLong("date", date);
+        Nbt.update(stack, tag -> tag.put(PHOTO_KEY, nbt));
         return stack;
     }
 
     @Nullable
     public static UUID photoOf(ItemStack stack) {
-        CompoundTag nbt = stack.getItem() instanceof PhotoItem ? stack.getTagElement(PHOTO_KEY) : null;
+        CompoundTag nbt = stack.getItem() instanceof PhotoItem ? Nbt.element(stack, PHOTO_KEY) : null;
         return nbt != null && Nbt.hasUUID(nbt, "id") ? Nbt.getUUID(nbt, "id") : null;
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level world, Player user, InteractionHand hand) {
+    public InteractionResult use(Level world, Player user, InteractionHand hand) {
         ItemStack stack = user.getItemInHand(hand);
         UUID photo = photoOf(stack);
         if (photo == null) {
-            return InteractionResultHolder.pass(stack);
+            return InteractionResult.PASS;
         }
         if (user instanceof ServerPlayer player) {
             PhoneServer.viewPrint(player, photo);
         }
-        return InteractionResultHolder.sidedSuccess(stack, world.isClientSide());
+        return InteractionResult.SUCCESS;
     }
 
     public interface Placer {
@@ -96,7 +97,7 @@ public class PhotoItem extends Item {
                 || !world.mayInteract(player, clicked)) {
             return;
         }
-        CompoundTag nbt = stack.getTagElement(PHOTO_KEY);
+        CompoundTag nbt = Nbt.element(stack, PHOTO_KEY);
         Direction top = PhotoFrameEntity.topFor(side, player.getDirection());
         PhotoFrameEntity frame = new PhotoFrameEntity(world, pos, side, top, width, height, photo, nbt.getStringOr("author", ""), nbt.getLongOr("date", 0L));
         if (!frame.survives()) {
@@ -111,16 +112,16 @@ public class PhotoItem extends Item {
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level world, List<Component> tooltip, TooltipFlag context) {
-        CompoundTag nbt = stack.getTagElement(PHOTO_KEY);
+    public void appendHoverText(ItemStack stack, Item.TooltipContext world, net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> tooltip, TooltipFlag context) {
+        CompoundTag nbt = Nbt.element(stack, PHOTO_KEY);
         if (nbt == null) {
             return;
         }
         if (!nbt.getStringOr("author", "").isEmpty()) {
-            tooltip.add(Component.translatable("item.mca_vie.photo.author", nbt.getStringOr("author", "")).withStyle(ChatFormatting.GRAY));
+            tooltip.accept(Component.translatable("item.mca_vie.photo.author", nbt.getStringOr("author", "")).withStyle(ChatFormatting.GRAY));
         }
         CalendarDate date = WorldCalendar.flowingFromTicks(nbt.getLongOr("date", 0L));
-        tooltip.add(Component.translatable("item.mca_vie.photo.date", date.day() + "/" + date.month() + "/" + date.year()).withStyle(ChatFormatting.GRAY));
-        tooltip.add(Component.translatable("item.mca_vie.photo.hint").withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.accept(Component.translatable("item.mca_vie.photo.date", date.day() + "/" + date.month() + "/" + date.year()).withStyle(ChatFormatting.GRAY));
+        tooltip.accept(Component.translatable("item.mca_vie.photo.hint").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

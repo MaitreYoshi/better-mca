@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import net.minecraft.server.permissions.Permissions;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
@@ -31,7 +32,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
@@ -44,7 +44,7 @@ import java.util.Map;
 import java.util.Optional;
 
 public class MemorialBlock extends Block implements EntityBlock {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
     public static final int LAYERS = 8;
     public static final int PARTS = LAYERS * 9;
     public static final IntegerProperty PART = IntegerProperty.create("part", 0, PARTS - 1);
@@ -213,16 +213,12 @@ public class MemorialBlock extends Block implements EntityBlock {
         registry.refresh(world.getServer(), village.get().getId());
     }
 
+    // le retrait du registre se fait dans MemorialBlockEntity.preRemoveSideEffects (l'entité n'existe plus ici)
     @Override
-    public void onRemove(BlockState state, Level world, BlockPos pos, BlockState newState, boolean moved) {
-        if (!world.isClientSide() && !state.is(newState.getBlock())) {
+    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel world, BlockPos pos, boolean moved) {
+        if (!world.getBlockState(pos).is(this)) {
             BlockPos master = master(pos, state);
             Direction facing = state.getValue(FACING);
-            if (state.getValue(PART) == MASTER && world.getBlockEntity(pos) instanceof MemorialBlockEntity memorial && memorial.village() >= 0) {
-                MemorialRegistry registry = MemorialRegistry.get(((ServerLevel) world).getServer());
-                registry.removeMonument(memorial.village(), world, pos);
-                registry.refresh(((ServerLevel) world).getServer(), memorial.village());
-            }
             for (int part = 0; part < PARTS; part++) {
                 BlockPos target = partPos(master, facing, part);
                 BlockState other = world.getBlockState(target);
@@ -231,15 +227,15 @@ public class MemorialBlock extends Block implements EntityBlock {
                 }
             }
         }
-        super.onRemove(state, world, pos, newState, moved);
+        super.affectNeighborsAfterRemoval(state, world, pos, moved);
     }
 
     @Override
-    public void playerWillDestroy(Level world, BlockPos pos, BlockState state, Player player) {
+    public BlockState playerWillDestroy(Level world, BlockPos pos, BlockState state, Player player) {
         if (!world.isClientSide() && !player.isCreative() && player.hasCorrectToolForDrops(state)) {
             Block.popResource(world, pos, new ItemStack(this));
         }
-        super.playerWillDestroy(world, pos, state, player);
+        return super.playerWillDestroy(world, pos, state, player);
     }
 
     @Nullable
@@ -249,6 +245,15 @@ public class MemorialBlock extends Block implements EntityBlock {
     }
 
     @Override
+    protected InteractionResult useItemOn(net.minecraft.world.item.ItemStack mcavieStack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        return use(state, world, pos, player, hand, hit);
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
+        return use(state, world, pos, player, InteractionHand.MAIN_HAND, hit);
+    }
+
     public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (hand != InteractionHand.MAIN_HAND) {
             return InteractionResult.PASS;
@@ -266,7 +271,7 @@ public class MemorialBlock extends Block implements EntityBlock {
                 ServerPlayNetworking.send(serverPlayer, LIST_OPEN, out);
             }
         }
-        return InteractionResult.sidedSuccess(world.isClientSide());
+        return InteractionResult.SUCCESS;
     }
 
     private static boolean canEdit(ServerPlayer player, MemorialBlockEntity memorial) {

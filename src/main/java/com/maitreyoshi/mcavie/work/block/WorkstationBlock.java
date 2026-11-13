@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.work.block;
 
+import net.minecraft.world.level.block.state.properties.EnumProperty;
 import com.maitreyoshi.mcavie.work.Job;
 import java.util.EnumMap;
 import java.util.Map;
@@ -22,14 +23,20 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 public class WorkstationBlock extends BaseEntityBlock {
-    public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
+    private static final com.mojang.serialization.MapCodec<WorkstationBlock> CODEC = simpleCodec(p -> new WorkstationBlock(p, com.maitreyoshi.mcavie.work.Job.NONE, new double[0][]));
+
+    @Override
+    protected com.mojang.serialization.MapCodec<? extends BaseEntityBlock> codec() {
+        return CODEC;
+    }
+
+    public static final EnumProperty<Direction> FACING = BlockStateProperties.HORIZONTAL_FACING;
 
     private final Job job;
     private final Map<Direction, VoxelShape> shapes = new EnumMap<>(Direction.class);
@@ -92,6 +99,15 @@ public class WorkstationBlock extends BaseEntityBlock {
     }
 
     @Override
+    protected InteractionResult useItemOn(net.minecraft.world.item.ItemStack mcavieStack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        return use(state, world, pos, player, hand, hit);
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
+        return use(state, world, pos, player, InteractionHand.MAIN_HAND, hit);
+    }
+
     public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (world.isClientSide()) {
             return InteractionResult.SUCCESS;
@@ -102,15 +118,10 @@ public class WorkstationBlock extends BaseEntityBlock {
         return InteractionResult.CONSUME;
     }
 
+    // le contenu est lâché par BlockEntity.preRemoveSideEffects (Container) ; on prévient les comparateurs
     @Override
-    public void onRemove(BlockState state, Level world, BlockPos pos, BlockState newState, boolean moved) {
-        if (!state.is(newState.getBlock())) {
-            if (world.getBlockEntity(pos) instanceof Container inventory) {
-                Containers.dropContents(world, pos, inventory);
-                world.updateNeighbourForOutputSignal(pos, this);
-            }
-        }
-        super.onRemove(state, world, pos, newState, moved);
+    protected void affectNeighborsAfterRemoval(BlockState state, net.minecraft.server.level.ServerLevel world, BlockPos pos, boolean moved) {
+        Containers.updateNeighboursAfterDestroy(state, world, pos);
     }
 
     @Override

@@ -148,4 +148,14 @@ public class MemorialBlockEntity extends BlockEntity {
     public Packet<ClientGamePacketListener> getUpdatePacket() {
         return ClientboundBlockEntityDataPacket.create(this);
     }
+
+    @Override
+    public void preRemoveSideEffects(BlockPos pos, BlockState state) {
+        super.preRemoveSideEffects(pos, state);
+        if (level instanceof net.minecraft.server.level.ServerLevel world && village() >= 0) {
+            MemorialRegistry registry = MemorialRegistry.get(world.getServer());
+            registry.removeMonument(village(), world, pos);
+            registry.refresh(world.getServer(), village());
+        }
+    }
 }

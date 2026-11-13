@@ -242,9 +242,9 @@ public class VaultBlock extends TombstoneBlock {
     }
 
     @Override
-    public void onRemove(BlockState state, Level world, BlockPos pos, BlockState newState, boolean moved) {
-        super.onRemove(state, world, pos, newState, moved);
-        if (world.isClientSide() || state.is(newState.getBlock())) {
+    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel world, BlockPos pos, boolean moved) {
+        super.affectNeighborsAfterRemoval(state, world, pos, moved);
+        if (world.getBlockState(pos).is(this)) {
             return;
         }
         BlockPos master = master(pos, state);
@@ -290,7 +290,7 @@ public class VaultBlock extends TombstoneBlock {
     }
 
     @Override
-    public void playerWillDestroy(Level world, BlockPos pos, BlockState state, Player player) {
+    public BlockState playerWillDestroy(Level world, BlockPos pos, BlockState state, Player player) {
         BlockPos master = master(pos, state);
         Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
         boolean occupied = occupied(world, master, facing);
@@ -310,7 +310,7 @@ public class VaultBlock extends TombstoneBlock {
             }
             Block.popResource(world, pos, stack);
         }
-        super.playerWillDestroy(world, pos, state, player);
+        return super.playerWillDestroy(world, pos, state, player);
     }
 
     private static void restore(ServerLevel world, BlockPos master, Direction facing, ListTag slots) {
@@ -328,6 +328,15 @@ public class VaultBlock extends TombstoneBlock {
     }
 
     @Override
+    protected InteractionResult useItemOn(net.minecraft.world.item.ItemStack mcavieStack, BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        return use(state, world, pos, player, hand, hit);
+    }
+
+    @Override
+    protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos, Player player, BlockHitResult hit) {
+        return use(state, world, pos, player, InteractionHand.MAIN_HAND, hit);
+    }
+
     public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         if (hand != InteractionHand.MAIN_HAND) {
             return InteractionResult.PASS;
@@ -347,7 +356,7 @@ public class VaultBlock extends TombstoneBlock {
                     TombReservations.openAt(serverPlayer, server, partPos(master, facing, SLOTS[slot]));
                 }
             }
-            return InteractionResult.sidedSuccess(world.isClientSide());
+            return InteractionResult.SUCCESS;
         }
         if (slot == TITLE) {
             return InteractionResult.PASS;

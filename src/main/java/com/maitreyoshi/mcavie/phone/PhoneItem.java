@@ -10,7 +10,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -29,7 +29,7 @@ public class PhoneItem extends Item {
             return -1;
         }
         CompoundTag nbt = Nbt.tag(stack);
-        if (nbt == null || !nbt.contains(NUMBER_KEY, Tag.TAG_INT)) {
+        if (nbt == null || nbt.getInt(NUMBER_KEY).isEmpty()) {
             return -1;
         }
         int number = nbt.getIntOr(NUMBER_KEY, 0);
@@ -41,19 +41,19 @@ public class PhoneItem extends Item {
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level world, Player user, InteractionHand hand) {
+    public InteractionResult use(Level world, Player user, InteractionHand hand) {
         ItemStack stack = user.getItemInHand(hand);
         if (user instanceof ServerPlayer player) {
             PhoneServer.open(player, stack);
         }
-        return InteractionResultHolder.sidedSuccess(stack, world.isClientSide());
+        return InteractionResult.SUCCESS;
     }
 
     @Override
-    public void appendHoverText(ItemStack stack, @Nullable Level world, List<Component> tooltip, TooltipFlag context) {
+    public void appendHoverText(ItemStack stack, Item.TooltipContext world, net.minecraft.world.item.component.TooltipDisplay display, java.util.function.Consumer<Component> tooltip, TooltipFlag context) {
         int number = numberOf(stack);
         if (number >= 0) {
-            tooltip.add(Component.translatable("item.mca_vie.phone.number", PhoneRegistry.format(number)).withStyle(ChatFormatting.GRAY));
+            tooltip.accept(Component.translatable("item.mca_vie.phone.number", PhoneRegistry.format(number)).withStyle(ChatFormatting.GRAY));
         }
     }
 }
