@@ -1,72 +1,102 @@
-{
-  "mca_vie:skins/clothing/normal/female/farmer/%d.png": {
-    "count": 2,
+[
+  {
+    "id": "mca_vie:skins/clothing/normal/female/farmer/0.png",
     "profession": "mca_vie:farmer",
-    "chance": 1.0,
-    "exclude": false,
-    "temperature": 0
+    "chance": 1.0
   },
-  "mca_vie:skins/clothing/normal/female/lumberjack/%d.png": {
-    "count": 2,
+  {
+    "id": "mca_vie:skins/clothing/normal/female/farmer/1.png",
+    "profession": "mca_vie:farmer",
+    "chance": 1.0
+  },
+  {
+    "id": "mca_vie:skins/clothing/normal/female/lumberjack/0.png",
     "profession": "mca_vie:lumberjack",
-    "chance": 1.0,
-    "exclude": false,
-    "temperature": 0
+    "chance": 1.0
   },
-  "mca_vie:skins/clothing/normal/female/fisher/%d.png": {
-    "count": 2,
+  {
+    "id": "mca_vie:skins/clothing/normal/female/lumberjack/1.png",
+    "profession": "mca_vie:lumberjack",
+    "chance": 1.0
+  },
+  {
+    "id": "mca_vie:skins/clothing/normal/female/fisher/0.png",
     "profession": "mca_vie:fisher",
-    "chance": 1.0,
-    "exclude": false,
-    "temperature": 0
+    "chance": 1.0
   },
-  "mca_vie:skins/clothing/normal/female/breeder/%d.png": {
-    "count": 2,
+  {
+    "id": "mca_vie:skins/clothing/normal/female/fisher/1.png",
+    "profession": "mca_vie:fisher",
+    "chance": 1.0
+  },
+  {
+    "id": "mca_vie:skins/clothing/normal/female/breeder/0.png",
     "profession": "mca_vie:breeder",
-    "chance": 1.0,
-    "exclude": false,
-    "temperature": 0
+    "chance": 1.0
   },
-  "mca_vie:skins/clothing/normal/female/doctor/%d.png": {
-    "count": 2,
+  {
+    "id": "mca_vie:skins/clothing/normal/female/breeder/1.png",
+    "profession": "mca_vie:breeder",
+    "chance": 1.0
+  },
+  {
+    "id": "mca_vie:skins/clothing/normal/female/doctor/0.png",
     "profession": "mca_vie:doctor",
-    "chance": 1.0,
-    "exclude": false,
-    "temperature": 0
+    "chance": 1.0
   },
-  "mca_vie:skins/clothing/normal/female/blacksmith/%d.png": {
-    "count": 2,
+  {
+    "id": "mca_vie:skins/clothing/normal/female/doctor/1.png",
+    "profession": "mca_vie:doctor",
+    "chance": 1.0
+  },
+  {
+    "id": "mca_vie:skins/clothing/normal/female/blacksmith/0.png",
     "profession": "mca_vie:blacksmith",
-    "chance": 1.0,
-    "exclude": false,
-    "temperature": 0
+    "chance": 1.0
   },
-  "mca_vie:skins/clothing/normal/female/baker/%d.png": {
-    "count": 2,
+  {
+    "id": "mca_vie:skins/clothing/normal/female/blacksmith/1.png",
+    "profession": "mca_vie:blacksmith",
+    "chance": 1.0
+  },
+  {
+    "id": "mca_vie:skins/clothing/normal/female/baker/0.png",
     "profession": "mca_vie:baker",
-    "chance": 1.0,
-    "exclude": false,
-    "temperature": 0
+    "chance": 1.0
   },
-  "mca_vie:skins/clothing/normal/female/teacher/%d.png": {
-    "count": 2,
+  {
+    "id": "mca_vie:skins/clothing/normal/female/baker/1.png",
+    "profession": "mca_vie:baker",
+    "chance": 1.0
+  },
+  {
+    "id": "mca_vie:skins/clothing/normal/female/teacher/0.png",
     "profession": "mca_vie:teacher",
-    "chance": 1.0,
-    "exclude": false,
-    "temperature": 0
+    "chance": 1.0
   },
-  "mca_vie:skins/clothing/normal/female/miner/%d.png": {
-    "count": 2,
+  {
+    "id": "mca_vie:skins/clothing/normal/female/teacher/1.png",
+    "profession": "mca_vie:teacher",
+    "chance": 1.0
+  },
+  {
+    "id": "mca_vie:skins/clothing/normal/female/miner/0.png",
     "profession": "mca_vie:miner",
-    "chance": 1.0,
-    "exclude": false,
-    "temperature": 0
+    "chance": 1.0
   },
-  "mca_vie:skins/clothing/normal/female/cook/%d.png": {
-    "count": 2,
+  {
+    "id": "mca_vie:skins/clothing/normal/female/miner/1.png",
+    "profession": "mca_vie:miner",
+    "chance": 1.0
+  },
+  {
+    "id": "mca_vie:skins/clothing/normal/female/cook/0.png",
     "profession": "mca_vie:cook",
-    "chance": 1.0,
-    "exclude": false,
-    "temperature": 0
+    "chance": 1.0
+  },
+  {
+    "id": "mca_vie:skins/clothing/normal/female/cook/1.png",
+    "profession": "mca_vie:cook",
+    "chance": 1.0
   }
-}
+]
