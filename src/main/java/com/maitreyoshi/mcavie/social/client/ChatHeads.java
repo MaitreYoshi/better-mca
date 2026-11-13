@@ -20,6 +20,8 @@ public final class ChatHeads {
     private static final int SIZE = 8;
     private static final int MIN_ALPHA = 80;
     public static final int CHAT_RAISE = 12;
+    /** Contexte de dessin du tchat en cours (renseigné par ChatHudMixin). */
+    public static GuiGraphicsExtractor context;
 
     private ChatHeads() {
     }
