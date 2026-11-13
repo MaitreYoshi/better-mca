@@ -107,7 +107,7 @@ public abstract class DestinyScreenMixin extends VillagerEditorScreen implements
         }
     }
 
-    @Inject(method = "render", at = @At("HEAD"))
+    @Inject(method = "extractRenderState", at = @At("HEAD"))
     private void mcavie$updateAcceptButton(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if ("general".equals(page) && acceptWidget != null && mcavie$surnameField != null) {
             EditBox nameField = ((VillagerEditorScreenAccessor) this).mcavie$getNameField();

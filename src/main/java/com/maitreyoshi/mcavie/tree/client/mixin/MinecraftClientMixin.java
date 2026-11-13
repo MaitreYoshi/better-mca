@@ -11,13 +11,13 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(Minecraft.class)
+@Mixin(net.minecraft.client.gui.Gui.class)
 public abstract class MinecraftClientMixin {
     @Inject(method = "setScreen", at = @At("HEAD"), cancellable = true)
     private void mcavie$replaceFamilyTree(Screen screen, CallbackInfo ci) {
         if (screen instanceof FamilyTreeScreen tree && ClientPlayNetworking.canSend(TreeProtocol.REQUEST)) {
             ci.cancel();
-            Minecraft client = (Minecraft) (Object) this;
+            Minecraft client = Minecraft.getInstance();
             TreeClient.open(((FamilyTreeScreenAccessor) tree).mcavie$getFocusedEntityId(), client.gui.screen());
         }
     }

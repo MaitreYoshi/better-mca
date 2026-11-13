@@ -27,7 +27,7 @@ public abstract class SaveVillageMessageMixin {
     @Final
     private float marriageThreshold;
 
-    @Inject(method = "receive", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "handleServer", at = @At("HEAD"), cancellable = true)
     private void mcavie$checkRights(ServerPlayer player, CallbackInfo ci) {
         ci.cancel();
         VillageManager.get(player.level()).getOrEmpty(id).ifPresent(village -> {

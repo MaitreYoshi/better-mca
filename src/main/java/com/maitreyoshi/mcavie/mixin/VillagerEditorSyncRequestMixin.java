@@ -22,7 +22,7 @@ public abstract class VillagerEditorSyncRequestMixin {
     @Final
     private UUID uuid;
 
-    @Inject(method = "receive", at = @At("TAIL"))
+    @Inject(method = "handleServer", at = @At("TAIL"))
     private void mcavie$storeEditedSurname(ServerPlayer player, CallbackInfo ci) {
         if ("sync".equals(command) && player.level().getEntity(uuid) instanceof VillagerEntityMCA villager) {
             Surnames.onEditorRename(villager);

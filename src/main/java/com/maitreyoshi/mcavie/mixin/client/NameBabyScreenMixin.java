@@ -99,7 +99,7 @@ public abstract class NameBabyScreenMixin extends Screen implements SurnameField
         return super.keyPressed(event);
     }
 
-    @Inject(method = "render", at = @At("TAIL"))
+    @Inject(method = "extractRenderState", at = @At("TAIL"))
     private void mcavie$keepSurnameFocus(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         mcavie$applyFocus();
     }
@@ -113,7 +113,7 @@ public abstract class NameBabyScreenMixin extends Screen implements SurnameField
     }
 
     @ModifyArg(method = "lambda$init$0", remap = false, index = 1,
-            at = @At(value = "INVOKE", target = "Lnet/mca/network/c2s/BabyNamingVillagerMessage;<init>(ILjava/lang/String;)V"))
+            at = @At(value = "INVOKE", target = "Lnet/conczin/mca/network/c2s/BabyNamingVillagerMessage;<init>(ILjava/lang/String;)V"))
     private String mcavie$appendSurname(String firstName) {
         String surname = mcavie$surnameField == null ? "" : SurnameText.sanitize(mcavie$surnameField.getValue());
         if (firstName.isBlank() || surname.isEmpty()) {

@@ -14,8 +14,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 // En mode photo, les bras du joueur restent le long du corps (pas de bras tendu vers l'objectif).
 @Mixin(AvatarRenderer.class)
 public abstract class CameraArmPoseMixin {
-    @Inject(method = "getArmPose", at = @At("HEAD"), cancellable = true)
-    private static void mcavie$emptyArms(AbstractClientPlayer player, InteractionHand hand, CallbackInfoReturnable<HumanoidModel.ArmPose> cir) {
+    @Inject(method = "getArmPose(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/world/entity/HumanoidArm;)Lnet/minecraft/client/model/HumanoidModel$ArmPose;", at = @At("HEAD"), cancellable = true)
+    private static void mcavie$emptyArms(net.minecraft.world.entity.Avatar player, net.minecraft.world.entity.HumanoidArm arm, CallbackInfoReturnable<HumanoidModel.ArmPose> cir) {
         if (CameraMode.active() && player == Minecraft.getInstance().player) {
             cir.setReturnValue(HumanoidModel.ArmPose.EMPTY);
         }

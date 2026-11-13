@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /** Marque les habitants morts avant l'envoi du village, pour la tête de mort du plan. */
 @Mixin(value = GetVillageRequest.class, remap = false)
 public abstract class GetVillageRequestMixin {
-    @Inject(method = "receive", at = @At("HEAD"))
+    @Inject(method = "handleServer", at = @At("HEAD"))
     private void mcavie$markDead(ServerPlayer player, CallbackInfo ci) {
         Village.findNearest(player).ifPresent(village -> {
             VillageState state = VillageState.of(village);

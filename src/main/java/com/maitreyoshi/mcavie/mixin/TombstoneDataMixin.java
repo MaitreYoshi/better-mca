@@ -139,7 +139,8 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
     }
 
     @Inject(method = "saveAdditional", at = @At("TAIL"))
-    private void mcavie$writeDates(CompoundTag nbt, CallbackInfo ci) {
+    private void mcavie$writeDates(net.minecraft.world.level.storage.ValueOutput output, CallbackInfo ci) {
+        CompoundTag nbt = Nbt.out(output);
         if (mcavie$years != null) {
             nbt.putString(KEY, mcavie$years);
         }
@@ -179,8 +180,9 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
         computedName = null;
     }
 
-    @Inject(method = "load", at = @At("TAIL"))
-    private void mcavie$readDates(CompoundTag nbt, CallbackInfo ci) {
+    @Inject(method = "loadAdditional", at = @At("TAIL"))
+    private void mcavie$readDates(net.minecraft.world.level.storage.ValueInput input, CallbackInfo ci) {
+        CompoundTag nbt = Nbt.in(input);
         mcavie$years = nbt.contains(KEY) ? nbt.getStringOr(KEY, "") : null;
         TombstoneDetails previous = mcavie$details;
         mcavie$details = TombstoneDetails.read(nbt);

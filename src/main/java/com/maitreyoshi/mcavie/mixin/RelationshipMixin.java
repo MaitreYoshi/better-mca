@@ -85,13 +85,13 @@ public abstract class RelationshipMixin {
         }
     }
 
-    @Redirect(method = "onDeath", at = @At(value = "INVOKE", target = "Lnet/mca/server/world/data/FamilyTreeNode;willBeRemembered()Z"))
+    @Redirect(method = "onDeath", at = @At(value = "INVOKE", target = "Lnet/conczin/mca/server/world/data/FamilyTreeNode;willBeRemembered()Z"))
     private boolean mcavie$alwaysRemembered(FamilyTreeNode node) {
         return entity instanceof VillagerEntityMCA || node.willBeRemembered();
     }
 
     @Redirect(method = "onDeath", at = @At(value = "INVOKE", remap = true,
-            target = "Lnet/mca/server/world/data/GraveyardManager;findNearest(Lnet/minecraft/core/BlockPos;Lnet/mca/server/world/data/GraveyardManager$TombstoneState;I)Ljava/util/Optional;"))
+            target = "Lnet/conczin/mca/server/world/data/GraveyardManager;findNearest(Lnet/minecraft/core/BlockPos;Lnet/conczin/mca/server/world/data/GraveyardManager$TombstoneState;I)Ljava/util/Optional;"))
     private Optional<BlockPos> mcavie$reservedOrFreeTomb(GraveyardManager graveyard, BlockPos pos, GraveyardManager.TombstoneState state, int range) {
         if (mcavie$memorial) {
             return Optional.empty();

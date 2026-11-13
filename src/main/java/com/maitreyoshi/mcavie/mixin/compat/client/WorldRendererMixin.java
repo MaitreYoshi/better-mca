@@ -9,7 +9,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(LevelRenderer.class)
 public abstract class WorldRendererMixin {
-    @Inject(method = "renderLevel", at = @At("TAIL"))
+    @Inject(method = "render", at = @At("TAIL"))
     private void mcavie$renderEnd(CallbackInfo ci) {
         WorldRenderEvents.END.forEach(Runnable::run);
     }

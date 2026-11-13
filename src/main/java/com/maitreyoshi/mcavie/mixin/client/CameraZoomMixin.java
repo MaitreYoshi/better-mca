@@ -12,16 +12,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(GameRenderer.class)
 public abstract class CameraZoomMixin {
-    @Inject(method = "getFov", at = @At("RETURN"), cancellable = true)
-    private void mcavie$zoom(Camera camera, float tickDelta, boolean changingFov, CallbackInfoReturnable<Double> cir) {
-        double zoom = CameraMode.zoom();
-        if (zoom > 1) {
-            cir.setReturnValue(cir.getReturnValue() / zoom);
-        }
-    }
-
     @Inject(method = "renderItemInHand", at = @At("HEAD"), cancellable = true)
-    private void mcavie$hideHand(PoseStack matrices, Camera camera, float tickDelta, CallbackInfo ci) {
+    private void mcavie$hideHand(net.minecraft.client.renderer.state.level.CameraRenderState camera, float tickDelta, org.joml.Matrix4fc matrix, CallbackInfo ci) {
         if (CameraMode.active()) {
             ci.cancel();
         }

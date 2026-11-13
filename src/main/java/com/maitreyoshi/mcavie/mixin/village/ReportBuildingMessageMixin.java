@@ -29,7 +29,7 @@ public abstract class ReportBuildingMessageMixin {
     @Final
     private String data;
 
-    @Inject(method = "receive", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "handleServer", at = @At("HEAD"), cancellable = true)
     private void mcavie$checkForceType(ServerPlayer player, CallbackInfo ci) {
         VillageManager villages = VillageManager.get(player.level());
         Optional<Village> village = villages.findNearestVillage(player);

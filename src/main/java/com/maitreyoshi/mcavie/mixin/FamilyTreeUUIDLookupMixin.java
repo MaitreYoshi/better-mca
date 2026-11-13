@@ -16,7 +16,7 @@ import java.util.stream.Stream;
 
 @Mixin(value = FamilyTreeUUIDLookup.class, remap = false)
 public abstract class FamilyTreeUUIDLookupMixin {
-    @Redirect(method = "receive", at = @At(value = "INVOKE", target = "Lnet/mca/server/world/data/FamilyTree;getAllWithName(Ljava/lang/String;)Ljava/util/stream/Stream;"))
+    @Redirect(method = "handleServer", at = @At(value = "INVOKE", target = "Lnet/conczin/mca/server/world/data/FamilyTree;getAllWithNameContaining(Ljava/lang/String;)Ljava/util/stream/Stream;"))
     private Stream<FamilyTreeNode> mcavie$looseSearch(FamilyTree tree, String search) {
         String query = mcavie$normalize(search);
         if (query.isEmpty()) {

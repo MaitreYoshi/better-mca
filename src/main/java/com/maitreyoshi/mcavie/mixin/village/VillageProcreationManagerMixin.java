@@ -22,14 +22,14 @@ public abstract class VillageProcreationManagerMixin {
     @Final
     private Village village;
 
-    @ModifyExpressionValue(method = "procreate", at = @At(value = "FIELD", target = "Lnet/mca/Config;villagerProcreationChancePerMinute:F"))
+    @ModifyExpressionValue(method = "procreate", at = @At(value = "FIELD", target = "Lnet/conczin/mca/Config;villagerProcreationChancePerMinute:F"))
     private float mcavie$birthBonus(float chance) {
         return VillageDecrees.birthBonus(village) ? chance * (float) (1 + VillageConfig.get().birthBonusChance) : chance;
     }
 
     // MCA tire n'importe quel résident (hommes, enfants, célibataires...) : avec 36 habitants, une femme mariée
     // n'avait qu'environ une chance sur 700 par minute. On ne tire que parmi les femmes qui peuvent concevoir.
-    @ModifyExpressionValue(method = "procreate", at = @At(value = "INVOKE", target = "Lnet/mca/server/world/data/Village;getResidents"))
+    @ModifyExpressionValue(method = "procreate", at = @At(value = "INVOKE", target = "Lnet/conczin/mca/server/world/data/Village;getResidents"))
     private List<VillagerEntityMCA> mcavie$onlyFertileWives(List<VillagerEntityMCA> residents) {
         return residents.stream()
                 .filter(v -> v.getGenetics().getGender() == Gender.FEMALE)

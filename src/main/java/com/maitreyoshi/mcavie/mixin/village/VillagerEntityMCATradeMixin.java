@@ -8,10 +8,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-@Mixin(value = VillagerEntityMCA.class, remap = false)
+@Mixin(net.minecraft.world.entity.npc.villager.Villager.class)
 public abstract class VillagerEntityMCATradeMixin {
-    @Inject(method = "copiedPrepareOffersFor", at = @At("TAIL"))
+    @Inject(method = "updateSpecialPrices", at = @At("TAIL"))
     private void mcavie$marketDiscount(Player player, CallbackInfo ci) {
-        VillageEconomy.applyMarketDiscount((VillagerEntityMCA) (Object) this, player);
+        if ((Object) this instanceof VillagerEntityMCA villager) {
+            VillageEconomy.applyMarketDiscount(villager, player);
+        }
     }
 }

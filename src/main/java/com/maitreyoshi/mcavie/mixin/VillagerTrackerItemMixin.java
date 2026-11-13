@@ -1,15 +1,13 @@
 package com.maitreyoshi.mcavie.mixin;
 
-import com.maitreyoshi.mcavie.compat.Nbt;
 import net.conczin.mca.item.VillagerTrackerItem;
+import net.conczin.mca.registry.DataComponentsMCA;
 import net.conczin.mca.server.world.data.VillagerTrackerManager;
-import net.conczin.mca.util.NbtHelper;
 import net.minecraft.core.GlobalPos;
-import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -19,20 +17,19 @@ import java.util.UUID;
 
 @Mixin(VillagerTrackerItem.class)
 public abstract class VillagerTrackerItemMixin {
-    @Inject(method = "inventoryTick", at = @At("TAIL"))
-    private void mcavie$trackLoadedTarget(ItemStack stack, Level world, Entity holder, int slot, boolean selected, CallbackInfo ci) {
-        if (!(world instanceof ServerLevel serverWorld) || world.getGameTime() % 20 != 0) {
+    @Inject(method = "inventoryTick", at = @At("HEAD"))
+    private void mcavie$trackLoadedTarget(ItemStack stack, ServerLevel world, Entity holder, EquipmentSlot slot, CallbackInfo ci) {
+        if (world.getGameTime() % 20 != 0) {
             return;
         }
-        CompoundTag nbt = Nbt.tag(stack);
-        if (nbt == null || !Nbt.hasUUID(nbt, "targetUUID")) {
+        UUID target = stack.get(DataComponentsMCA.TRACKER_UUID);
+        if (target == null) {
             return;
         }
-        UUID target = Nbt.getUUID(nbt, "targetUUID");
-        for (ServerLevel candidate : serverWorld.getServer().getAllLevels()) {
+        for (ServerLevel candidate : world.getServer().getAllLevels()) {
             Entity entity = candidate.getEntity(target);
             if (entity != null) {
-                nbt.put("position", NbtHelper.encodeGlobalPosition(GlobalPos.of(candidate.dimension(), entity.blockPosition())));
+                stack.set(DataComponentsMCA.TRACKER_POS, GlobalPos.of(candidate.dimension(), entity.blockPosition()));
                 VillagerTrackerManager.get(candidate).set(entity);
                 return;
             }

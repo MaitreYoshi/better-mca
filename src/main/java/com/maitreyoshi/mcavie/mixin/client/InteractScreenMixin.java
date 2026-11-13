@@ -73,7 +73,7 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
     @ModifyConstant(method = "drawTextPopups", constant = @Constant(intValue = 4), remap = false,
             slice = @Slice(
                     from = @At(value = "CONSTANT", args = "stringValue=gui.interact.label.personality"),
-                    to = @At(value = "INVOKE", target = "Lnet/mca/client/gui/InteractScreen;hoveringOverIcon(Ljava/lang/String;)Z", ordinal = 0)
+                    to = @At(value = "INVOKE", target = "Lnet/conczin/mca/client/gui/InteractScreen;hoveringOverIcon(Ljava/lang/String;)Z", ordinal = 0)
             ))
     private int mcavie$moveTraitsDown(int row) {
         return row + mcavie$extraRows();
@@ -91,7 +91,7 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
     }
 
     @Redirect(method = "drawTextPopups", remap = false,
-            at = @At(value = "INVOKE", target = "Lnet/mca/entity/VillagerLike;getProfessionText()Lnet/minecraft/network/chat/MutableComponent;", remap = true))
+            at = @At(value = "INVOKE", target = "Lnet/conczin/mca/entity/VillagerLike;getProfessionText()Lnet/minecraft/network/chat/MutableComponent;", remap = true))
     private MutableComponent mcavie$showAddonJob(VillagerLike<?> instance) {
         WorkClient.Info job = mcavie$job();
         return job == null ? instance.getProfessionText() : WorkClient.jobLine(job);
@@ -113,7 +113,7 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
     }
 
     @Inject(method = "drawTextPopups", remap = false,
-            at = @At(value = "INVOKE", target = "Lnet/mca/client/gui/InteractScreen;hoveringOverIcon(Ljava/lang/String;)Z", ordinal = 0))
+            at = @At(value = "INVOKE", target = "Lnet/conczin/mca/client/gui/InteractScreen;hoveringOverIcon(Ljava/lang/String;)Z", ordinal = 0))
     private void mcavie$drawBirthDay(GuiGraphicsExtractor context, CallbackInfo ci) {
         Minecraft client = Minecraft.getInstance();
         if (client.level == null) {

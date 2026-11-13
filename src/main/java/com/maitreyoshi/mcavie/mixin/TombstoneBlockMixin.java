@@ -23,11 +23,9 @@ public abstract class TombstoneBlockMixin extends BaseEntityBlock {
         super(settings);
     }
 
-    @Inject(method = "onRemove", at = @At("TAIL"))
-    private void mcavie$releaseReservation(BlockState state, Level world, BlockPos pos, BlockState newState, boolean moved, CallbackInfo ci) {
-        if (world instanceof ServerLevel server && !state.is(newState.getBlock())) {
-            TombReservations.tombRemoved(server, pos);
-        }
+    @Inject(method = "affectNeighborsAfterRemoval", at = @At("TAIL"))
+    private void mcavie$releaseReservation(BlockState state, ServerLevel world, BlockPos pos, boolean moved, CallbackInfo ci) {
+        TombReservations.tombRemoved(world, pos);
     }
 
     @Override

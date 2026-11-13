@@ -12,9 +12,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(VillagerLikeEntityMCARenderer.class)
 public abstract class VillagerRendererAgingMixin {
-    @Inject(method = "scale(Lnet/minecraft/world/entity/Mob;Lcom/mojang/blaze3d/vertex/PoseStack;F)V", at = @At("TAIL"))
-    private void mcavie$shrink(Mob entity, PoseStack matrices, float tickDelta, CallbackInfo ci) {
-        if (entity instanceof VillagerEntityMCA villager) {
+    @Inject(method = "scale(Lnet/conczin/mca/client/render/VillagerRenderState;Lcom/mojang/blaze3d/vertex/PoseStack;)V", at = @At("TAIL"))
+    private void mcavie$shrink(net.conczin.mca.client.render.VillagerRenderState state, PoseStack matrices, CallbackInfo ci) {
+        if (AgingClient.villager(state) instanceof VillagerEntityMCA villager) {
             float scale = AgingClient.shrink(villager);
             if (scale < 1) {
                 matrices.scale(scale, scale, scale);

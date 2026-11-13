@@ -21,7 +21,7 @@ public abstract class TimeCommandMixin {
     private static long mcavie$dayBefore;
 
     @ModifyVariable(method = "addTime", at = @At("HEAD"), argsOnly = true)
-    private static int mcavie$limitJump(int time, CommandSourceStack source) {
+    private static int mcavie$limitJump(int time, CommandSourceStack source, net.minecraft.core.Holder<net.minecraft.world.clock.WorldClock> clock) {
         if (time <= 0) {
             return time;
         }
@@ -35,23 +35,23 @@ public abstract class TimeCommandMixin {
     }
 
     @Inject(method = "addTime", at = @At("HEAD"))
-    private static void mcavie$rememberDay(CommandSourceStack source, int time, CallbackInfoReturnable<Integer> cir) {
+    private static void mcavie$rememberDay(CommandSourceStack source, net.minecraft.core.Holder<net.minecraft.world.clock.WorldClock> clock, int time, CallbackInfoReturnable<Integer> cir) {
         mcavie$dayBefore = WorldCalendar.now(source.getServer().overworld()).dayIndex();
     }
 
     @Inject(method = "addTime", at = @At("RETURN"))
-    private static void mcavie$simulate(CommandSourceStack source, int time, CallbackInfoReturnable<Integer> cir) {
+    private static void mcavie$simulate(CommandSourceStack source, net.minecraft.core.Holder<net.minecraft.world.clock.WorldClock> clock, int time, CallbackInfoReturnable<Integer> cir) {
         ServerLevel world = source.getServer().overworld();
         History.simulate(world, mcavie$dayBefore, WorldCalendar.now(world).dayIndex());
     }
 
-    @WrapOperation(method = "setTime", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;setDayTime(J)V"))
-    private static void mcavie$keepDay(ServerLevel world, long time, Operation<Void> original) {
-        long current = world.getOverworldClockTime();
+    @WrapOperation(method = "setTotalTicks", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/clock/ServerClockManager;setTotalTicks(Lnet/minecraft/core/Holder;J)V"))
+    private static void mcavie$keepDay(net.minecraft.world.clock.ServerClockManager clocks, net.minecraft.core.Holder<net.minecraft.world.clock.WorldClock> clock, long time, Operation<Void> original) {
+        long current = clocks.getTotalTicks(clock);
         long target = Math.floorDiv(current, WorldCalendar.TICKS_PER_DAY) * WorldCalendar.TICKS_PER_DAY + Math.floorMod(time, WorldCalendar.TICKS_PER_DAY);
         if (target < current) {
             target += WorldCalendar.TICKS_PER_DAY;
         }
-        original.call(world, target);
+        original.call(clocks, clock, target);
     }
 }

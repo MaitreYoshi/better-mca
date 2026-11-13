@@ -54,7 +54,6 @@
   ],
   "client": [
     "client.AbstractDynamicScreenMixin",
-    "client.BipedWorkPoseMixin",
     "client.ClientInteractionManagerMixin",
     "client.CameraArmPoseMixin",
     "client.CameraHudMixin",

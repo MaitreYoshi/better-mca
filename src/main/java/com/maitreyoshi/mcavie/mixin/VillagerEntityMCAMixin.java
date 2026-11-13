@@ -63,7 +63,7 @@ public abstract class VillagerEntityMCAMixin implements AgeHolder {
     }
 
     @Inject(method = "convertTo", at = @At("HEAD"))
-    private void mcavie$zombified(net.minecraft.world.entity.EntityType<?> type, boolean keepInventory, CallbackInfoReturnable<?> cir) {
+    private void mcavie$zombified(net.minecraft.world.entity.EntityType<?> type, net.minecraft.world.entity.ConversionParams params, net.minecraft.world.entity.ConversionParams.AfterConversion<?> after, CallbackInfoReturnable<?> cir) {
         VillagerEntityMCA self = (VillagerEntityMCA) (Object) this;
         if (type == net.minecraft.world.entity.EntityTypes.ZOMBIE_VILLAGER && self.level() instanceof ServerLevel world) {
             com.maitreyoshi.mcavie.village.CivilRegistry.zombified(self, world);
@@ -73,8 +73,8 @@ public abstract class VillagerEntityMCAMixin implements AgeHolder {
         }
     }
 
-    @Inject(method = "hurt", at = @At("RETURN"))
-    private void mcavie$hurtFeelings(DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
+    @Inject(method = "hurtServer", at = @At("RETURN"))
+    private void mcavie$hurtFeelings(ServerLevel level, DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
         VillagerEntityMCA self = (VillagerEntityMCA) (Object) this;
         if (cir.getReturnValueZ() && amount > 0 && source.getEntity() != null && self.isAlive()
                 && self.level() instanceof ServerLevel world) {

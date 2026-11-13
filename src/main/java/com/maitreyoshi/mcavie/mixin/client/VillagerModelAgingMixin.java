@@ -15,6 +15,7 @@ public abstract class VillagerModelAgingMixin {
     private void mcavie$elderPose(VillagerRenderState state, CallbackInfo ci) {
         VillagerEntityMCA villager = AgingClient.villager(state);
         if (villager != null) {
+            com.maitreyoshi.mcavie.work.client.WorkPoses.apply((VillagerEntityBaseModelMCA) (Object) this, villager, state.ageInTicks);
             AgingClient.pose((VillagerEntityBaseModelMCA) (Object) this, villager, state.attackTime);
         }
     }

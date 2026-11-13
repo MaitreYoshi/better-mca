@@ -22,7 +22,7 @@ public abstract class CameraMouseMixin {
         }
     }
 
-    @WrapOperation(method = "turnPlayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;changeLookDirection(DD)V"))
+    @WrapOperation(method = "turnPlayer", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/player/LocalPlayer;turn(DD)V"))
     private void mcavie$zoomLook(LocalPlayer player, double x, double y, Operation<Void> original) {
         double zoom = CameraMode.zoom();
         original.call(player, x / zoom, y / zoom);
