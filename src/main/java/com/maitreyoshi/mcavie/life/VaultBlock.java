@@ -242,7 +242,7 @@ public class VaultBlock extends TombstoneBlock {
     }
 
     @Override
-    protected void affectNeighborsAfterRemoval(BlockState state, ServerLevel world, BlockPos pos, boolean moved) {
+    public void affectNeighborsAfterRemoval(BlockState state, ServerLevel world, BlockPos pos, boolean moved) {
         super.affectNeighborsAfterRemoval(state, world, pos, moved);
         if (world.getBlockState(pos).is(this)) {
             return;

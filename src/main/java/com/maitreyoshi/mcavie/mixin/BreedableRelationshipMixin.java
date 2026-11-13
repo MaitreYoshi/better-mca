@@ -12,7 +12,6 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.alchemy.Potions;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
@@ -56,9 +55,10 @@ public abstract class BreedableRelationshipMixin extends Relationship<VillagerEn
         if (stack.is(Items.GOLDEN_APPLE) || stack.is(Items.ENCHANTED_GOLDEN_APPLE)) {
             return true;
         }
-        var potion = PotionUtils.getPotion(stack);
-        return potion == Potions.HEALING || potion == Potions.STRONG_HEALING
-                || potion == Potions.REGENERATION || potion == Potions.STRONG_REGENERATION || potion == Potions.LONG_REGENERATION;
+        var contents = stack.get(net.minecraft.core.component.DataComponents.POTION_CONTENTS);
+        var potion = contents == null ? null : contents.potion().orElse(null);
+        return potion != null && (potion.equals(Potions.HEALING) || potion.equals(Potions.STRONG_HEALING)
+                || potion.equals(Potions.REGENERATION) || potion.equals(Potions.STRONG_REGENERATION) || potion.equals(Potions.LONG_REGENERATION));
     }
 
     @ModifyVariable(method = "acceptGift", at = @At("STORE"), ordinal = 0)

@@ -15,7 +15,6 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.CropBlock;
 import net.minecraft.world.level.block.NetherWartBlock;
-import net.minecraft.world.level.block.StemGrownBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
 import java.util.ArrayList;
@@ -207,7 +206,7 @@ public class FarmerTask extends AbstractJobTask {
         if (block instanceof NetherWartBlock) {
             return state.getValue(NetherWartBlock.AGE) >= 3 ? Kind.HARVEST : null;
         }
-        if (block instanceof StemGrownBlock) {
+        if ((block == net.minecraft.world.level.block.Blocks.PUMPKIN || block == net.minecraft.world.level.block.Blocks.MELON)) {
             return hasAttachedStem(world, pos) ? Kind.HARVEST : null;
         }
         if (state.is(Blocks.FARMLAND) && world.getBlockState(pos.above()).isAir()) {
@@ -241,7 +240,7 @@ public class FarmerTask extends AbstractJobTask {
         if (classify(world, pos) != Kind.HARVEST) {
             return;
         }
-        boolean replant = !(block instanceof StemGrownBlock);
+        boolean replant = !((block == net.minecraft.world.level.block.Blocks.PUMPKIN || block == net.minecraft.world.level.block.Blocks.MELON));
         if (!mayAlter(world, pos)) {
             return;
         }

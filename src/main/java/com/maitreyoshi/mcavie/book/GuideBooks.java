@@ -2,7 +2,6 @@ package com.maitreyoshi.mcavie.book;
 
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.compat.Registration;
-import dev.architectury.registry.level.entity.trade.TradeRegistry;
 import net.conczin.mca.client.book.Book;
 import net.conczin.mca.client.book.pages.TextPage;
 import net.conczin.mca.client.book.pages.TitlePage;
@@ -33,21 +32,34 @@ public final class GuideBooks {
                 () -> new ExtendedWrittenBookItem(com.maitreyoshi.mcavie.compat.Registration.item("memory_book").stacksTo(1), memoryBook()), item -> MEMORY_BOOK = item);
         Registration.register(Registries.ITEM, "tombs_book",
                 () -> new ExtendedWrittenBookItem(com.maitreyoshi.mcavie.compat.Registration.item("tombs_book").stacksTo(1), tombsBook()), item -> TOMBS_BOOK = item);
-        VillagerTrades.ItemListing memory = sell(() -> MEMORY_BOOK);
-        VillagerTrades.ItemListing tombs = sell(() -> TOMBS_BOOK);
-        TradeRegistry.registerVillagerTrade(VillagerProfession.CLERIC, 1, memory, tombs);
-        TradeRegistry.registerVillagerTrade(VillagerProfession.LIBRARIAN, 1, memory, tombs);
     }
 
-    private static VillagerTrades.ItemListing sell(Supplier<Item> book) {
-        return (entity, random) -> new MerchantOffer(new net.minecraft.world.item.trading.ItemCost(Items.EMERALD, 2), new ItemStack(book.get()), 12, 2, 0.05F);
+    /**
+     * Échanges vanilla en données depuis 26.x : clerc et bibliothécaire de niveau 1 proposent
+     * en plus chacun des deux livres avec une chance sur quatre (appelé par VillagerTradesMixin).
+     */
+    public static void addTrades(net.minecraft.world.entity.npc.villager.Villager villager, net.minecraft.util.RandomSource random) {
+        var data = villager.getVillagerData();
+        if (data.level() != 1 || !(data.profession().is(VillagerProfession.CLERIC) || data.profession().is(VillagerProfession.LIBRARIAN))) {
+            return;
+        }
+        if (random.nextFloat() < 0.25F) {
+            villager.getOffers().add(sell(MEMORY_BOOK));
+        }
+        if (random.nextFloat() < 0.25F) {
+            villager.getOffers().add(sell(TOMBS_BOOK));
+        }
+    }
+
+    private static MerchantOffer sell(Item book) {
+        return new MerchantOffer(new net.minecraft.world.item.trading.ItemCost(Items.EMERALD, 2), new ItemStack(book), 12, 2, 0.05F);
     }
 
     private static Book memoryBook() {
         return new Book("memory", Component.translatable(M + "author").withStyle(ChatFormatting.GRAY))
                 .setBackground(MCAVie.id("textures/gui/books/happiness.png"))
                 .addPage(new TitlePage("item.mca_vie.memory_book", M + "author"))
-                .addPage(new TextPage("{\"translate\":\"" + M + "intro\"}"))
+                .addPage(new TextPage(Component.translatable(M + "intro")))
                 .addPage(new IllustratedPage(M + "build")
                         .recipe("mca_vie:ghost_altar",
                                 "minecraft:candle", "minecraft:gold_nugget", "minecraft:candle",
@@ -74,7 +86,7 @@ public final class GuideBooks {
         return new Book("tombs", Component.translatable(T + "author").withStyle(ChatFormatting.GRAY))
                 .setBackground(MCAVie.id("textures/gui/books/happiness.png"))
                 .addPage(new TitlePage("item.mca_vie.tombs_book", T + "author"))
-                .addPage(new TextPage("{\"translate\":\"" + T + "intro\"}"))
+                .addPage(new TextPage(Component.translatable(T + "intro")))
                 .addPage(new IllustratedPage(T + "kinds")
                         .info("mca_vie:wooden_cross_tomb", T + "cross", "")
                         .info("mca_vie:stele_tomb", T + "stele", "")

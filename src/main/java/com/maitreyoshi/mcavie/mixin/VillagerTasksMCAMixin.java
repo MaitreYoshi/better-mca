@@ -17,6 +17,6 @@ public abstract class VillagerTasksMCAMixin {
         brain.addActivity(ActivitiesMCA.CHORE, com.google.common.collect.ImmutableList.<com.mojang.datafixers.util.Pair<Integer, ? extends net.minecraft.world.entity.ai.behavior.BehaviorControl<? super VillagerEntityMCA>>>builder()
                 .addAll(VillagerTasksMCA.getChorePackage())
                 .addAll(JobTasks.createPackage())
-                .build());
+                .build(), java.util.Set.of(), java.util.Set.of());
     }
 }

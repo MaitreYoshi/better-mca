@@ -144,7 +144,7 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
             nbt.putInt("tier", tier);
         }
         if (!pastLives.isEmpty()) {
-            nbt.putLongArray("lives_cal", pastLives);
+            nbt.putLongArray("lives_cal", pastLives.stream().mapToLong(Long::longValue).toArray());
         }
         if (exactBirth != null) {
             nbt.putLong("exact_birth", exactBirth);

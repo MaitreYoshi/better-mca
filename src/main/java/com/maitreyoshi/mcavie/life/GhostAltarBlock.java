@@ -96,7 +96,7 @@ public class GhostAltarBlock extends BaseEntityBlock {
     }
 
     @Override
-    public BlockState updateShape(BlockState state, Direction direction, BlockState neighbor, LevelAccessor world, BlockPos pos, BlockPos neighborPos) {
+    protected BlockState updateShape(BlockState state, net.minecraft.world.level.LevelReader world, net.minecraft.world.level.ScheduledTickAccess ticks, BlockPos pos, Direction direction, BlockPos neighborPos, BlockState neighbor, net.minecraft.util.RandomSource random) {
         return direction == state.getValue(FACING).getOpposite() && !state.canSurvive(world, pos)
                 ? net.minecraft.world.level.block.Blocks.AIR.defaultBlockState() : state;
     }

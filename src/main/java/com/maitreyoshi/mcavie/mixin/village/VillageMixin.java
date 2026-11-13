@@ -25,7 +25,7 @@ public abstract class VillageMixin implements VillageState.Holder {
     @Inject(method = "<init>(Lnet/minecraft/nbt/CompoundTag;Lnet/minecraft/server/level/ServerLevel;)V", at = @At("TAIL"), remap = true)
     private void mcavie$load(CompoundTag nbt, ServerLevel world, CallbackInfo ci) {
         if (nbt.contains(VillageState.NBT_KEY)) {
-            mcavie$state.readNbt(nbt.getCompound(VillageState.NBT_KEY));
+            mcavie$state.readNbt(nbt.getCompoundOrEmpty(VillageState.NBT_KEY));
         }
     }
 

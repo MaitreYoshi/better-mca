@@ -90,8 +90,8 @@ public enum Orientation {
         if (!trait.isEnabled()) {
             return false;
         }
-        double total = Traits.Trait.values().stream().mapToDouble(t -> ((TraitAccessor) t).mcavie$getChance()).sum();
-        return total > 0 && random.nextFloat() < Config.getInstance().traitChance / total * ((TraitAccessor) trait).mcavie$getChance();
+        double total = Traits.all().stream().mapToDouble(t -> ((TraitAccessor) (Object) t).mcavie$getChance()).sum();
+        return total > 0 && random.nextFloat() < Config.getInstance().traitChance / total * ((TraitAccessor) (Object) trait).mcavie$getChance();
     }
 
     public static void apply(Traits traits, Orientation orientation) {

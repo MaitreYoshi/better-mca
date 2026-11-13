@@ -30,7 +30,7 @@ public final class VillageRights {
     private static Object ranksServer;
 
     public static Rank personalRank(Village village, ServerPlayer player) {
-        int tick = player.level().level().getServer() == null ? -1 : player.level().level().getServer().getTickCount();
+        int tick = player.level().getServer() == null ? -1 : player.level().getServer().getTickCount();
         if (tick < 0) {
             return Tasks.getRank(village, player);
         }

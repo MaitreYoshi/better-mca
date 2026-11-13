@@ -42,7 +42,7 @@ public final class HappinessBook {
         com.maitreyoshi.mcavie.compat.Registration.register(net.minecraft.core.registries.Registries.ITEM, "happiness_book",
                 () -> new ExtendedWrittenBookItem(com.maitreyoshi.mcavie.compat.Registration.item("happiness_book").stacksTo(1), createBook()), item -> HAPPINESS_BOOK = item);
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            if (!handler.player.getTags().contains(TAG)) {
+            if (!handler.player.entityTags().contains(TAG)) {
                 PENDING.add(handler.player.getUUID());
             }
         });
@@ -51,7 +51,7 @@ public final class HappinessBook {
             if (PENDING.isEmpty()) {
                 return;
             }
-            Advancement mcaRoot = server.getAdvancements().getAdvancement(MCA_ROOT);
+            net.minecraft.advancements.AdvancementHolder mcaRoot = server.getAdvancements().get(MCA_ROOT);
             Iterator<UUID> it = PENDING.iterator();
             while (it.hasNext()) {
                 ServerPlayer player = server.getPlayerList().getPlayer(it.next());
@@ -69,7 +69,7 @@ public final class HappinessBook {
         return new Book("happiness", Component.translatable(P + "author").withStyle(ChatFormatting.GRAY))
                 .setBackground(MCAVie.id("textures/gui/books/happiness.png"))
                 .addPage(new TitlePage("item.mca_vie.happiness_book", P + "author"))
-                .addPage(new TextPage("{\"translate\":\"" + P + "intro\"}"))
+                .addPage(new TextPage(Component.translatable(P + "intro")))
                 .addPage(new IllustratedPage(P + "joys")
                         .gain("mca:wedding_ring", P + "marriage", (int) Wellbeing.MARRIAGE)
                         .gain("mca:baby_boy", P + "child", (int) Wellbeing.NEW_CHILD)
@@ -140,7 +140,7 @@ public final class HappinessBook {
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS,
                 0.2F, ((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
         player.containerMenu.broadcastChanges();
-        Advancement advancement = player.server.getAdvancements().getAdvancement(MCAVie.id("happiness_book"));
+        net.minecraft.advancements.AdvancementHolder advancement = player.level().getServer().getAdvancements().get(MCAVie.id("happiness_book"));
         if (advancement != null) {
             AdvancementProgress progress = player.getAdvancements().getOrStartProgress(advancement);
             for (String criterion : progress.getRemainingCriteria()) {

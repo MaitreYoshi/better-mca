@@ -548,8 +548,8 @@ public final class PhoneServer {
     private static boolean giveToInventory(ServerPlayer player, ItemStack stack) {
         Inventory inventory = player.getInventory();
         int slot = -1;
-        for (int i = 0; i < inventory.items.size() && slot < 0; i++) {
-            if (inventory.items.get(i).isEmpty()) {
+        for (int i = 0; i < inventory.getNonEquipmentItems().size() && slot < 0; i++) {
+            if (inventory.getNonEquipmentItems().get(i).isEmpty()) {
                 slot = i;
             }
         }
@@ -644,7 +644,7 @@ public final class PhoneServer {
 
     private static boolean updateOwner(Phone phone, ServerPlayer player) {
         String name = player.getGameProfile().name();
-        String skin = player.getGameProfile().getProperties().get("textures").stream().findFirst().map(Property::getValue).orElse("");
+        String skin = player.getGameProfile().properties().get("textures").stream().findFirst().map(Property::value).orElse("");
         if (name.equals(phone.ownerName) && skin.equals(phone.ownerSkin)) {
             return false;
         }
@@ -696,7 +696,7 @@ public final class PhoneServer {
     }
 
     private static String clean(String text) {
-        return SharedConstants.filterText(text).trim();
+        return net.minecraft.util.StringUtil.filterText(text).trim();
     }
 
     private static void error(ServerPlayer player, String key) {

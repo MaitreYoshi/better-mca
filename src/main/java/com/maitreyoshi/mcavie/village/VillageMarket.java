@@ -303,7 +303,7 @@ public final class VillageMarket {
         state.orders.add(order);
         village.markDirty();
         player.sendOverlayMessage(Component.translatable("msg.mca_vie.market.ordered", lots * config.unitsPerEmerald(itemId),
-                BuiltInRegistries.ITEM.get(Identifier.tryParse(itemId)).getDescription(), price));
+                BuiltInRegistries.ITEM.getValue(Identifier.tryParse(itemId)).getName(new net.minecraft.world.item.ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.tryParse(itemId)))), price));
     }
 
     public static void collect(ServerPlayer player, int villageId) {
@@ -332,7 +332,7 @@ public final class VillageMarket {
 
     private static void give(ServerPlayer player, Item item, int count) {
         while (count > 0) {
-            int stack = Math.min(count, item.getMaxStackSize());
+            int stack = Math.min(count, item.getDefaultMaxStackSize());
             player.getInventory().placeItemBackInInventory(new ItemStack(item, stack));
             count -= stack;
         }

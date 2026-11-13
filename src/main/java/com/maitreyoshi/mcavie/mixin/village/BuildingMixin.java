@@ -36,7 +36,7 @@ public abstract class BuildingMixin implements BuildingQuality.Holder {
     @Inject(method = "<init>(Lnet/minecraft/nbt/CompoundTag;)V", at = @At("TAIL"), remap = true)
     private void mcavie$load(CompoundTag nbt, CallbackInfo ci) {
         if (nbt.contains(MCAVIE$KEY)) {
-            mcavie$measure = BuildingQuality.Measure.fromNbt(nbt.getCompound(MCAVIE$KEY));
+            mcavie$measure = BuildingQuality.Measure.fromNbt(nbt.getCompoundOrEmpty(MCAVIE$KEY));
         }
     }
 

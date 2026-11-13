@@ -27,7 +27,7 @@ public final class VillageNetwork {
             int amount = buf.readInt();
             server.execute(() -> {
                 VillageEconomy.withdraw(player, villageId, amount);
-                new GetVillageRequest().receive(player);
+                new GetVillageRequest().handleServer(player);
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(DEPOSIT, (server, player, handler, buf, responseSender) -> {
@@ -35,7 +35,7 @@ public final class VillageNetwork {
             int amount = buf.readInt();
             server.execute(() -> {
                 VillageEconomy.deposit(player, villageId, amount);
-                new GetVillageRequest().receive(player);
+                new GetVillageRequest().handleServer(player);
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(NATURE, (server, player, handler, buf, responseSender) -> {
@@ -43,7 +43,7 @@ public final class VillageNetwork {
             int direction = buf.readInt();
             server.execute(() -> {
                 VillageEconomy.changeNature(player, villageId, direction);
-                new GetVillageRequest().receive(player);
+                new GetVillageRequest().handleServer(player);
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(ORDER, (server, player, handler, buf, responseSender) -> {
@@ -52,14 +52,14 @@ public final class VillageNetwork {
             int lots = buf.readInt();
             server.execute(() -> {
                 VillageMarket.order(player, villageId, item, lots);
-                new GetVillageRequest().receive(player);
+                new GetVillageRequest().handleServer(player);
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(COLLECT, (server, player, handler, buf, responseSender) -> {
             int villageId = buf.readInt();
             server.execute(() -> {
                 VillageMarket.collect(player, villageId);
-                new GetVillageRequest().receive(player);
+                new GetVillageRequest().handleServer(player);
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(JUDGE, (server, player, handler, buf, responseSender) -> {
@@ -68,7 +68,7 @@ public final class VillageNetwork {
             int verdict = buf.readInt();
             server.execute(() -> {
                 VillageJustice.judge(player, villageId, suspect, verdict);
-                new GetVillageRequest().receive(player);
+                new GetVillageRequest().handleServer(player);
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(DECREE, (server, player, handler, buf, responseSender) -> {
@@ -79,7 +79,7 @@ public final class VillageNetwork {
             }
             server.execute(() -> {
                 VillageDecrees.launch(player, villageId, decree);
-                new GetVillageRequest().receive(player);
+                new GetVillageRequest().handleServer(player);
             });
         });
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {

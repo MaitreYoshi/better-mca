@@ -545,14 +545,14 @@ public final class EmployeeChat {
             return token(Component.translatable("gui.mca_vie.phone.employees.report_none"));
         }
         List<String> keys = new ArrayList<>(report.keySet());
-        keys.sort(Comparator.comparingInt(report::getInt).reversed());
+        keys.sort(Comparator.<String>comparingInt(k -> report.getIntOr(k, 0)).reversed());
         StringBuilder b = new StringBuilder();
         for (int i = 0; i < Math.min(4, keys.size()); i++) {
             Item item = BuiltInRegistries.ITEM.getValue(Identifier.tryParse(keys.get(i)));
             if (b.length() > 0) {
                 b.append(", ");
             }
-            b.append(report.getInt(keys.get(i))).append(' ').append(token(item.getDescription()));
+            b.append(report.getIntOr(keys.get(i), 0)).append(' ').append(token(item.getName(new net.minecraft.world.item.ItemStack(item))));
         }
         return b.toString();
     }

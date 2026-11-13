@@ -57,11 +57,11 @@ public final class VillageMarketExtras {
             if (!world.hasChunkAt(pos)) {
                 continue;
             }
-            WanderingTrader trader = EntityTypes.WANDERING_TRADER.create(world);
+            WanderingTrader trader = EntityTypes.WANDERING_TRADER.create(world, net.minecraft.world.entity.EntitySpawnReason.EVENT);
             if (trader == null) {
                 continue;
             }
-            trader.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, world.getRandom().nextFloat() * 360, 0);
+            trader.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, world.getRandom().nextFloat() * 360, 0);
             trader.setDespawnDelay(config.marketMerchantTicks);
             trader.setWanderTarget(pos);
             if (world.addFreshEntity(trader)) {

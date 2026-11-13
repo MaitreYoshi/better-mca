@@ -3,7 +3,7 @@ package com.maitreyoshi.mcavie.mixin.path;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.maitreyoshi.mcavie.path.LadderPaths;
-import net.conczin.mca.entity.ai.pathfinder.VillagerLandPathNodeMaker;
+import net.conczin.mca.entity.ai.navigation.MCAWalkNodeEvaluator;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.NodeEvaluator;
 import net.minecraft.world.level.pathfinder.PathFinder;
@@ -17,7 +17,7 @@ public abstract class PathNodeNavigatorMixin {
             target = "Lnet/minecraft/world/level/pathfinder/NodeEvaluator;getNeighbors([Lnet/minecraft/world/level/pathfinder/Node;Lnet/minecraft/world/level/pathfinder/Node;)I"))
     private int mcavie$ladderSuccessors(NodeEvaluator maker, Node[] successors, Node node, Operation<Integer> original) {
         int count = original.call(maker, successors, node);
-        if (maker instanceof VillagerLandPathNodeMaker) {
+        if (maker instanceof MCAWalkNodeEvaluator) {
             count = LadderPaths.addSuccessors((PathNodeMakerAccessor) maker, successors, node, count);
         }
         return count;

@@ -18,4 +18,10 @@ public abstract class VillagerTradesMixin {
             ci.cancel();
         }
     }
+
+    @Inject(method = "updateTrades", at = @At("TAIL"))
+    private void mcavie$bookTrades(ServerLevel level, CallbackInfo ci) {
+        Villager self = (Villager) (Object) this;
+        com.maitreyoshi.mcavie.book.GuideBooks.addTrades(self, self.getRandom());
+    }
 }

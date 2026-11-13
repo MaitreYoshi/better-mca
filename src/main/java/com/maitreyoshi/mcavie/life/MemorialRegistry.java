@@ -184,7 +184,7 @@ public class MemorialRegistry extends SavedData {
         }
         List<Fallen> list = registry.fallen.computeIfAbsent(id, k -> new ArrayList<>());
         list.removeIf(entry -> entry.details().person().equals(villager.getUUID()));
-        list.add(new Fallen(details, Component.Serializer.toJson(killer)));
+        list.add(new Fallen(details, net.minecraft.network.chat.ComponentSerialization.CODEC.encodeStart(com.mojang.serialization.JsonOps.INSTANCE, killer).getOrThrow().toString()));
         registry.setDirty();
         Component message = Component.translatable("block.mca_vie.war_memorial.added", details.firstName()
                 + (details.lastName().isEmpty() ? "" : " " + details.lastName()), village.get().getName());

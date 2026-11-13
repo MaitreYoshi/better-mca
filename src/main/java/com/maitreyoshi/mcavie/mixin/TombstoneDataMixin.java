@@ -156,18 +156,24 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
 
     @Inject(method = "writeToStack", at = @At("TAIL"), remap = false)
     private void mcavie$writeDatesToStack(ItemStack stack, CallbackInfo ci) {
-        CompoundTag data = stack.getTagElement("entityData");
+        var typed = stack.get(net.minecraft.core.component.DataComponents.BLOCK_ENTITY_DATA);
+        CompoundTag data = typed == null ? null : typed.copyTagWithoutId();
         if (mcavie$years != null && data != null) {
             data.putString(KEY, mcavie$years);
         }
         if (mcavie$details != null && data != null) {
             mcavie$details.write(data);
         }
+        if (data != null) {
+            stack.set(net.minecraft.core.component.DataComponents.BLOCK_ENTITY_DATA,
+                    net.minecraft.world.item.component.TypedEntityData.of(net.conczin.mca.block.BlockEntityTypesMCA.TOMBSTONE, data));
+        }
     }
 
     @Inject(method = "readFromStack", at = @At("TAIL"), remap = false)
     private void mcavie$readDatesFromStack(ItemStack stack, CallbackInfo ci) {
-        CompoundTag data = stack == null ? null : stack.getTagElement("entityData");
+        var typed = stack == null ? null : stack.get(net.minecraft.core.component.DataComponents.BLOCK_ENTITY_DATA);
+        CompoundTag data = typed == null ? null : typed.copyTagWithoutId();
         mcavie$years = data != null && data.contains(KEY) ? data.getStringOr(KEY, "") : null;
         mcavie$details = TombstoneDetails.read(data);
         computedName = null;

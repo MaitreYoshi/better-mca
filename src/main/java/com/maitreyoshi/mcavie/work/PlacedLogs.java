@@ -61,7 +61,7 @@ public class PlacedLogs extends SavedData {
     }
 
     public static void register() {
-        BlockEvent.BREAK.register((world, pos, state, player, xp) -> {
+        BlockEvent.BREAK.register((world, pos, state, player) -> {
             if (world instanceof ServerLevel serverWorld && com.maitreyoshi.mcavie.work.tasks.LumberjackTask.isLog(state)) {
                 get(serverWorld).remove(pos);
             }

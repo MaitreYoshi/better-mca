@@ -54,8 +54,8 @@ public class WorkstationBlockEntity extends RandomizableContainerBlockEntity {
         CompoundTag nbt = Nbt.in(mcavieInput);
         super.loadAdditional(mcavieInput);
         items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
-        if (!tryLoadLootTable(nbt)) {
-            ContainerHelper.loadAllItems(nbt, items);
+        if (!tryLoadLootTable(mcavieInput)) {
+            ContainerHelper.loadAllItems(mcavieInput, items);
         }
     }
 
@@ -63,8 +63,8 @@ public class WorkstationBlockEntity extends RandomizableContainerBlockEntity {
     protected void saveAdditional(ValueOutput mcavieOutput) {
         CompoundTag nbt = Nbt.out(mcavieOutput);
         super.saveAdditional(mcavieOutput);
-        if (!trySaveLootTable(nbt)) {
-            ContainerHelper.saveAllItems(nbt, items);
+        if (!trySaveLootTable(mcavieOutput)) {
+            ContainerHelper.saveAllItems(mcavieOutput, items);
         }
     }
 }
