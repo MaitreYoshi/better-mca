@@ -4,13 +4,13 @@ import com.maitreyoshi.mcavie.client.InteractScreenHolder;
 import com.maitreyoshi.mcavie.social.client.RelationsScreen;
 import com.maitreyoshi.mcavie.work.client.JobScreen;
 import net.mca.client.gui.AbstractDynamicScreen;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableTextContent;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -20,7 +20,7 @@ import java.util.ArrayList;
 
 @Mixin(AbstractDynamicScreen.class)
 public abstract class AbstractDynamicScreenMixin extends Screen {
-    private AbstractDynamicScreenMixin(Text title) {
+    private AbstractDynamicScreenMixin(Component title) {
         super(title);
     }
 
@@ -32,16 +32,16 @@ public abstract class AbstractDynamicScreenMixin extends Screen {
         boolean mercenary = holder.mcavie$getVillagerEntity() instanceof net.mca.entity.VillagerEntityMCA villager
                 && villager.getProfession() == net.mca.ProfessionsMCA.MERCENARY.get();
         if (!mercenary) {
-            for (Element element : new ArrayList<>(children())) {
-                if (element instanceof ClickableWidget widget && widget.getMessage().getContent() instanceof TranslatableTextContent content
+            for (GuiEventListener element : new ArrayList<>(children())) {
+                if (element instanceof AbstractWidget widget && widget.getMessage().getContents() instanceof TranslatableContents content
                         && content.getKey().equals("gui.button.work")) {
-                    remove(widget);
+                    removeWidget(widget);
                 }
             }
         }
-        ClickableWidget lowest = null;
-        for (Element element : new ArrayList<>(children())) {
-            if (element instanceof ClickableWidget widget && isMcaButton(widget)
+        AbstractWidget lowest = null;
+        for (GuiEventListener element : new ArrayList<>(children())) {
+            if (element instanceof AbstractWidget widget && isMcaButton(widget)
                     && (lowest == null || widget.getY() > lowest.getY())) {
                 lowest = widget;
             }
@@ -51,15 +51,15 @@ public abstract class AbstractDynamicScreenMixin extends Screen {
         int w = lowest != null ? lowest.getWidth() : 80;
         int h = lowest != null ? lowest.getHeight() : 20;
 
-        addDrawableChild(ButtonWidget.builder(Text.translatable("job.mca_vie.button"), b ->
-                        MinecraftClient.getInstance().setScreen(new JobScreen(holder.mcavie$getVillagerEntity(), this)))
-                .dimensions(x, y, w, h).build());
-        addDrawableChild(ButtonWidget.builder(Text.translatable("gui.mca_vie.relations.button"), b ->
-                        MinecraftClient.getInstance().setScreen(new RelationsScreen(holder.mcavie$getVillagerEntity(), this)))
-                .dimensions(x, y + h + 2, w, h).build());
+        addRenderableWidget(Button.builder(Component.translatable("job.mca_vie.button"), b ->
+                        Minecraft.getInstance().setScreen(new JobScreen(holder.mcavie$getVillagerEntity(), this)))
+                .bounds(x, y, w, h).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.mca_vie.relations.button"), b ->
+                        Minecraft.getInstance().setScreen(new RelationsScreen(holder.mcavie$getVillagerEntity(), this)))
+                .bounds(x, y + h + 2, w, h).build());
     }
 
-    private static boolean isMcaButton(ClickableWidget widget) {
-        return widget.getMessage().getContent() instanceof TranslatableTextContent content && content.getKey().startsWith("gui.button.");
+    private static boolean isMcaButton(AbstractWidget widget) {
+        return widget.getMessage().getContents() instanceof TranslatableContents content && content.getKey().startsWith("gui.button.");
     }
 }

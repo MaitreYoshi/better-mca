@@ -10,15 +10,14 @@ import com.maitreyoshi.mcavie.compat.ServerTickEvents;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.random.Random;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -37,10 +36,10 @@ public final class SocialConversation {
 
     private static final List<Line> PENDING = new ArrayList<>();
 
-    private record Line(ServerWorld world, VillagerEntityMCA speaker, Text text, boolean angry, long at) {
+    private record Line(ServerLevel world, VillagerEntityMCA speaker, Component text, boolean angry, long at) {
     }
 
-    private record Topic(String id, Text subject) {
+    private record Topic(String id, Component subject) {
     }
 
     private SocialConversation() {
@@ -54,18 +53,18 @@ public final class SocialConversation {
         PENDING.clear();
     }
 
-    public static int start(ServerWorld world, VillagerEntityMCA a, VillagerEntityMCA b, boolean quarrel, int score, boolean family) {
+    public static int start(ServerLevel world, VillagerEntityMCA a, VillagerEntityMCA b, boolean quarrel, int score, boolean family) {
         if (!canSpeak(a) || !canSpeak(b)) {
             return 0;
         }
-        Random random = world.getRandom();
-        Topic topic = quarrel && score <= Social.ENEMY ? new Topic("rival", Text.empty()) : chooseTopic(world, a, b, score, family, random);
+        RandomSource random = world.getRandom();
+        Topic topic = quarrel && score <= Social.ENEMY ? new Topic("rival", Component.empty()) : chooseTopic(world, a, b, score, family, random);
         String base = "chat.mca_vie.talk." + topic.id() + ".";
         String answer = quarrel ? "no" : "yes";
-        long time = world.getTime();
-        PENDING.add(new Line(world, a, Text.translatable(base + "open." + random.nextInt(OPEN_VARIANTS), b.getName(), topic.subject()), false, time));
-        PENDING.add(new Line(world, b, Text.translatable(base + answer + "." + random.nextInt(ANSWER_VARIANTS), a.getName(), topic.subject()), quarrel, time + GAP));
-        PENDING.add(new Line(world, a, Text.translatable(base + "end_" + answer + "." + random.nextInt(ANSWER_VARIANTS), b.getName(), topic.subject()), quarrel, time + 2L * GAP));
+        long time = world.getGameTime();
+        PENDING.add(new Line(world, a, Component.translatable(base + "open." + random.nextInt(OPEN_VARIANTS), b.getName(), topic.subject()), false, time));
+        PENDING.add(new Line(world, b, Component.translatable(base + answer + "." + random.nextInt(ANSWER_VARIANTS), a.getName(), topic.subject()), quarrel, time + GAP));
+        PENDING.add(new Line(world, a, Component.translatable(base + "end_" + answer + "." + random.nextInt(ANSWER_VARIANTS), b.getName(), topic.subject()), quarrel, time + 2L * GAP));
         return 2 * GAP + BUBBLE_TICKS;
     }
 
@@ -73,9 +72,9 @@ public final class SocialConversation {
         return villager.isAlive() && !villager.isSpeechImpaired() && !villager.isToYoungToSpeak();
     }
 
-    private static Topic chooseTopic(ServerWorld world, VillagerEntityMCA a, VillagerEntityMCA b, int score, boolean family, Random random) {
+    private static Topic chooseTopic(ServerLevel world, VillagerEntityMCA a, VillagerEntityMCA b, int score, boolean family, RandomSource random) {
         List<Topic> topics = new ArrayList<>();
-        Text empty = Text.empty();
+        Component empty = Component.empty();
         if (world.isRaining()) {
             topics.add(new Topic("rain", empty));
         } else if (world.isNight()) {
@@ -84,13 +83,13 @@ public final class SocialConversation {
             topics.add(new Topic("sun", empty));
         }
         WorkRegistry registry = WorkRegistry.get(world.getServer());
-        WorkRegistry.Record work = registry.get(a.getUuid());
+        WorkRegistry.Record work = registry.get(a.getUUID());
         if (work != null && work.job != Job.NONE) {
             topics.add(new Topic("work", work.job.getName()));
             topics.add(new Topic("job." + work.job.id(), work.job.getName()));
             topics.add(new Topic("job." + work.job.id(), work.job.getName()));
         }
-        WorkRegistry.Record other = registry.get(b.getUuid());
+        WorkRegistry.Record other = registry.get(b.getUUID());
         if (other != null && other.job != Job.NONE) {
             topics.add(new Topic("ask." + other.job.id(), other.job.getName()));
             topics.add(new Topic("ask." + other.job.id(), other.job.getName()));
@@ -99,7 +98,7 @@ public final class SocialConversation {
         if (village.isPresent()) {
             float taxes = village.get().getTaxes();
             if (taxes >= 0.3f) {
-                topics.add(new Topic("taxes_high", Text.literal(Math.round(taxes * 100) + " %")));
+                topics.add(new Topic("taxes_high", Component.literal(Math.round(taxes * 100) + " %")));
             } else if (taxes <= 0.1f) {
                 topics.add(new Topic("taxes_low", empty));
             }
@@ -109,7 +108,7 @@ public final class SocialConversation {
                 topics.add(news);
             }
         }
-        PlayerEntity player = world.getClosestPlayer(a, 10);
+        Player player = world.getNearestPlayer(a, 10);
         if (player != null && !player.isSpectator()) {
             topics.add(new Topic("player", player.getName()));
         }
@@ -118,14 +117,14 @@ public final class SocialConversation {
         } else if (score >= Social.FRIEND) {
             topics.add(new Topic("friend", empty));
         }
-        WellbeingRegistry.Record mood = WellbeingRegistry.get(world.getServer()).get(a.getUuid());
+        WellbeingRegistry.Record mood = WellbeingRegistry.get(world.getServer()).get(a.getUUID());
         if (mood != null && mood.happiness < Social.UNHAPPY_BELOW) {
             topics.add(new Topic("gloomy", empty));
         }
         return topics.get(random.nextInt(topics.size()));
     }
 
-    private static Topic news(ServerWorld world, Village village) {
+    private static Topic news(ServerLevel world, Village village) {
         long today = WorldCalendar.now(world).dayIndex();
         for (CivilRegistry.Entry e : VillageState.of(village).registry) {
             if (today - e.day() > NEWS_DAYS) {
@@ -133,16 +132,16 @@ public final class SocialConversation {
             }
             switch (e.kind()) {
                 case CivilRegistry.BIRTH -> {
-                    return new Topic("birth", Text.literal(e.name()));
+                    return new Topic("birth", Component.literal(e.name()));
                 }
                 case CivilRegistry.MARRIAGE -> {
-                    return new Topic("marriage", Text.translatable("chat.mca_vie.talk.couple", e.name(), e.other()));
+                    return new Topic("marriage", Component.translatable("chat.mca_vie.talk.couple", e.name(), e.other()));
                 }
                 case CivilRegistry.DEATH -> {
-                    return new Topic("death", Text.literal(e.name()));
+                    return new Topic("death", Component.literal(e.name()));
                 }
                 case CivilRegistry.JUSTICE -> {
-                    return new Topic("justice", Text.literal(e.name()));
+                    return new Topic("justice", Component.literal(e.name()));
                 }
                 default -> {
                 }
@@ -151,35 +150,35 @@ public final class SocialConversation {
         return null;
     }
 
-    public static void witness(ServerWorld world, Entity source, String event, Text subject, UUID... involved) {
+    public static void witness(ServerLevel world, Entity source, String event, Component subject, UUID... involved) {
         if (!SocialConfig.get().showChats) {
             return;
         }
-        List<VillagerEntityMCA> witnesses = world.getEntitiesByClass(VillagerEntityMCA.class, source.getBoundingBox().expand(WITNESS_RADIUS),
-                v -> v != source && canSpeak(v) && !v.isSleeping() && !List.of(involved).contains(v.getUuid()));
+        List<VillagerEntityMCA> witnesses = world.getEntitiesOfClass(VillagerEntityMCA.class, source.getBoundingBox().inflate(WITNESS_RADIUS),
+                v -> v != source && canSpeak(v) && !v.isSleeping() && !List.of(involved).contains(v.getUUID()));
         if (witnesses.isEmpty()) {
             return;
         }
-        Random random = world.getRandom();
-        long time = world.getTime();
+        RandomSource random = world.getRandom();
+        long time = world.getGameTime();
         for (int i = 0; i < Math.min(2, witnesses.size()); i++) {
             VillagerEntityMCA witness = witnesses.remove(random.nextInt(witnesses.size()));
-            Text text = Text.translatable("chat.mca_vie.witness." + event + "." + random.nextInt(WITNESS_VARIANTS), subject);
+            Component text = Component.translatable("chat.mca_vie.witness." + event + "." + random.nextInt(WITNESS_VARIANTS), subject);
             PENDING.add(new Line(world, witness, text, event.equals("hit") || event.equals("theft"), time + 10L + i * (long) GAP));
         }
     }
 
-    public static void remark(ServerWorld world, VillagerEntityMCA speaker, Text text) {
+    public static void remark(ServerLevel world, VillagerEntityMCA speaker, Component text) {
         if (SocialConfig.get().showChats && canSpeak(speaker) && !speaker.isSleeping()) {
-            PENDING.add(new Line(world, speaker, text, false, world.getTime() + 10L));
+            PENDING.add(new Line(world, speaker, text, false, world.getGameTime() + 10L));
         }
     }
 
-    private static void tick(ServerWorld world) {
+    private static void tick(ServerLevel world) {
         if (PENDING.isEmpty()) {
             return;
         }
-        long time = world.getTime();
+        long time = world.getGameTime();
         Iterator<Line> it = PENDING.iterator();
         while (it.hasNext()) {
             Line line = it.next();
@@ -197,21 +196,21 @@ public final class SocialConversation {
                 continue;
             }
             it.remove();
-            if (line.speaker.isAlive() && line.speaker.getWorld() == world) {
+            if (line.speaker.isAlive() && line.speaker.level() == world) {
                 say(world, line.speaker, line.text, line.angry);
             }
         }
     }
 
-    private static void say(ServerWorld world, VillagerEntityMCA speaker, Text text, boolean angry) {
+    private static void say(ServerLevel world, VillagerEntityMCA speaker, Component text, boolean angry) {
         SocialConfig config = SocialConfig.get();
         double max = (double) config.chatRadius * config.chatRadius;
-        MutableText head = Text.literal("   ").styled(s -> s.withInsertion(HEAD_MARKER + speaker.getId() + ":" + speaker.getUuid()));
-        MutableText chat = Text.empty().append(head).append(Text.translatable("chat.mca_vie.social.said", speaker.getName(), text)
-                .formatted(angry ? Formatting.RED : Formatting.GRAY, Formatting.ITALIC));
-        for (ServerPlayerEntity player : world.getPlayers()) {
-            if (player.squaredDistanceTo(speaker) <= max) {
-                player.sendMessage(chat);
+        MutableComponent head = Component.literal("   ").withStyle(s -> s.withInsertion(HEAD_MARKER + speaker.getId() + ":" + speaker.getUUID()));
+        MutableComponent chat = Component.empty().append(head).append(Component.translatable("chat.mca_vie.social.said", speaker.getName(), text)
+                .withStyle(angry ? ChatFormatting.RED : ChatFormatting.GRAY, ChatFormatting.ITALIC));
+        for (ServerPlayer player : world.players()) {
+            if (player.distanceToSqr(speaker) <= max) {
+                player.sendSystemMessage(chat);
             }
         }
     }

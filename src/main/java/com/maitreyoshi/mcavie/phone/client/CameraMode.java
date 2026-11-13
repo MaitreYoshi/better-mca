@@ -4,20 +4,12 @@ import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.phone.PhoneItem;
 import com.maitreyoshi.mcavie.phone.PhoneNetwork;
 import com.maitreyoshi.mcavie.phone.client.PhoneClient.State;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.maitreyoshi.mcavie.compat.client.ClientTickEvents;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import com.maitreyoshi.mcavie.compat.client.HudRenderCallback;
 import com.maitreyoshi.mcavie.compat.client.WorldRenderEvents;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.option.Perspective;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.util.ScreenshotRecorder;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Hand;
 import org.jetbrains.annotations.Nullable;
 
 import javax.imageio.IIOImage;
@@ -25,6 +17,14 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageWriteParam;
 import javax.imageio.ImageWriter;
 import javax.imageio.stream.ImageOutputStream;
+import net.minecraft.client.CameraType;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.Screenshot;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -46,7 +46,7 @@ public final class CameraMode {
     private static boolean hudWasHidden;
     private static boolean selfie;
     @Nullable
-    private static Perspective previousPerspective;
+    private static CameraType previousPerspective;
 
     private CameraMode() {
     }
@@ -74,9 +74,9 @@ public final class CameraMode {
         return state != null && selfie;
     }
 
-    private static void toggleSelfie(MinecraftClient client) {
+    private static void toggleSelfie(Minecraft client) {
         selfie = !selfie;
-        client.options.setPerspective(selfie ? Perspective.THIRD_PERSON_FRONT : Perspective.FIRST_PERSON);
+        client.options.setCameraType(selfie ? CameraType.THIRD_PERSON_FRONT : CameraType.FIRST_PERSON);
     }
 
     public static void scroll(double amount) {
@@ -89,12 +89,12 @@ public final class CameraMode {
         flash = 0;
         zoom = 1;
         targetZoom = 1;
-        MinecraftClient client = MinecraftClient.getInstance();
-        hudWasHidden = client.options.hudHidden;
-        client.options.hudHidden = false;
+        Minecraft client = Minecraft.getInstance();
+        hudWasHidden = client.options.hideGui;
+        client.options.hideGui = false;
         selfie = false;
-        previousPerspective = client.options.getPerspective();
-        client.options.setPerspective(Perspective.FIRST_PERSON);
+        previousPerspective = client.options.getCameraType();
+        client.options.setCameraType(CameraType.FIRST_PERSON);
         client.setScreen(null);
     }
 
@@ -107,10 +107,10 @@ public final class CameraMode {
     public static void stop(boolean reopen) {
         State phone = state;
         if (phone != null) {
-            MinecraftClient client = MinecraftClient.getInstance();
-            client.options.hudHidden = hudWasHidden;
+            Minecraft client = Minecraft.getInstance();
+            client.options.hideGui = hudWasHidden;
             if (previousPerspective != null) {
-                client.options.setPerspective(previousPerspective);
+                client.options.setCameraType(previousPerspective);
             }
         }
         selfie = false;
@@ -120,43 +120,43 @@ public final class CameraMode {
         zoom = 1;
         targetZoom = 1;
         if (reopen && phone != null) {
-            MinecraftClient.getInstance().setScreen(new PhoneScreen(phone));
+            Minecraft.getInstance().setScreen(new PhoneScreen(phone));
             PhoneClient.send(phone.number(), PhoneNetwork.OP_REFRESH, buf -> {
             });
         }
     }
 
-    private static void tick(MinecraftClient client) {
+    private static void tick(Minecraft client) {
         if (flash > 0) {
             flash--;
         }
         if (state == null) {
             return;
         }
-        if (client.player == null || client.currentScreen != null || !holds(client)) {
+        if (client.player == null || client.screen != null || !holds(client)) {
             stop(false);
             return;
         }
         boolean shot = false;
-        while (client.options.attackKey.wasPressed()) {
+        while (client.options.keyAttack.consumeClick()) {
             shot = true;
         }
-        client.options.attackKey.setPressed(false);
+        client.options.keyAttack.setDown(false);
         boolean back = false;
-        while (client.options.useKey.wasPressed()) {
+        while (client.options.keyUse.consumeClick()) {
             back = true;
         }
-        client.options.useKey.setPressed(false);
+        client.options.keyUse.setDown(false);
         boolean flip = false;
-        while (client.options.swapHandsKey.wasPressed()) {
+        while (client.options.keySwapOffhand.consumeClick()) {
             flip = !flip;
         }
         if (flip) {
             toggleSelfie(client);
         }
-        Perspective wanted = selfie ? Perspective.THIRD_PERSON_FRONT : Perspective.FIRST_PERSON;
-        if (client.options.getPerspective() != wanted) {
-            client.options.setPerspective(wanted);
+        CameraType wanted = selfie ? CameraType.THIRD_PERSON_FRONT : CameraType.FIRST_PERSON;
+        if (client.options.getCameraType() != wanted) {
+            client.options.setCameraType(wanted);
         }
         if (back) {
             stop(true);
@@ -165,9 +165,9 @@ public final class CameraMode {
         }
     }
 
-    private static boolean holds(MinecraftClient client) {
-        for (Hand hand : Hand.values()) {
-            if (PhoneItem.numberOf(client.player.getStackInHand(hand)) == state.number()) {
+    private static boolean holds(Minecraft client) {
+        for (InteractionHand hand : InteractionHand.values()) {
+            if (PhoneItem.numberOf(client.player.getItemInHand(hand)) == state.number()) {
                 return true;
             }
         }
@@ -175,38 +175,38 @@ public final class CameraMode {
     }
 
     private static void shoot() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         State phone = state;
         if (phone == null) {
             return;
         }
         byte[] thumbnail;
         byte[] full;
-        try (NativeImage screen = ScreenshotRecorder.takeScreenshot(client.getFramebuffer());
+        try (NativeImage screen = Screenshot.takeScreenshot(client.getMainRenderTarget());
              NativeImage big = new NativeImage(PhoneNetwork.FULL_WIDTH, PhoneNetwork.FULL_HEIGHT, false);
              NativeImage small = new NativeImage(PhoneNetwork.THUMB_WIDTH, PhoneNetwork.THUMB_HEIGHT, false)) {
             int[] crop = crop(screen.getWidth(), screen.getHeight());
             screen.resizeSubRectTo(crop[0], crop[1], crop[2], crop[3], big);
             screen.resizeSubRectTo(crop[0], crop[1], crop[2], crop[3], small);
-            thumbnail = small.getBytes();
+            thumbnail = small.asByteArray();
             full = jpeg(big);
         } catch (IOException | RuntimeException e) {
             MCAVie.LOGGER.warn("Photo impossible", e);
             return;
         }
         if (thumbnail.length > PhoneNetwork.MAX_THUMB_BYTES || full.length > PhoneNetwork.MAX_FULL_BYTES) {
-            client.player.sendMessage(Text.translatable("msg.mca_vie.phone.photo_too_big"), true);
+            client.player.displayClientMessage(Component.translatable("msg.mca_vie.phone.photo_too_big"), true);
             return;
         }
         flash = FLASH_TICKS;
-        client.player.playSound(SoundEvents.BLOCK_DISPENSER_FAIL, 0.4f, 2.0f);
+        client.player.playSound(SoundEvents.DISPENSER_FAIL, 0.4f, 2.0f);
         byte[] data = new byte[thumbnail.length + full.length];
         System.arraycopy(thumbnail, 0, data, 0, thumbnail.length);
         System.arraycopy(full, 0, data, thumbnail.length, full.length);
         int id = ++uploadId;
         int total = (data.length + PhoneNetwork.PHOTO_CHUNK - 1) / PhoneNetwork.PHOTO_CHUNK;
         for (int i = 0; i < total; i++) {
-            PacketByteBuf buf = PacketByteBufs.create();
+            FriendlyByteBuf buf = PacketByteBufs.create();
             buf.writeVarInt(phone.number());
             buf.writeVarInt(id);
             buf.writeVarInt(i);
@@ -224,7 +224,7 @@ public final class CameraMode {
         int[] pixels = new int[width * height];
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                int abgr = image.getColor(x, y);
+                int abgr = image.getPixelRGBA(x, y);
                 pixels[y * width + x] = (abgr & 0xFF) << 16 | (abgr & 0xFF00) | (abgr >> 16 & 0xFF);
             }
         }
@@ -253,13 +253,13 @@ public final class CameraMode {
         return new int[]{(width - w) / 2, (height - h) / 2, w, h};
     }
 
-    public static void render(DrawContext context, float tickDelta) {
-        MinecraftClient client = MinecraftClient.getInstance();
+    public static void render(GuiGraphics context, float tickDelta) {
+        Minecraft client = Minecraft.getInstance();
         if (state == null && flash == 0) {
             return;
         }
-        int width = context.getScaledWindowWidth();
-        int height = context.getScaledWindowHeight();
+        int width = context.guiWidth();
+        int height = context.guiHeight();
         if (state != null) {
             zoom += (targetZoom - zoom) * 0.25;
             if (Math.abs(targetZoom - zoom) < 0.005) {
@@ -284,22 +284,22 @@ public final class CameraMode {
             context.fill(width / 2, height / 2 - 4, width / 2 + 1, height / 2 + 5, 0x90FFFFFF);
             context.fill(x + m + 4, y + m + 4, x + m + 8, y + m + 8, 0xFFE5484D);
             if (selfie) {
-                context.drawTextWithShadow(client.textRenderer, Text.translatable("gui.mca_vie.phone.selfie"), x + m + 12, y + m + 4, 0xFFFFFF);
+                context.drawString(client.font, Component.translatable("gui.mca_vie.phone.selfie"), x + m + 12, y + m + 4, 0xFFFFFF);
             }
             String level = String.format("x%.1f", zoom);
-            int lw = client.textRenderer.getWidth(level);
+            int lw = client.font.width(level);
             context.fill(x + w - m - lw - 12, y + m + 4, x + w - m - 4, y + m + 18, 0x90000000);
-            context.drawTextWithShadow(client.textRenderer, level, x + w - m - lw - 8, y + m + 7, 0xFFFFFF);
+            context.drawString(client.font, level, x + w - m - lw - 8, y + m + 7, 0xFFFFFF);
             int barX = x + w - m - 8;
             int barTop = y + h / 4;
             int barBottom = y + h * 3 / 4;
             context.fill(barX, barTop, barX + 2, barBottom, 0x60FFFFFF);
             int knob = barBottom - (int) ((barBottom - barTop) * Math.log(zoom) / Math.log(MAX_ZOOM));
             context.fill(barX - 3, knob - 1, barX + 5, knob + 2, 0xFFFFFFFF);
-            Text hint = Text.translatable("gui.mca_vie.phone.camera_hint", client.options.swapHandsKey.getBoundKeyLocalizedText());
-            int tw = client.textRenderer.getWidth(hint);
+            Component hint = Component.translatable("gui.mca_vie.phone.camera_hint", client.options.keySwapOffhand.getTranslatedKeyMessage());
+            int tw = client.font.width(hint);
             context.fill(width / 2 - tw / 2 - 6, y + h - m - 18, width / 2 + tw / 2 + 6, y + h - m - 4, 0x90000000);
-            context.drawCenteredTextWithShadow(client.textRenderer, hint, width / 2, y + h - m - 15, 0xFFFFFF);
+            context.drawCenteredString(client.font, hint, width / 2, y + h - m - 15, 0xFFFFFF);
         }
         if (flash > 0) {
             int alpha = (int) (200 * (flash - tickDelta) / FLASH_TICKS);
@@ -309,7 +309,7 @@ public final class CameraMode {
         }
     }
 
-    private static void corner(DrawContext context, int x, int y, int size, int dx, int dy) {
+    private static void corner(GuiGraphics context, int x, int y, int size, int dx, int dy) {
         int x2 = x + dx * size;
         int y2 = y + dy * size;
         context.fill(Math.min(x, x2), Math.min(y, y + dy * 2), Math.max(x, x2), Math.max(y, y + dy * 2), 0xFFFFFFFF);

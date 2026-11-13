@@ -4,25 +4,25 @@ import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.block.WorkBlocks;
 import com.maitreyoshi.mcavie.work.block.WorkstationBlock;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.ConfirmScreen;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.InventoryScreen;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.screens.ConfirmScreen;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 public class JobScreen extends Screen {
     private static final int MAX_WIDTH = 440;
@@ -40,7 +40,7 @@ public class JobScreen extends Screen {
     @Nullable
     private final Screen parent;
     private final Job[] jobs = Arrays.stream(Job.values()).filter(j -> j.isSelectable() && j != Job.NONE).toArray(Job[]::new);
-    private final List<ButtonWidget> actions = new ArrayList<>();
+    private final List<Button> actions = new ArrayList<>();
 
     private Job selected;
     private int scroll;
@@ -55,14 +55,14 @@ public class JobScreen extends Screen {
     @Nullable
     private Job shownFor;
     @Nullable
-    private Text refusal;
+    private Component refusal;
     private int refusalTicks;
     // 2 s affiché puis 1 s de fondu
     private static final int REFUSAL_TICKS = 60;
     private static final int REFUSAL_FADE = 20;
 
     public JobScreen(Entity villager, @Nullable Screen parent) {
-        super(Text.translatable("job.mca_vie.screen_title", villager.getName()));
+        super(Component.translatable("job.mca_vie.screen_title", villager.getName()));
         this.villager = villager;
         this.parent = parent;
         WorkClient.Info info = WorkClient.get(villager.getId());
@@ -76,8 +76,8 @@ public class JobScreen extends Screen {
         left = (width - panelWidth) / 2;
         top = Math.max(26, (height - panelHeight) / 2);
         rebuildActions();
-        addDrawableChild(ButtonWidget.builder(Text.translatable("gui.back"), b -> close())
-                .dimensions(width / 2 - 50, Math.min(height - BUTTON_HEIGHT - 2, top + panelHeight + 10), 100, BUTTON_HEIGHT).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.back"), b -> onClose())
+                .bounds(width / 2 - 50, Math.min(height - BUTTON_HEIGHT - 2, top + panelHeight + 10), 100, BUTTON_HEIGHT).build());
     }
 
     private Job currentJob() {
@@ -86,7 +86,7 @@ public class JobScreen extends Screen {
     }
 
     private void rebuildActions() {
-        actions.forEach(this::remove);
+        actions.forEach(this::removeWidget);
         actions.clear();
         Job current = currentJob();
         shownFor = current;
@@ -94,30 +94,30 @@ public class JobScreen extends Screen {
         int detailWidth = panelWidth - LIST_WIDTH - PAD * 2;
         int y = top + panelHeight - BUTTON_HEIGHT - PAD;
         if (selected != current) {
-            ButtonWidget hire = ButtonWidget.builder(Text.translatable("job.mca_vie.hire", selected.getName()), b -> hire())
-                    .dimensions(detailLeft, y, detailWidth, BUTTON_HEIGHT).build();
-            actions.add(addDrawableChild(hire));
+            Button hire = Button.builder(Component.translatable("job.mca_vie.hire", selected.getName()), b -> hire())
+                    .bounds(detailLeft, y, detailWidth, BUTTON_HEIGHT).build();
+            actions.add(addRenderableWidget(hire));
             return;
         }
         int third = (detailWidth - PAD) / 3;
         boolean craft = selected.isCraft();
-        ButtonWidget show = ButtonWidget.builder(Text.translatable("job.mca_vie.show"), b -> WorkClient.showWorkstation(villager.getUuid()))
-                .dimensions(detailLeft, y, third, BUTTON_HEIGHT)
-                .tooltip(Tooltip.of(Text.translatable("job.mca_vie.show.tooltip"))).build();
-        ButtonWidget link = ButtonWidget.builder(Text.translatable("job.mca_vie.choose_depot"), b -> {
-            WorkClient.pickDepot(villager.getUuid());
-            if (client != null) {
-                client.setScreen(null);
+        Button show = Button.builder(Component.translatable("job.mca_vie.show"), b -> WorkClient.showWorkstation(villager.getUUID()))
+                .bounds(detailLeft, y, third, BUTTON_HEIGHT)
+                .tooltip(Tooltip.create(Component.translatable("job.mca_vie.show.tooltip"))).build();
+        Button link = Button.builder(Component.translatable("job.mca_vie.choose_depot"), b -> {
+            WorkClient.pickDepot(villager.getUUID());
+            if (minecraft != null) {
+                minecraft.setScreen(null);
             }
-        }).dimensions(detailLeft + third + PAD / 2, y, third, BUTTON_HEIGHT)
-                .tooltip(Tooltip.of(Text.translatable("job.mca_vie.choose_depot.tooltip"))).build();
+        }).bounds(detailLeft + third + PAD / 2, y, third, BUTTON_HEIGHT)
+                .tooltip(Tooltip.create(Component.translatable("job.mca_vie.choose_depot.tooltip"))).build();
         show.active = craft;
         link.active = craft;
-        ButtonWidget fire = ButtonWidget.builder(Text.translatable("job.mca_vie.fire").formatted(Formatting.RED), b -> confirm(Job.NONE))
-                .dimensions(detailLeft + (third + PAD / 2) * 2, y, detailWidth - (third + PAD / 2) * 2, BUTTON_HEIGHT).build();
-        actions.add(addDrawableChild(show));
-        actions.add(addDrawableChild(link));
-        actions.add(addDrawableChild(fire));
+        Button fire = Button.builder(Component.translatable("job.mca_vie.fire").withStyle(ChatFormatting.RED), b -> confirm(Job.NONE))
+                .bounds(detailLeft + (third + PAD / 2) * 2, y, detailWidth - (third + PAD / 2) * 2, BUTTON_HEIGHT).build();
+        actions.add(addRenderableWidget(show));
+        actions.add(addRenderableWidget(link));
+        actions.add(addRenderableWidget(fire));
     }
 
     private void hire() {
@@ -130,33 +130,33 @@ public class JobScreen extends Screen {
     }
 
     private void confirm(Job target) {
-        if (client == null) {
+        if (minecraft == null) {
             return;
         }
         Job current = currentJob();
-        Text message = target == Job.NONE
-                ? Text.translatable("job.mca_vie.confirm_fire", villager.getName(), current.getName())
-                : Text.translatable("job.mca_vie.confirm_change", villager.getName(), current.getName(), target.getName());
-        client.setScreen(new ConfirmScreen(yes -> {
+        Component message = target == Job.NONE
+                ? Component.translatable("job.mca_vie.confirm_fire", villager.getName(), current.getName())
+                : Component.translatable("job.mca_vie.confirm_change", villager.getName(), current.getName(), target.getName());
+        minecraft.setScreen(new ConfirmScreen(yes -> {
             if (yes) {
                 apply(target);
-            } else if (client != null) {
-                client.setScreen(this);
+            } else if (minecraft != null) {
+                minecraft.setScreen(this);
             }
-        }, Text.translatable("job.mca_vie.confirm_title"), message));
+        }, Component.translatable("job.mca_vie.confirm_title"), message));
     }
 
     private void apply(Job job) {
-        WorkClient.setJob(villager.getUuid(), job);
+        WorkClient.setJob(villager.getUUID(), job);
         if (job != Job.NONE) {
             selected = job;
         }
-        if (client != null) {
-            client.setScreen(this);
+        if (minecraft != null) {
+            minecraft.setScreen(this);
         }
     }
 
-    public void showRefusal(Text message) {
+    public void showRefusal(Component message) {
         refusal = message;
         refusalTicks = REFUSAL_TICKS;
     }
@@ -172,11 +172,11 @@ public class JobScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, top - 14, 0xFFFFFF);
+        context.drawCenteredString(font, title, width / 2, top - 14, 0xFFFFFF);
         context.fill(left, top, left + panelWidth, top + panelHeight, PANEL);
-        context.drawBorder(left, top, panelWidth, panelHeight, BORDER);
+        context.renderOutline(left, top, panelWidth, panelHeight, BORDER);
         renderList(context, mouseX, mouseY);
         renderDetail(context);
         super.render(context, mouseX, mouseY, delta);
@@ -186,8 +186,8 @@ public class JobScreen extends Screen {
             if (alpha > 4) {
                 int detailLeft = left + LIST_WIDTH + PAD;
                 int detailWidth = panelWidth - LIST_WIDTH - PAD * 2;
-                int y = top + panelHeight - BUTTON_HEIGHT - PAD - textRenderer.fontHeight - 4;
-                context.drawCenteredTextWithShadow(textRenderer, refusal, detailLeft + detailWidth / 2, y, (alpha << 24) | 0xFFFFFF);
+                int y = top + panelHeight - BUTTON_HEIGHT - PAD - font.lineHeight - 4;
+                context.drawCenteredString(font, refusal, detailLeft + detailWidth / 2, y, (alpha << 24) | 0xFFFFFF);
             }
         }
     }
@@ -196,7 +196,7 @@ public class JobScreen extends Screen {
         return (panelHeight - PAD * 2) / ROW_HEIGHT;
     }
 
-    private void renderList(DrawContext context, int mouseX, int mouseY) {
+    private void renderList(GuiGraphics context, int mouseX, int mouseY) {
         int x = left + PAD / 2;
         int y = top + PAD;
         int w = LIST_WIDTH - PAD;
@@ -212,14 +212,14 @@ public class JobScreen extends Screen {
             } else if (hovered) {
                 context.fill(x, rowY, x + w, rowY + ROW_HEIGHT, PANEL_LIGHT);
             }
-            context.drawItem(iconOf(job), x + 2, rowY + 2);
-            Text name = job == current ? job.getName().copy().formatted(Formatting.GOLD) : job.getName();
-            context.drawTextWithShadow(textRenderer, net.minecraft.util.Language.getInstance().reorder(textRenderer.trimToWidth(name, w - 24)), x + 22, rowY + 6, 0xFFFFFF);
+            context.renderItem(iconOf(job), x + 2, rowY + 2);
+            Component name = job == current ? job.getName().copy().withStyle(ChatFormatting.GOLD) : job.getName();
+            context.drawString(font, net.minecraft.locale.Language.getInstance().getVisualOrder(font.substrByWidth(name, w - 24)), x + 22, rowY + 6, 0xFFFFFF);
         }
         context.disableScissor();
     }
 
-    private void renderDetail(DrawContext context) {
+    private void renderDetail(GuiGraphics context) {
         int x = left + LIST_WIDTH + PAD;
         int w = panelWidth - LIST_WIDTH - PAD * 2;
         int y = top + PAD;
@@ -228,13 +228,13 @@ public class JobScreen extends Screen {
         boolean isCurrent = selected == current;
 
         if (isCurrent && villager instanceof LivingEntity living) {
-            InventoryScreen.drawEntity(context, x + w - 16, y + 52, 24, 0, 0, living);
+            InventoryScreen.renderEntityInInventoryFollowsMouse(context, x + w - 16, y + 52, 24, 0, 0, living);
         }
-        context.drawItem(iconOf(selected), x, y);
-        context.drawTextWithShadow(textRenderer, selected.getName().copy().formatted(Formatting.BOLD), x + 20, y + 4, 0xFFFFFF);
+        context.renderItem(iconOf(selected), x, y);
+        context.drawString(font, selected.getName().copy().withStyle(ChatFormatting.BOLD), x + 20, y + 4, 0xFFFFFF);
         if (isCurrent) {
-            context.drawTextWithShadow(textRenderer, Text.translatable("job.mca_vie.current").formatted(Formatting.GOLD),
-                    x + 24 + textRenderer.getWidth(selected.getName().copy().formatted(Formatting.BOLD)), y + 4, 0xFFFFFF);
+            context.drawString(font, Component.translatable("job.mca_vie.current").withStyle(ChatFormatting.GOLD),
+                    x + 24 + font.width(selected.getName().copy().withStyle(ChatFormatting.BOLD)), y + 4, 0xFFFFFF);
         }
         y += 22;
 
@@ -249,23 +249,23 @@ public class JobScreen extends Screen {
         int contentTop = y;
 
         int textWidth = isCurrent ? w - 40 : w;
-        for (OrderedText line : textRenderer.wrapLines(Text.translatable("job.mca_vie.desc." + selected.id()), textWidth)) {
-            context.drawTextWithShadow(textRenderer, line, x, y, 0xD0D0D0);
+        for (FormattedCharSequence line : font.split(Component.translatable("job.mca_vie.desc." + selected.id()), textWidth)) {
+            context.drawString(font, line, x, y, 0xD0D0D0);
             y += 10;
         }
         y += 6;
 
         WorkstationBlock station = WorkBlocks.forJob(selected);
-        Text place = station != null
-                ? Text.translatable("job.mca_vie.workstation_label", station.getName().copy().formatted(Formatting.WHITE))
-                : Text.translatable("job.mca_vie.no_workstation_needed");
-        context.drawTextWithShadow(textRenderer, place.copy().formatted(Formatting.GRAY), x, y, 0xFFFFFF);
+        Component place = station != null
+                ? Component.translatable("job.mca_vie.workstation_label", station.getName().copy().withStyle(ChatFormatting.WHITE))
+                : Component.translatable("job.mca_vie.no_workstation_needed");
+        context.drawString(font, place.copy().withStyle(ChatFormatting.GRAY), x, y, 0xFFFFFF);
         y += 12;
         y = renderItems(context, x, y, "job.mca_vie.consumes", consumes(selected));
         y = renderItems(context, x, y, "job.mca_vie.produces", produces(selected));
         if (selected.isCraft()) {
-            context.drawTextWithShadow(textRenderer, Text.translatable("job.mca_vie.hours", WorkManager.START_HOUR, WorkManager.END_HOUR)
-                    .formatted(Formatting.GRAY), x, y, 0xFFFFFF);
+            context.drawString(font, Component.translatable("job.mca_vie.hours", WorkManager.START_HOUR, WorkManager.END_HOUR)
+                    .withStyle(ChatFormatting.GRAY), x, y, 0xFFFFFF);
             y += 14;
         }
 
@@ -284,40 +284,40 @@ public class JobScreen extends Screen {
         }
     }
 
-    private int renderItems(DrawContext context, int x, int y, String key, Item[] items) {
+    private int renderItems(GuiGraphics context, int x, int y, String key, Item[] items) {
         if (items.length == 0) {
             return y;
         }
-        Text label = Text.translatable(key).formatted(Formatting.GRAY);
-        context.drawTextWithShadow(textRenderer, label, x, y + 4, 0xFFFFFF);
-        int ix = x + textRenderer.getWidth(label) + 4;
+        Component label = Component.translatable(key).withStyle(ChatFormatting.GRAY);
+        context.drawString(font, label, x, y + 4, 0xFFFFFF);
+        int ix = x + font.width(label) + 4;
         for (Item item : items) {
-            context.drawItem(new ItemStack(item), ix, y);
+            context.renderItem(new ItemStack(item), ix, y);
             ix += 18;
         }
         return y + 18;
     }
 
-    private int renderProgress(DrawContext context, WorkClient.Info info, int x, int y, int w) {
+    private int renderProgress(GuiGraphics context, WorkClient.Info info, int x, int y, int w) {
         int level = Math.max(1, Math.min(5, info.level()));
-        Text levelName = Text.translatable("job.mca_vie.level." + level).formatted(Formatting.GOLD);
+        Component levelName = Component.translatable("job.mca_vie.level." + level).withStyle(ChatFormatting.GOLD);
         int next = WorkManager.nextLevelExperience(level);
         int from = WorkManager.levelExperience(level);
-        Text xpText = next < 0 ? Text.translatable("job.mca_vie.max_level")
-                : Text.translatable("job.mca_vie.level_xp", info.experience() - from, next - from);
-        context.drawTextWithShadow(textRenderer, levelName, x, y, 0xFFFFFF);
-        context.drawTextWithShadow(textRenderer, xpText.copy().formatted(Formatting.GRAY), x + w - textRenderer.getWidth(xpText), y, 0xFFFFFF);
+        Component xpText = next < 0 ? Component.translatable("job.mca_vie.max_level")
+                : Component.translatable("job.mca_vie.level_xp", info.experience() - from, next - from);
+        context.drawString(font, levelName, x, y, 0xFFFFFF);
+        context.drawString(font, xpText.copy().withStyle(ChatFormatting.GRAY), x + w - font.width(xpText), y, 0xFFFFFF);
         y += 11;
         float progress = next < 0 ? 1F : Math.max(0F, Math.min(1F, (info.experience() - from) / (float) Math.max(1, next - from)));
         context.fill(x, y, x + w, y + 5, 0xFF2A2A2A);
         context.fill(x, y, x + (int) (w * progress), y + 5, 0xFF7FD34E);
         y += 10;
-        context.drawTextWithShadow(textRenderer, Text.translatable("job.mca_vie.status_label", WorkClient.statusText(info)), x, y, 0xFFFFFF);
+        context.drawString(font, Component.translatable("job.mca_vie.status_label", WorkClient.statusText(info)), x, y, 0xFFFFFF);
         y += 11;
-        Text depot = Text.translatable(info.hasDepot() ? "job.mca_vie.has_depot" : "job.mca_vie.no_depot")
-                .formatted(info.hasDepot() ? Formatting.GREEN : Formatting.GOLD);
-        for (OrderedText line : textRenderer.wrapLines(depot, w)) {
-            context.drawTextWithShadow(textRenderer, line, x, y, 0xFFFFFF);
+        Component depot = Component.translatable(info.hasDepot() ? "job.mca_vie.has_depot" : "job.mca_vie.no_depot")
+                .withStyle(info.hasDepot() ? ChatFormatting.GREEN : ChatFormatting.GOLD);
+        for (FormattedCharSequence line : font.split(depot, w)) {
+            context.drawString(font, line, x, y, 0xFFFFFF);
             y += 10;
         }
         return y;
@@ -379,14 +379,14 @@ public class JobScreen extends Screen {
     }
 
     @Override
-    public void close() {
-        if (client != null) {
-            client.setScreen(parent);
+    public void onClose() {
+        if (minecraft != null) {
+            minecraft.setScreen(parent);
         }
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }

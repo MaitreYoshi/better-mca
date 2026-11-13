@@ -3,8 +3,7 @@ package com.maitreyoshi.mcavie.village;
 import net.mca.resources.Rank;
 import net.mca.resources.Tasks;
 import net.mca.server.world.data.Village;
-import net.minecraft.server.network.ServerPlayerEntity;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -30,8 +29,8 @@ public final class VillageRights {
     private static int ranksTick = -1;
     private static Object ranksServer;
 
-    public static Rank personalRank(Village village, ServerPlayerEntity player) {
-        int tick = player.getServer() == null ? -1 : player.getServer().getTicks();
+    public static Rank personalRank(Village village, ServerPlayer player) {
+        int tick = player.getServer() == null ? -1 : player.getServer().getTickCount();
         if (tick < 0) {
             return Tasks.getRank(village, player);
         }
@@ -40,11 +39,11 @@ public final class VillageRights {
             ranksTick = tick;
             ranksServer = player.getServer();
         }
-        return RANKS.computeIfAbsent(player.getUuid(), k -> new HashMap<>())
+        return RANKS.computeIfAbsent(player.getUUID(), k -> new HashMap<>())
                 .computeIfAbsent(village.getId(), k -> Tasks.getRank(village, player));
     }
 
-    public static boolean hasRights(Village village, ServerPlayerEntity player) {
+    public static boolean hasRights(Village village, ServerPlayer player) {
         return personalRank(village, player).isAtLeast(RIGHTS);
     }
 

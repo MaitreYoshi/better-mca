@@ -1,26 +1,25 @@
 package com.maitreyoshi.mcavie.village;
 
 import net.mca.Config;
-import net.minecraft.block.AbstractGlassBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.DoorBlock;
-import net.minecraft.block.FenceBlock;
-import net.minecraft.block.FluidBlock;
-import net.minecraft.block.SlabBlock;
-import net.minecraft.block.StairsBlock;
-import net.minecraft.block.TrapdoorBlock;
-import net.minecraft.block.WallBlock;
-import net.minecraft.block.StainedGlassPaneBlock;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.World;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.AbstractGlassBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.FenceBlock;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.StainedGlassPaneBlock;
+import net.minecraft.world.level.block.StairBlock;
+import net.minecraft.world.level.block.TrapDoorBlock;
+import net.minecraft.world.level.block.WallBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import java.util.ArrayDeque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,14 +45,14 @@ public enum BuildingQuality {
         return list != null && list.size() > ordinal() ? list.get(ordinal()) : 1;
     }
 
-    public MutableText getName() {
-        return Text.translatable("gui.mca_vie.quality." + name().toLowerCase(java.util.Locale.ROOT));
+    public MutableComponent getName() {
+        return Component.translatable("gui.mca_vie.quality." + name().toLowerCase(java.util.Locale.ROOT));
     }
 
     // storeys = niveaux comptés, rez-de-chaussée inclus (1 = rez-de-chaussée seul)
     public record Measure(int lights, int windows, int decor, int floor, int storeys) {
-        public NbtCompound toNbt() {
-            NbtCompound nbt = new NbtCompound();
+        public CompoundTag toNbt() {
+            CompoundTag nbt = new CompoundTag();
             nbt.putInt("lights", lights);
             nbt.putInt("windows", windows);
             nbt.putInt("decor", decor);
@@ -62,7 +61,7 @@ public enum BuildingQuality {
             return nbt;
         }
 
-        public static Measure fromNbt(NbtCompound nbt) {
+        public static Measure fromNbt(CompoundTag nbt) {
             return new Measure(nbt.getInt("lights"), nbt.getInt("windows"), nbt.getInt("decor"), nbt.getInt("floor"), nbt.getInt("storeys"));
         }
     }
@@ -94,7 +93,7 @@ public enum BuildingQuality {
         return CORRECT;
     }
 
-    public static Measure measure(World world, BlockPos source, boolean strictScan) {
+    public static Measure measure(Level world, BlockPos source, boolean strictScan) {
         int maxSize = Config.getInstance().maxBuildingSize;
         int maxRadius = Config.getInstance().maxBuildingRadius;
 
@@ -115,11 +114,11 @@ public enum BuildingQuality {
             if (!isDoor && isFloor(world, p, here)) {
                 floor.add(p);
             }
-            if (p.getManhattanDistance(source) >= maxRadius) {
+            if (p.distManhattan(source) >= maxRadius) {
                 continue;
             }
             for (Direction d : Direction.values()) {
-                BlockPos n = p.offset(d);
+                BlockPos n = p.relative(d);
                 if (!done.add(n)) {
                     continue;
                 }
@@ -149,10 +148,10 @@ public enum BuildingQuality {
         Set<Block> decor = new HashSet<>();
         for (BlockPos pos : hull) {
             BlockState state = world.getBlockState(pos);
-            if (state.getBlock() instanceof FluidBlock || state.isIn(BlockTags.FIRE) || state.isIn(BlockTags.LEAVES) || isNatural(state)) {
+            if (state.getBlock() instanceof LiquidBlock || state.is(BlockTags.FIRE) || state.is(BlockTags.LEAVES) || isNatural(state)) {
                 continue;
             }
-            if (state.getLuminance() > 0) {
+            if (state.getLightEmission() > 0) {
                 lights++;
             }
             if (isWindow(state)) {
@@ -161,7 +160,7 @@ public enum BuildingQuality {
                 if (hasRoof(world, pos, roofCache)) {
                     decor.add(state.getBlock());
                 }
-            } else if (!state.isOpaqueFullCube(world, pos) || state.hasBlockEntity()) {
+            } else if (!state.isSolidRender(world, pos) || state.hasBlockEntity()) {
                 decor.add(state.getBlock());
             } else {
                 fullBlocks.merge(state.getBlock(), 1, Integer::sum);
@@ -181,14 +180,14 @@ public enum BuildingQuality {
 
     private static boolean isClimbOrStep(BlockState state) {
         Block block = state.getBlock();
-        return state.isIn(BlockTags.CLIMBABLE) || block instanceof StairsBlock || block instanceof TrapdoorBlock;
+        return state.is(BlockTags.CLIMBABLE) || block instanceof StairBlock || block instanceof TrapDoorBlock;
     }
 
-    private static boolean isFloor(World world, BlockPos pos, BlockState state) {
+    private static boolean isFloor(Level world, BlockPos pos, BlockState state) {
         if (!state.isAir()) {
             return false;
         }
-        BlockPos below = pos.down();
+        BlockPos below = pos.below();
         BlockState ground = world.getBlockState(below);
         return !isPassable(ground) && !ground.getCollisionShape(world, below).isEmpty();
     }
@@ -211,18 +210,18 @@ public enum BuildingQuality {
 
     public static boolean isWindow(BlockState state) {
         Block block = state.getBlock();
-        return block instanceof AbstractGlassBlock || block instanceof StainedGlassPaneBlock || state.isOf(Blocks.GLASS_PANE);
+        return block instanceof AbstractGlassBlock || block instanceof StainedGlassPaneBlock || state.is(Blocks.GLASS_PANE);
     }
 
     private static boolean isNatural(BlockState state) {
-        return state.isReplaceable() || state.isIn(BlockTags.DIRT) || state.isIn(BlockTags.FLOWERS) || state.isIn(BlockTags.SAPLINGS)
-                || state.isIn(BlockTags.SAND) || state.isIn(BlockTags.BASE_STONE_OVERWORLD) || state.isOf(Blocks.DIRT_PATH)
-                || state.isOf(Blocks.GRAVEL) || state.isOf(Blocks.FARMLAND);
+        return state.canBeReplaced() || state.is(BlockTags.DIRT) || state.is(BlockTags.FLOWERS) || state.is(BlockTags.SAPLINGS)
+                || state.is(BlockTags.SAND) || state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(Blocks.DIRT_PATH)
+                || state.is(Blocks.GRAVEL) || state.is(Blocks.FARMLAND);
     }
 
     private static boolean isStructural(BlockState state) {
         Block block = state.getBlock();
-        return block instanceof StairsBlock || block instanceof SlabBlock || block instanceof WallBlock || block instanceof FenceBlock;
+        return block instanceof StairBlock || block instanceof SlabBlock || block instanceof WallBlock || block instanceof FenceBlock;
     }
 
     private static int countWindows(Set<BlockPos> glass) {
@@ -237,9 +236,9 @@ public enum BuildingQuality {
             queue.add(start);
             while (!queue.isEmpty()) {
                 BlockPos p = queue.removeLast();
-                for (BlockPos n : BlockPos.iterate(p.add(-1, -1, -1), p.add(1, 1, 1))) {
-                    if (glass.contains(n) && seen.add(n.toImmutable())) {
-                        queue.add(n.toImmutable());
+                for (BlockPos n : BlockPos.betweenClosed(p.offset(-1, -1, -1), p.offset(1, 1, 1))) {
+                    if (glass.contains(n) && seen.add(n.immutable())) {
+                        queue.add(n.immutable());
                     }
                 }
             }
@@ -247,7 +246,7 @@ public enum BuildingQuality {
         return windows;
     }
 
-    private static boolean hasRoof(World world, BlockPos pos, Map<BlockPos, Boolean> cache) {
+    private static boolean hasRoof(Level world, BlockPos pos, Map<BlockPos, Boolean> cache) {
         Boolean cached = cache.get(pos);
         if (cached != null) {
             return cached;
@@ -257,7 +256,7 @@ public enum BuildingQuality {
         column.add(pos);
         BlockPos p = pos;
         for (int i = 0; i < ROOF_SCAN_HEIGHT; i++) {
-            p = p.up();
+            p = p.above();
             Boolean known = cache.get(p);
             if (known != null) {
                 roof = known;
@@ -265,7 +264,7 @@ public enum BuildingQuality {
             }
             BlockState state = world.getBlockState(p);
             if (!isPassable(state)) {
-                roof =!state.isIn(BlockTags.LEAVES);
+                roof =!state.is(BlockTags.LEAVES);
                 break;
             }
             column.add(p);

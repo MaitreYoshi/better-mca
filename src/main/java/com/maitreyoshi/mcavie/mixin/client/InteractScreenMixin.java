@@ -5,8 +5,6 @@ import com.maitreyoshi.mcavie.client.BirthDayHolder;
 import com.maitreyoshi.mcavie.client.HappinessDisplay;
 import com.maitreyoshi.mcavie.client.InteractScreenHolder;
 import com.maitreyoshi.mcavie.work.client.WorkClient;
-import net.minecraft.entity.Entity;
-import net.minecraft.text.MutableText;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import com.maitreyoshi.mcavie.client.MCAVieClient;
 import com.maitreyoshi.mcavie.life.LifeCycle;
@@ -14,11 +12,13 @@ import com.maitreyoshi.mcavie.social.client.RelationsClient;
 import net.mca.client.gui.InteractScreen;
 import net.mca.entity.VillagerLike;
 import net.mca.entity.ai.relationship.Gender;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.entity.Entity;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -46,7 +46,7 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
     private Long mcavie$birthDay;
 
     @Unique
-    private Text mcavie$birthLine;
+    private Component mcavie$birthLine;
 
     @Unique
     private long mcavie$birthLineDay;
@@ -58,16 +58,16 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
     private HappinessDisplay.Entry mcavie$menuEntry;
 
     @Unique
-    private Text mcavie$menuLine;
+    private Component mcavie$menuLine;
 
-    private InteractScreenMixin(Text title) {
+    private InteractScreenMixin(Component title) {
         super(title);
     }
 
     @Inject(method = "init", at = @At("TAIL"))
     private void mcavie$requestBirthDay(CallbackInfo ci) {
-        MCAVieClient.requestBirthDay(villager.asEntity().getUuid());
-        RelationsClient.request(villager.asEntity().getUuid());
+        MCAVieClient.requestBirthDay(villager.asEntity().getUUID());
+        RelationsClient.request(villager.asEntity().getUUID());
     }
 
     @ModifyConstant(method = "drawTextPopups", constant = @Constant(intValue = 4), remap = false,
@@ -91,8 +91,8 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
     }
 
     @Redirect(method = "drawTextPopups", remap = false,
-            at = @At(value = "INVOKE", target = "Lnet/mca/entity/VillagerLike;getProfessionText()Lnet/minecraft/text/MutableText;", remap = true))
-    private MutableText mcavie$showAddonJob(VillagerLike<?> instance) {
+            at = @At(value = "INVOKE", target = "Lnet/mca/entity/VillagerLike;getProfessionText()Lnet/minecraft/network/chat/MutableComponent;", remap = true))
+    private MutableComponent mcavie$showAddonJob(VillagerLike<?> instance) {
         WorkClient.Info job = mcavie$job();
         return job == null ? instance.getProfessionText() : WorkClient.jobLine(job);
     }
@@ -104,7 +104,7 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
 
     @Unique
     private RelationsClient.Entry mcavie$bestFriend() {
-        return RelationsClient.bestFriend(villager.asEntity().getUuid());
+        return RelationsClient.bestFriend(villager.asEntity().getUUID());
     }
 
     @Unique
@@ -114,9 +114,9 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
 
     @Inject(method = "drawTextPopups", remap = false,
             at = @At(value = "INVOKE", target = "Lnet/mca/client/gui/InteractScreen;hoveringOverIcon(Ljava/lang/String;)Z", ordinal = 0))
-    private void mcavie$drawBirthDay(DrawContext context, CallbackInfo ci) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.world == null) {
+    private void mcavie$drawBirthDay(GuiGraphics context, CallbackInfo ci) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.level == null) {
             return;
         }
 
@@ -127,51 +127,51 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
                 mcavie$menuEntry = happiness;
                 mcavie$menuLine = HappinessDisplay.menuLine(happiness);
             }
-            context.drawTooltip(textRenderer, mcavie$menuLine, 10, 30 + ROW_HEIGHT * row);
+            context.renderTooltip(font, mcavie$menuLine, 10, 30 + ROW_HEIGHT * row);
         }
 
         RelationsClient.Entry friend = mcavie$bestFriend();
         if (friend != null) {
             int row = 4 + (mcavie$birthDay == null ? 0 : 1) + (happiness == null ? 0 : 1);
-            Text line = Text.translatable(friend.female() ? "gui.mca_vie.relations.best_friend.female" : "gui.mca_vie.relations.best_friend",
-                    Text.literal(friend.name()).formatted(Formatting.GOLD)).formatted(Formatting.WHITE);
-            context.drawTooltip(textRenderer, line, 10, 30 + ROW_HEIGHT * row);
+            Component line = Component.translatable(friend.female() ? "gui.mca_vie.relations.best_friend.female" : "gui.mca_vie.relations.best_friend",
+                    Component.literal(friend.name()).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.WHITE);
+            context.renderTooltip(font, line, 10, 30 + ROW_HEIGHT * row);
         }
 
         if (mcavie$birthDay == null) {
             return;
         }
         long birth = mcavie$birthDay;
-        long today = WorldCalendar.exactCalendarDay(client.world);
+        long today = WorldCalendar.exactCalendarDay(client.level);
         if (mcavie$birthLine == null || mcavie$birthLineDay != birth || mcavie$birthLineToday != today) {
             mcavie$birthLine = mcavie$createBirthLine(birth, today);
             mcavie$birthLineDay = birth;
             mcavie$birthLineToday = today;
         }
-        context.drawTooltip(textRenderer, mcavie$birthLine, 10, 30 + ROW_HEIGHT * 4);
+        context.renderTooltip(font, mcavie$birthLine, 10, 30 + ROW_HEIGHT * 4);
     }
 
     @Unique
-    private Text mcavie$createBirthLine(long birth, long today) {
+    private Component mcavie$createBirthLine(long birth, long today) {
         LocalDate date = WorldCalendar.dateOfDay(birth);
         // today = jour exact du calendrier qui défile : l'âge change le jour de l'anniversaire, même en vitesse « 1 an »
         int age = com.maitreyoshi.mcavie.tree.client.TreeTexts.ageBetween(null, birth, today);
 
-        Text day = date.getDayOfMonth() == 1
-                ? Text.translatable("calendar.mca_vie.first_day")
-                : Text.literal(String.valueOf(date.getDayOfMonth()));
+        Component day = date.getDayOfMonth() == 1
+                ? Component.translatable("calendar.mca_vie.first_day")
+                : Component.literal(String.valueOf(date.getDayOfMonth()));
         String key = villager.getGenetics().getGender() == Gender.FEMALE ? "gui.mca_vie.born_female" : "gui.mca_vie.born_male";
-        return Text.translatable(key,
+        return Component.translatable(key,
                 day,
-                Text.translatable("calendar.mca_vie.month." + date.getMonthValue()),
+                Component.translatable("calendar.mca_vie.month." + date.getMonthValue()),
                 WorldCalendar.displayYearOfDay(birth),
-                Text.translatable(age <= 1 ? "gui.mca_vie.age_one" : "gui.mca_vie.age", age)
-        ).formatted(Formatting.WHITE);
+                Component.translatable(age <= 1 ? "gui.mca_vie.age_one" : "gui.mca_vie.age", age)
+        ).withStyle(ChatFormatting.WHITE);
     }
 
     @Override
     public UUID mcavie$getVillagerUuid() {
-        return villager.asEntity().getUuid();
+        return villager.asEntity().getUUID();
     }
 
     @Override

@@ -7,19 +7,18 @@ import net.mca.entity.ai.MoveState;
 import net.mca.server.world.data.Building;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.Registries;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.Container;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
 import java.time.DayOfWeek;
 import java.util.Iterator;
 import java.util.List;
@@ -31,13 +30,13 @@ public final class VillageMarket {
     private VillageMarket() {
     }
 
-    public static boolean isMarketHours(World world) {
+    public static boolean isMarketHours(Level world) {
         VillageConfig config = VillageConfig.get();
         WorldCalendar.CalendarDate date = WorldCalendar.now(world);
         return WorldCalendar.rhythmDay(date) == DayOfWeek.of(config.marketDayOfWeek) && date.hour() >= config.marketStartHour && date.hour() < config.marketEndHour;
     }
 
-    public static long marketWeek(World world) {
+    public static long marketWeek(Level world) {
         VillageConfig config = VillageConfig.get();
         WorldCalendar.CalendarDate date = WorldCalendar.now(world);
         long offset = config.marketDayOfWeek - 1;
@@ -46,14 +45,14 @@ public final class VillageMarket {
         return ended ? week : week - 1;
     }
 
-    public static boolean isMarketDayFor(VillagerEntityMCA villager, ServerWorld world) {
+    public static boolean isMarketDayFor(VillagerEntityMCA villager, ServerLevel world) {
         return isMarketHours(world) && VillageDecrees.residentVillage(villager).map(v -> VillageState.of(v).marketActive).orElse(false);
     }
 
     /** Commandes et ventes automatiques depuis l'Entrepôt, désactivées : le Marché est un lieu de rassemblement. */
     public static final boolean AUTOMATIC_TRADE = false;
 
-    public static boolean tick(Village village, ServerWorld world, VillageState state, Prestige.Result result) {
+    public static boolean tick(Village village, ServerLevel world, VillageState state, Prestige.Result result) {
         boolean dirty = false;
         boolean active = Prestige.hasActive(result, village, "market") && state.economyActive;
         if (active != state.marketActive) {
@@ -94,9 +93,9 @@ public final class VillageMarket {
             }
             return dirty;
         }
-        boolean refresh = (world.getTime() / 100) % 12 == village.getId() % 12;
+        boolean refresh = (world.getGameTime() / 100) % 12 == village.getId() % 12;
         boolean newWeek = state.lastMarketWeek != VillageState.NONE && week > state.lastMarketWeek;
-        List<Inventory> storage = refresh || newWeek ? VillageNature.storage(village, world, result).inventories() : List.of();
+        List<Container> storage = refresh || newWeek ? VillageNature.storage(village, world, result).inventories() : List.of();
         if (refresh && !storage.isEmpty() && refreshStock(state, storage)) {
             dirty = true;
         }
@@ -129,17 +128,17 @@ public final class VillageMarket {
         return changed;
     }
 
-    public static void devHold(Village village, ServerWorld world) {
+    public static void devHold(Village village, ServerLevel world) {
         if (!AUTOMATIC_TRADE) { VillageMarketExtras.sellStalls(village, world, VillageState.of(village)); village.markDirty(); return; }
         VillageState state = VillageState.of(village);
         Prestige.Result result = Prestige.evaluate(village, state.rank);
-        List<Inventory> storage = VillageNature.hasStorage(village, result) ? VillageNature.storage(village, world, result).inventories() : List.of();
+        List<Container> storage = VillageNature.hasStorage(village, result) ? VillageNature.storage(village, world, result).inventories() : List.of();
         hold(village, world, state, storage);
         refreshStock(state, storage);
         village.markDirty();
     }
 
-    private static void gather(Village village, ServerWorld world) {
+    private static void gather(Village village, ServerLevel world) {
         List<Building> markets = village.getBuildingsOfType("market").toList();
         if (markets.isEmpty()) {
             return;
@@ -151,24 +150,24 @@ public final class VillageMarket {
         }
         for (java.util.UUID uuid : village.getResidentsUUIDs().toList()) {
             if (!(world.getEntity(uuid) instanceof VillagerEntityMCA villager) || villager.isGuard() || villager.isSleeping() || villager.isBaby()
-                    || villager.hasVehicle() || villager.getVillagerBrain().getMoveState() != MoveState.MOVE || villager.getVillagerBrain().isPanicking()
+                    || villager.isPassenger() || villager.getVillagerBrain().getMoveState() != MoveState.MOVE || villager.getVillagerBrain().isPanicking()
                     || villager.getVillagerBrain().getCurrentJob() != net.mca.entity.ai.Chore.NONE
                     || VillageJustice.isImprisoned(village, uuid)) {
                 continue;
             }
-            if (!market.containsPos(villager.getBlockPos())) {
+            if (!market.containsPos(villager.blockPosition())) {
                 villager.moveTowards(stalls.get(world.random.nextInt(stalls.size())), 0.6f, 2);
             }
         }
     }
 
-    private static boolean refreshStock(VillageState state, List<Inventory> storage) {
+    private static boolean refreshStock(VillageState state, List<Container> storage) {
         Map<String, Integer> stock = new TreeMap<>();
-        for (Inventory inventory : storage) {
-            for (int slot = 0; slot < inventory.size(); slot++) {
-                ItemStack stack = inventory.getStack(slot);
+        for (Container inventory : storage) {
+            for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+                ItemStack stack = inventory.getItem(slot);
                 if (VillageNature.unitsPerEmerald(stack) > 0) {
-                    stock.merge(Registries.ITEM.getId(stack.getItem()).toString(), stack.getCount(), Integer::sum);
+                    stock.merge(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString(), stack.getCount(), Integer::sum);
                 }
             }
         }
@@ -180,14 +179,14 @@ public final class VillageMarket {
         return true;
     }
 
-    private static void hold(Village village, ServerWorld world, VillageState state, List<Inventory> storage) {
+    private static void hold(Village village, ServerLevel world, VillageState state, List<Container> storage) {
         VillageConfig config = VillageConfig.get();
         long orderIncome = 0;
         for (VillageState.Order order : state.orders) {
             if (order.ready) {
                 continue;
             }
-            Item item = Registries.ITEM.get(Identifier.tryParse(order.item));
+            Item item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(order.item));
             int units = order.units;
             int lots = 0;
             while (units > 0 && lots < order.lots && count(storage, item) >= units) {
@@ -204,9 +203,9 @@ public final class VillageMarket {
 
         double budget = village.getPopulation() * config.marketSpendPerResident;
         double sales = 0;
-        for (Inventory inventory : storage) {
-            for (int slot = 0; slot < inventory.size() && sales + 1e-9 < budget; slot++) {
-                ItemStack stack = inventory.getStack(slot);
+        for (Container inventory : storage) {
+            for (int slot = 0; slot < inventory.getContainerSize() && sales + 1e-9 < budget; slot++) {
+                ItemStack stack = inventory.getItem(slot);
                 int units = VillageNature.unitsPerEmerald(stack);
                 if (units == 0) {
                     continue;
@@ -215,8 +214,8 @@ public final class VillageMarket {
                 if (sold <= 0) {
                     break;
                 }
-                stack.decrement(sold);
-                inventory.markDirty();
+                stack.shrink(sold);
+                inventory.setChanged();
                 sales += sold * config.marketSalePrice / units;
             }
         }
@@ -230,21 +229,21 @@ public final class VillageMarket {
         if (income > 0 || orderIncome > 0) {
             village.getResidentsUUIDs().toList().forEach(uuid -> Wellbeing.addHappiness(world, uuid, config.marketHappiness));
         }
-        VillageServer.notify(world, village, Text.translatable("msg.mca_vie.market.held", village.getName(), income, orderIncome, state.treasury)
-                .formatted(Formatting.GOLD));
-        for (ServerPlayerEntity player : world.getPlayers()) {
-            if (state.orders.stream().anyMatch(o -> o.ready && o.player.equals(player.getUuid()))) {
-                player.sendMessage(Text.translatable("msg.mca_vie.market.ready", village.getName()).formatted(Formatting.GREEN), false);
+        VillageServer.notify(world, village, Component.translatable("msg.mca_vie.market.held", village.getName(), income, orderIncome, state.treasury)
+                .withStyle(ChatFormatting.GOLD));
+        for (ServerPlayer player : world.players()) {
+            if (state.orders.stream().anyMatch(o -> o.ready && o.player.equals(player.getUUID()))) {
+                player.displayClientMessage(Component.translatable("msg.mca_vie.market.ready", village.getName()).withStyle(ChatFormatting.GREEN), false);
             }
         }
     }
 
-    private static int count(List<Inventory> storage, Item item) {
+    private static int count(List<Container> storage, Item item) {
         int total = 0;
-        for (Inventory inventory : storage) {
-            for (int slot = 0; slot < inventory.size(); slot++) {
-                ItemStack stack = inventory.getStack(slot);
-                if (stack.isOf(item) && !stack.hasNbt()) {
+        for (Container inventory : storage) {
+            for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+                ItemStack stack = inventory.getItem(slot);
+                if (stack.is(item) && !stack.hasTag()) {
                     total += stack.getCount();
                 }
             }
@@ -252,22 +251,22 @@ public final class VillageMarket {
         return total;
     }
 
-    private static void take(List<Inventory> storage, Item item, int amount) {
-        for (Inventory inventory : storage) {
-            for (int slot = 0; slot < inventory.size() && amount > 0; slot++) {
-                ItemStack stack = inventory.getStack(slot);
-                if (stack.isOf(item) && !stack.hasNbt()) {
+    private static void take(List<Container> storage, Item item, int amount) {
+        for (Container inventory : storage) {
+            for (int slot = 0; slot < inventory.getContainerSize() && amount > 0; slot++) {
+                ItemStack stack = inventory.getItem(slot);
+                if (stack.is(item) && !stack.hasTag()) {
                     int take = Math.min(amount, stack.getCount());
-                    stack.decrement(take);
-                    inventory.markDirty();
+                    stack.shrink(take);
+                    inventory.setChanged();
                     amount -= take;
                 }
             }
         }
     }
 
-    public static void order(ServerPlayerEntity player, int villageId, String itemId, int lots) {
-        Optional<Village> found = VillageManager.get(player.getServerWorld()).getOrEmpty(villageId);
+    public static void order(ServerPlayer player, int villageId, String itemId, int lots) {
+        Optional<Village> found = VillageManager.get(player.serverLevel()).getOrEmpty(villageId);
         if (found.isEmpty()) {
             return;
         }
@@ -275,26 +274,26 @@ public final class VillageMarket {
         VillageState state = VillageState.of(village);
         VillageConfig config = VillageConfig.get();
         if (!state.marketActive) {
-            player.sendMessage(Text.translatable("msg.mca_vie.market.inactive"), true);
+            player.displayClientMessage(Component.translatable("msg.mca_vie.market.inactive"), true);
             return;
         }
         if (config.unitsPerEmerald(itemId) == 0 || !village.isWithinBorder(player)) {
-            player.sendMessage(Text.translatable("msg.mca_vie.market.unknown"), true);
+            player.displayClientMessage(Component.translatable("msg.mca_vie.market.unknown"), true);
             return;
         }
-        long pending = state.orders.stream().filter(o -> o.player.equals(player.getUuid())).count();
+        long pending = state.orders.stream().filter(o -> o.player.equals(player.getUUID())).count();
         if (pending >= config.maxOrdersPerPlayer) {
-            player.sendMessage(Text.translatable("msg.mca_vie.market.too_many", config.maxOrdersPerPlayer), true);
+            player.displayClientMessage(Component.translatable("msg.mca_vie.market.too_many", config.maxOrdersPerPlayer), true);
             return;
         }
         lots = Math.max(1, Math.min(config.maxLotsPerOrder, lots));
         int price = lots * config.orderLotPrice;
         if (!takeEmeralds(player, price)) {
-            player.sendMessage(Text.translatable("msg.mca_vie.market.no_money", price), true);
+            player.displayClientMessage(Component.translatable("msg.mca_vie.market.no_money", price), true);
             return;
         }
         VillageState.Order order = new VillageState.Order();
-        order.player = player.getUuid();
+        order.player = player.getUUID();
         order.playerName = player.getName().getString();
         order.item = itemId;
         order.lots = lots;
@@ -302,12 +301,12 @@ public final class VillageMarket {
         order.paid = price;
         state.orders.add(order);
         village.markDirty();
-        player.sendMessage(Text.translatable("msg.mca_vie.market.ordered", lots * config.unitsPerEmerald(itemId),
-                Registries.ITEM.get(Identifier.tryParse(itemId)).getName(), price), true);
+        player.displayClientMessage(Component.translatable("msg.mca_vie.market.ordered", lots * config.unitsPerEmerald(itemId),
+                BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(itemId)).getDescription(), price), true);
     }
 
-    public static void collect(ServerPlayerEntity player, int villageId) {
-        VillageManager.get(player.getServerWorld()).getOrEmpty(villageId).ifPresent(village -> {
+    public static void collect(ServerPlayer player, int villageId) {
+        VillageManager.get(player.serverLevel()).getOrEmpty(villageId).ifPresent(village -> {
             if (!village.isWithinBorder(player)) {
                 return;
             }
@@ -315,50 +314,50 @@ public final class VillageMarket {
             int given = 0;
             for (Iterator<VillageState.Order> it = state.orders.iterator(); it.hasNext(); ) {
                 VillageState.Order order = it.next();
-                if (!order.ready || !order.player.equals(player.getUuid())) {
+                if (!order.ready || !order.player.equals(player.getUUID())) {
                     continue;
                 }
-                give(player, Registries.ITEM.get(Identifier.tryParse(order.item)), order.delivered);
+                give(player, BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(order.item)), order.delivered);
                 give(player, Items.EMERALD, order.refund);
                 it.remove();
                 given++;
             }
             if (given > 0) {
                 village.markDirty();
-                player.sendMessage(Text.translatable("msg.mca_vie.market.collected", given), true);
+                player.displayClientMessage(Component.translatable("msg.mca_vie.market.collected", given), true);
             }
         });
     }
 
-    private static void give(ServerPlayerEntity player, Item item, int count) {
+    private static void give(ServerPlayer player, Item item, int count) {
         while (count > 0) {
-            int stack = Math.min(count, item.getMaxCount());
-            player.getInventory().offerOrDrop(new ItemStack(item, stack));
+            int stack = Math.min(count, item.getMaxStackSize());
+            player.getInventory().placeItemBackInInventory(new ItemStack(item, stack));
             count -= stack;
         }
     }
 
-    private static boolean takeEmeralds(ServerPlayerEntity player, int amount) {
-        net.minecraft.entity.player.PlayerInventory inventory = player.getInventory();
+    private static boolean takeEmeralds(ServerPlayer player, int amount) {
+        net.minecraft.world.entity.player.Inventory inventory = player.getInventory();
         int available = 0;
-        for (int slot = 0; slot < inventory.size(); slot++) {
-            ItemStack stack = inventory.getStack(slot);
-            if (stack.isOf(Items.EMERALD) && !stack.hasNbt()) {
+        for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (stack.is(Items.EMERALD) && !stack.hasTag()) {
                 available += stack.getCount();
             }
         }
         if (available < amount) {
             return false;
         }
-        for (int slot = 0; slot < inventory.size() && amount > 0; slot++) {
-            ItemStack stack = inventory.getStack(slot);
-            if (stack.isOf(Items.EMERALD) && !stack.hasNbt()) {
+        for (int slot = 0; slot < inventory.getContainerSize() && amount > 0; slot++) {
+            ItemStack stack = inventory.getItem(slot);
+            if (stack.is(Items.EMERALD) && !stack.hasTag()) {
                 int take = Math.min(amount, stack.getCount());
-                stack.decrement(take);
+                stack.shrink(take);
                 amount -= take;
             }
         }
-        inventory.markDirty();
+        inventory.setChanged();
         return true;
     }
 }

@@ -10,9 +10,9 @@ import com.maitreyoshi.mcavie.social.Social;
 import com.maitreyoshi.mcavie.social.SocialChat;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -39,7 +39,7 @@ public abstract class VillagerEntityMCAMixin implements AgeHolder {
     @Inject(method = "tick", at = @At("TAIL"))
     private void mcavie$checkSurname(CallbackInfo ci) {
         VillagerEntityMCA self = (VillagerEntityMCA) (Object) this;
-        if (self.getWorld().isClient || self.isDead()) {
+        if (self.level().isClientSide || self.isDeadOrDying()) {
             return;
         }
         WorkManager.keepWorking(self);
@@ -62,29 +62,29 @@ public abstract class VillagerEntityMCAMixin implements AgeHolder {
     }
 
     @Inject(method = "convertTo", at = @At("HEAD"))
-    private void mcavie$zombified(net.minecraft.entity.EntityType<?> type, boolean keepInventory, CallbackInfoReturnable<?> cir) {
+    private void mcavie$zombified(net.minecraft.world.entity.EntityType<?> type, boolean keepInventory, CallbackInfoReturnable<?> cir) {
         VillagerEntityMCA self = (VillagerEntityMCA) (Object) this;
-        if (type == net.minecraft.entity.EntityType.ZOMBIE_VILLAGER && self.getWorld() instanceof ServerWorld world) {
+        if (type == net.minecraft.world.entity.EntityType.ZOMBIE_VILLAGER && self.level() instanceof ServerLevel world) {
             com.maitreyoshi.mcavie.village.CivilRegistry.zombified(self, world);
-            com.maitreyoshi.mcavie.life.LifeRegistry.get(world.getServer()).setZombified(self.getUuid(),
+            com.maitreyoshi.mcavie.life.LifeRegistry.get(world.getServer()).setZombified(self.getUUID(),
                     com.maitreyoshi.mcavie.calendar.WorldCalendar.now(world).dayIndex());
-            WorkManager.forget(self.getUuid());
+            WorkManager.forget(self.getUUID());
         }
     }
 
-    @Inject(method = "damage", at = @At("RETURN"))
+    @Inject(method = "hurt", at = @At("RETURN"))
     private void mcavie$hurtFeelings(DamageSource source, float amount, CallbackInfoReturnable<Boolean> cir) {
         VillagerEntityMCA self = (VillagerEntityMCA) (Object) this;
-        if (cir.getReturnValueZ() && amount > 0 && source.getAttacker() != null && self.isAlive()
-                && self.getWorld() instanceof ServerWorld world) {
-            Wellbeing.addHappiness(world, self.getUuid(), source.getAttacker() instanceof PlayerEntity ? Wellbeing.HIT_BY_PLAYER : Wellbeing.HIT);
-            if (source.getAttacker() instanceof VillagerEntityMCA attacker) {
-                Social.hit(world, self.getUuid(), attacker.getUuid());
+        if (cir.getReturnValueZ() && amount > 0 && source.getEntity() != null && self.isAlive()
+                && self.level() instanceof ServerLevel world) {
+            Wellbeing.addHappiness(world, self.getUUID(), source.getEntity() instanceof Player ? Wellbeing.HIT_BY_PLAYER : Wellbeing.HIT);
+            if (source.getEntity() instanceof VillagerEntityMCA attacker) {
+                Social.hit(world, self.getUUID(), attacker.getUUID());
             }
         }
     }
 
-    @Inject(method = "getSoundPitch", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "getVoicePitch", at = @At("RETURN"), cancellable = true)
     private void mcavie$olderVoice(CallbackInfoReturnable<Float> cir) {
         float drop = Aging.voicePitchDrop((VillagerEntityMCA) (Object) this);
         if (drop > 0) {

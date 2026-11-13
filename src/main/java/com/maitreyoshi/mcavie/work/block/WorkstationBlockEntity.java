@@ -1,65 +1,65 @@
 package com.maitreyoshi.mcavie.work.block;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.LootableContainerBlockEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.inventory.Inventories;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.screen.GenericContainerScreenHandler;
-import net.minecraft.screen.ScreenHandler;
-import net.minecraft.text.Text;
-import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.NonNullList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.ContainerHelper;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
-public class WorkstationBlockEntity extends LootableContainerBlockEntity {
+public class WorkstationBlockEntity extends RandomizableContainerBlockEntity {
     private static final int SIZE = 27;
 
-    private DefaultedList<ItemStack> items = DefaultedList.ofSize(SIZE, ItemStack.EMPTY);
+    private NonNullList<ItemStack> items = NonNullList.withSize(SIZE, ItemStack.EMPTY);
 
     public WorkstationBlockEntity(BlockPos pos, BlockState state) {
         super(WorkBlocks.WORKSTATION_ENTITY, pos, state);
     }
 
     @Override
-    protected DefaultedList<ItemStack> getInvStackList() {
+    protected NonNullList<ItemStack> getItems() {
         return items;
     }
 
     @Override
-    protected void setInvStackList(DefaultedList<ItemStack> list) {
+    protected void setItems(NonNullList<ItemStack> list) {
         items = list;
     }
 
     @Override
-    protected Text getContainerName() {
-        return getCachedState().getBlock().getName();
+    protected Component getDefaultName() {
+        return getBlockState().getBlock().getName();
     }
 
     @Override
-    protected ScreenHandler createScreenHandler(int syncId, PlayerInventory playerInventory) {
-        return GenericContainerScreenHandler.createGeneric9x3(syncId, playerInventory, this);
+    protected AbstractContainerMenu createMenu(int syncId, Inventory playerInventory) {
+        return ChestMenu.threeRows(syncId, playerInventory, this);
     }
 
     @Override
-    public int size() {
+    public int getContainerSize() {
         return SIZE;
     }
 
     @Override
-    public void readNbt(NbtCompound nbt) {
-        super.readNbt(nbt);
-        items = DefaultedList.ofSize(size(), ItemStack.EMPTY);
-        if (!deserializeLootTable(nbt)) {
-            Inventories.readNbt(nbt, items);
+    public void load(CompoundTag nbt) {
+        super.load(nbt);
+        items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
+        if (!tryLoadLootTable(nbt)) {
+            ContainerHelper.loadAllItems(nbt, items);
         }
     }
 
     @Override
-    protected void writeNbt(NbtCompound nbt) {
-        super.writeNbt(nbt);
-        if (!serializeLootTable(nbt)) {
-            Inventories.writeNbt(nbt, items);
+    protected void saveAdditional(CompoundTag nbt) {
+        super.saveAdditional(nbt);
+        if (!trySaveLootTable(nbt)) {
+            ContainerHelper.saveAllItems(nbt, items);
         }
     }
 }

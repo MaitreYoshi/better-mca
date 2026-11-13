@@ -14,26 +14,24 @@ import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
 import net.minecraft.SharedConstants;
-import net.minecraft.entity.EntityDimensions;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ItemEntity;
-import net.minecraft.entity.SpawnGroup;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemGroups;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKeys;
+import net.minecraft.Util;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.Util;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobCategory;
+import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.AABB;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.ByteArrayOutputStream;
@@ -86,13 +84,13 @@ public final class PhoneServer {
     }
 
     public static void register() {
-        Registration.register(RegistryKeys.ITEM, "phone", () -> new PhoneItem(new Item.Settings().maxCount(1)), item -> PHONE = item);
-        Registration.register(RegistryKeys.ITEM, "photo", () -> new PhotoItem(new Item.Settings().maxCount(1)), item -> PHOTO = item);
-        Registration.register(RegistryKeys.ENTITY_TYPE, "photo_frame",
-                () -> EntityType.Builder.<PhotoFrameEntity>create(PhotoFrameEntity::new, SpawnGroup.MISC)
-                        .setDimensions(0.5f, 0.5f).maxTrackingRange(10).trackingTickInterval(Integer.MAX_VALUE).build(MCAVie.id("photo_frame").toString()),
+        Registration.register(Registries.ITEM, "phone", () -> new PhoneItem(new Item.Properties().stacksTo(1)), item -> PHONE = item);
+        Registration.register(Registries.ITEM, "photo", () -> new PhotoItem(new Item.Properties().stacksTo(1)), item -> PHOTO = item);
+        Registration.register(Registries.ENTITY_TYPE, "photo_frame",
+                () -> EntityType.Builder.<PhotoFrameEntity>of(PhotoFrameEntity::new, MobCategory.MISC)
+                        .sized(0.5f, 0.5f).clientTrackingRange(10).updateInterval(Integer.MAX_VALUE).build(MCAVie.id("photo_frame").toString()),
                 type -> PHOTO_FRAME = type);
-        CreativeTabRegistry.modify(CreativeTabRegistry.defer(ItemGroups.TOOLS), (flags, entries, operator) -> entries.add(PHONE));
+        CreativeTabRegistry.modify(CreativeTabRegistry.defer(CreativeModeTabs.TOOLS_AND_UTILITIES), (flags, entries, operator) -> entries.accept(PHONE));
         ServerPlayNetworking.registerGlobalReceiver(PhoneNetwork.ACTION, (server, player, handler, buf, responseSender) -> {
             int number = buf.readVarInt();
             int op = buf.readVarInt();
@@ -101,42 +99,42 @@ public final class PhoneServer {
             UUID photo = null;
             UUID person = null;
             switch (op) {
-                case PhoneNetwork.OP_DELETE_PHOTO, PhoneNetwork.OP_SAVE_PHOTO, PhoneNetwork.OP_PRINT_PHOTO -> photo = buf.readUuid();
+                case PhoneNetwork.OP_DELETE_PHOTO, PhoneNetwork.OP_SAVE_PHOTO, PhoneNetwork.OP_PRINT_PHOTO -> photo = buf.readUUID();
                 case PhoneNetwork.OP_PHOTO -> {
-                    photo = buf.readUuid();
+                    photo = buf.readUUID();
                     other = buf.readBoolean() ? 1 : 0;
                 }
                 case PhoneNetwork.OP_SEND_PHOTO -> {
                     other = buf.readVarInt();
-                    photo = buf.readUuid();
+                    photo = buf.readUUID();
                 }
                 case PhoneNetwork.OP_SET_PORTRAIT -> {
-                    person = buf.readUuid();
-                    photo = buf.readUuid();
+                    person = buf.readUUID();
+                    photo = buf.readUUID();
                 }
-                case PhoneNetwork.OP_UNLOCK, PhoneNetwork.OP_SET_CODE -> text = buf.readString(PhoneNetwork.CODE_LENGTH);
+                case PhoneNetwork.OP_UNLOCK, PhoneNetwork.OP_SET_CODE -> text = buf.readUtf(PhoneNetwork.CODE_LENGTH);
                 case PhoneNetwork.OP_CONVERSATION, PhoneNetwork.OP_ADD_CONTACT, PhoneNetwork.OP_REMOVE_CONTACT -> other = buf.readVarInt();
                 case PhoneNetwork.OP_SEND -> {
                     other = buf.readVarInt();
-                    text = buf.readString(PhoneNetwork.MAX_TEXT);
+                    text = buf.readUtf(PhoneNetwork.MAX_TEXT);
                 }
-                case PhoneNetwork.OP_FOLDER_CREATE -> text = buf.readString(PhoneNetwork.MAX_FOLDER_NAME);
+                case PhoneNetwork.OP_FOLDER_CREATE -> text = buf.readUtf(PhoneNetwork.MAX_FOLDER_NAME);
                 case PhoneNetwork.OP_FOLDER_RENAME -> {
                     other = buf.readVarInt();
-                    text = buf.readString(PhoneNetwork.MAX_FOLDER_NAME);
+                    text = buf.readUtf(PhoneNetwork.MAX_FOLDER_NAME);
                 }
                 case PhoneNetwork.OP_FOLDER_DELETE -> other = buf.readVarInt();
-                case PhoneNetwork.OP_SET_WALLPAPER -> text = buf.readString(PhoneNetwork.MAX_WALLPAPER);
+                case PhoneNetwork.OP_SET_WALLPAPER -> text = buf.readUtf(PhoneNetwork.MAX_WALLPAPER);
                 case PhoneNetwork.OP_AGENDA_ADD -> {
                     // jour du calendrier (pas un jour de jeu) + annuel en bit de poids faible
                     long day = buf.readVarLong();
                     boolean yearly = buf.readBoolean();
-                    text = buf.readString(PhoneNetwork.MAX_EVENT_TITLE);
+                    text = buf.readUtf(PhoneNetwork.MAX_EVENT_TITLE);
                     other = (int) Math.max(0, Math.min(Integer.MAX_VALUE / 2, day)) * 2 + (yearly ? 1 : 0);
                 }
                 case PhoneNetwork.OP_AGENDA_REMOVE -> other = buf.readVarInt();
                 case PhoneNetwork.OP_MOVE_PHOTO -> {
-                    photo = buf.readUuid();
+                    photo = buf.readUUID();
                     other = buf.readVarInt();
                 }
                 default -> {
@@ -158,14 +156,14 @@ public final class PhoneServer {
             server.execute(() -> receiveChunk(player, number, id, index, total, thumbnail, chunk));
         });
         ServerPlayNetworking.registerGlobalReceiver(PhoneNetwork.PRINT_REQUEST, (server, player, handler, buf, responseSender) -> {
-            UUID photo = buf.readUuid();
+            UUID photo = buf.readUUID();
             boolean full = buf.readBoolean();
             server.execute(() -> sendPrint(player, photo, full));
         });
         ServerPlayNetworking.registerGlobalReceiver(PhoneNetwork.PHOTO_PLACE, (server, player, handler, buf, responseSender) -> {
             BlockPos clicked = buf.readBlockPos();
-            Direction side = buf.readEnumConstant(Direction.class);
-            Hand hand = buf.readEnumConstant(Hand.class);
+            Direction side = buf.readEnum(Direction.class);
+            InteractionHand hand = buf.readEnum(InteractionHand.class);
             int width = buf.readVarInt();
             int height = buf.readVarInt();
             server.execute(() -> PhotoItem.place(player, clicked, side, hand, width, height));
@@ -175,13 +173,13 @@ public final class PhoneServer {
             int width = buf.readVarInt();
             int height = buf.readVarInt();
             server.execute(() -> {
-                if (player.getServerWorld().getEntityById(id) instanceof PhotoFrameEntity frame && frame.getBoundingBox().expand(8).contains(player.getPos())) {
+                if (player.serverLevel().getEntity(id) instanceof PhotoFrameEntity frame && frame.getBoundingBox().inflate(8).contains(player.position())) {
                     frame.resize(width, height);
                 }
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(PhoneNetwork.PORTRAIT_REQUEST, (server, player, handler, buf, responseSender) -> {
-            UUID image = buf.readUuid();
+            UUID image = buf.readUUID();
             server.execute(() -> {
                 if (PortraitRegistry.get(server).isPortrait(image)) {
                     sendImage(player, image, false);
@@ -191,13 +189,13 @@ public final class PhoneServer {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             PhoneRegistry registry = PhoneRegistry.get(server);
             for (Phone phone : registry.all().values()) {
-                if (handler.player.getUuid().equals(phone.owner) && updateOwner(phone, handler.player)) {
-                    registry.markDirty();
+                if (handler.player.getUUID().equals(phone.owner) && updateOwner(phone, handler.player)) {
+                    registry.setDirty();
                 }
             }
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> server.execute(() -> {
-            UUID uuid = handler.player.getUuid();
+            UUID uuid = handler.player.getUUID();
             UNLOCKED.remove(uuid);
             LAST_UNLOCK.remove(uuid);
             LAST_SEND.remove(uuid);
@@ -217,30 +215,30 @@ public final class PhoneServer {
         });
     }
 
-    public static void open(ServerPlayerEntity player, ItemStack stack) {
+    public static void open(ServerPlayer player, ItemStack stack) {
         PhoneRegistry registry = PhoneRegistry.get(player.getServer());
         int number = PhoneItem.numberOf(stack);
         if (number < 0 || registry.get(number) == null) {
             number = registry.allocate(player.getRandom());
             if (number < 0) {
-                player.sendMessage(Text.translatable("msg.mca_vie.phone.no_number"), true);
+                player.displayClientMessage(Component.translatable("msg.mca_vie.phone.no_number"), true);
                 return;
             }
             PhoneItem.setNumber(stack, number);
         }
         Phone phone = registry.get(number);
         if (phone.owner == null) {
-            phone.owner = player.getUuid();
-            registry.markDirty();
+            phone.owner = player.getUUID();
+            registry.setDirty();
         }
-        if (player.getUuid().equals(phone.owner) && updateOwner(phone, player)) {
-            registry.markDirty();
+        if (player.getUUID().equals(phone.owner) && updateOwner(phone, player)) {
+            registry.setDirty();
         }
-        UNLOCKED.remove(player.getUuid());
+        UNLOCKED.remove(player.getUUID());
         sendState(player, number, phone, true);
     }
 
-    private static void handle(ServerPlayerEntity player, int number, int op, int other, String text, @Nullable UUID photo, @Nullable UUID person) {
+    private static void handle(ServerPlayer player, int number, int op, int other, String text, @Nullable UUID photo, @Nullable UUID person) {
         if (!PhoneNetwork.validNumber(number) || !holds(player, number)) {
             return;
         }
@@ -249,13 +247,13 @@ public final class PhoneServer {
         if (phone == null) {
             return;
         }
-        long time = player.getServerWorld().getTime();
+        long time = player.serverLevel().getGameTime();
         if (op == PhoneNetwork.OP_UNLOCK) {
             if (!cooldown(LAST_UNLOCK, player, time, UNLOCK_COOLDOWN)) {
                 return;
             }
             if (phone.code == null || phone.code.equals(text)) {
-                UNLOCKED.put(player.getUuid(), number);
+                UNLOCKED.put(player.getUUID(), number);
             } else {
                 error(player, "msg.mca_vie.phone.wrong_code");
             }
@@ -275,7 +273,7 @@ public final class PhoneServer {
                 Conversation conversation = phone.conversations.get(other);
                 if (conversation != null && conversation.unread > 0) {
                     conversation.unread = 0;
-                    registry.markDirty();
+                    registry.setDirty();
                     sendState(player, number, phone, false);
                 }
                 sendConversation(player, number, phone, other);
@@ -301,9 +299,9 @@ public final class PhoneServer {
                     error(player, "msg.mca_vie.phone.gallery_full");
                     return;
                 }
-                phone.gallery.add(0, new Photo(photo, player.getServer().getOverworld().getTimeOfDay()));
-                registry.markDirty();
-                player.sendMessage(Text.translatable("msg.mca_vie.phone.photo_saved"), true);
+                phone.gallery.add(0, new Photo(photo, player.getServer().overworld().getDayTime()));
+                registry.setDirty();
+                player.displayClientMessage(Component.translatable("msg.mca_vie.phone.photo_saved"), true);
                 sendState(player, number, phone, false);
             }
             case PhoneNetwork.OP_PRINT_PHOTO -> {
@@ -316,9 +314,9 @@ public final class PhoneServer {
                     return;
                 }
                 long date = phone.gallery.stream().filter(p -> p.id().equals(photo)).map(Photo::time).findFirst()
-                        .orElse(player.getServer().getOverworld().getTimeOfDay());
+                        .orElse(player.getServer().overworld().getDayTime());
                 ItemStack stack = PhotoItem.create(print, player.getGameProfile().getName(), date);
-                player.sendMessage(Text.translatable(giveToInventory(player, stack)
+                player.displayClientMessage(Component.translatable(giveToInventory(player, stack)
                         ? "msg.mca_vie.phone.printed" : "msg.mca_vie.phone.printed_ground"), true);
                 ServerPlayNetworking.send(player, PhoneNetwork.PRINTED, PacketByteBufs.empty());
             }
@@ -332,21 +330,21 @@ public final class PhoneServer {
                     return;
                 }
                 phone.folders.put(phone.nextFolder++, name);
-                registry.markDirty();
+                registry.setDirty();
                 sendState(player, number, phone, false);
             }
             case PhoneNetwork.OP_FOLDER_RENAME -> {
                 String name = folderName(text);
                 if (!name.isEmpty() && phone.folders.containsKey(other)) {
                     phone.folders.put(other, name);
-                    registry.markDirty();
+                    registry.setDirty();
                 }
                 sendState(player, number, phone, false);
             }
             case PhoneNetwork.OP_FOLDER_DELETE -> {
                 if (phone.folders.remove(other) != null) {
                     phone.gallery.replaceAll(p -> p.folder() == other ? new Photo(p.id(), p.time()) : p);
-                    registry.markDirty();
+                    registry.setDirty();
                 }
                 sendState(player, number, phone, false);
             }
@@ -358,7 +356,7 @@ public final class PhoneServer {
                     Photo entry = phone.gallery.get(i);
                     if (entry.id().equals(photo) && entry.folder() != other) {
                         phone.gallery.set(i, new Photo(entry.id(), entry.time(), other));
-                        registry.markDirty();
+                        registry.setDirty();
                     }
                 }
                 sendState(player, number, phone, false);
@@ -368,7 +366,7 @@ public final class PhoneServer {
                     if (phone.wallpaper.startsWith(photo.toString())) {
                         phone.wallpaper = "";
                     }
-                    registry.markDirty();
+                    registry.setDirty();
                     release(player.getServer(), registry, photo);
                 }
                 sendState(player, number, phone, false);
@@ -387,22 +385,22 @@ public final class PhoneServer {
                     return;
                 }
                 phone.contacts.add(other);
-                registry.markDirty();
+                registry.setDirty();
                 sendState(player, number, phone, false);
             }
             case PhoneNetwork.OP_REMOVE_CONTACT -> {
                 if (phone.contacts.remove(Integer.valueOf(other))) {
-                    registry.markDirty();
+                    registry.setDirty();
                 }
                 sendState(player, number, phone, false);
             }
             case PhoneNetwork.OP_SET_WALLPAPER -> {
-                if (!player.getUuid().equals(phone.owner) || !validWallpaper(phone, text)) {
+                if (!player.getUUID().equals(phone.owner) || !validWallpaper(phone, text)) {
                     return;
                 }
                 phone.wallpaper = text;
-                registry.markDirty();
-                player.sendMessage(Text.translatable("msg.mca_vie.phone.wallpaper_set"), true);
+                registry.setDirty();
+                player.displayClientMessage(Component.translatable("msg.mca_vie.phone.wallpaper_set"), true);
                 sendState(player, number, phone, false);
             }
             case PhoneNetwork.OP_AGENDA_ADD -> {
@@ -418,24 +416,24 @@ public final class PhoneServer {
                     return;
                 }
                 phone.agenda.add(new PhoneRegistry.AgendaEvent(phone.nextEvent++, other >> 1, (other & 1) != 0, title));
-                registry.markDirty();
-                player.sendMessage(Text.translatable("msg.mca_vie.phone.agenda_added"), true);
+                registry.setDirty();
+                player.displayClientMessage(Component.translatable("msg.mca_vie.phone.agenda_added"), true);
                 sendState(player, number, phone, false);
             }
             case PhoneNetwork.OP_AGENDA_REMOVE -> {
                 if (phone.agenda.removeIf(e -> e.id() == other)) {
-                    registry.markDirty();
+                    registry.setDirty();
                 }
                 sendState(player, number, phone, false);
             }
             case PhoneNetwork.OP_SET_CODE -> {
-                if (!player.getUuid().equals(phone.owner) || !(text.isEmpty() || PhoneNetwork.validCode(text))) {
+                if (!player.getUUID().equals(phone.owner) || !(text.isEmpty() || PhoneNetwork.validCode(text))) {
                     return;
                 }
                 phone.code = text.isEmpty() ? null : text;
-                registry.markDirty();
+                registry.setDirty();
                 UNLOCKED.values().removeIf(n -> n == number);
-                player.sendMessage(Text.translatable(text.isEmpty() ? "msg.mca_vie.phone.code_removed" : "msg.mca_vie.phone.code_set"), true);
+                player.displayClientMessage(Component.translatable(text.isEmpty() ? "msg.mca_vie.phone.code_removed" : "msg.mca_vie.phone.code_set"), true);
                 sendState(player, number, phone, false);
             }
             default -> {
@@ -443,7 +441,7 @@ public final class PhoneServer {
         }
     }
 
-    private static void send(ServerPlayerEntity player, PhoneRegistry registry, int number, Phone phone, int other, String message, @Nullable UUID photo, long time) {
+    private static void send(ServerPlayer player, PhoneRegistry registry, int number, Phone phone, int other, String message, @Nullable UUID photo, long time) {
         if (!PhoneNetwork.validNumber(other) || (message.isEmpty() && photo == null) || !cooldown(LAST_SEND, player, time, SEND_COOLDOWN)) {
             return;
         }
@@ -452,11 +450,11 @@ public final class PhoneServer {
             error(player, "msg.mca_vie.phone.unknown_number");
             return;
         }
-        long date = player.getServer().getOverworld().getTimeOfDay();
+        long date = player.getServer().overworld().getDayTime();
         List<UUID> dropped = new ArrayList<>();
         append(phone, other, new Message(true, message, date, photo), false, dropped);
         append(recipient, number, new Message(false, message, date, photo), true, dropped);
-        registry.markDirty();
+        registry.setDirty();
         dropped.forEach(id -> release(player.getServer(), registry, id));
         sendState(player, number, phone, false);
         sendConversation(player, number, phone, other);
@@ -479,29 +477,29 @@ public final class PhoneServer {
     }
 
     /** Le son est choisi et joué côté client selon les réglages du téléphone. */
-    public static void ring(ServerPlayerEntity player, int kind) {
-        PacketByteBuf buf = PacketByteBufs.create();
+    public static void ring(ServerPlayer player, int kind) {
+        FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeVarInt(kind);
         ServerPlayNetworking.send(player, PhoneNetwork.NOTIFY, buf);
     }
 
     private static void notify(MinecraftServer server, PhoneRegistry registry, int number, Phone phone, int from, boolean photo) {
-        for (ServerPlayerEntity player : server.getPlayerManager().getPlayerList()) {
+        for (ServerPlayer player : server.getPlayerList().getPlayers()) {
             if (!carries(player, number)) {
                 continue;
             }
             ring(player, PhoneNetwork.NOTIFY_MESSAGE);
             if (canAccess(player, number, phone)) {
-                player.sendMessage(Text.translatable(photo ? "msg.mca_vie.phone.new_photo_from" : "msg.mca_vie.phone.new_from", displayName(registry, from)), true);
+                player.displayClientMessage(Component.translatable(photo ? "msg.mca_vie.phone.new_photo_from" : "msg.mca_vie.phone.new_from", displayName(registry, from)), true);
                 sendState(player, number, phone, false);
             } else {
-                player.sendMessage(Text.translatable(photo ? "msg.mca_vie.phone.new_photo" : "msg.mca_vie.phone.new"), true);
+                player.displayClientMessage(Component.translatable(photo ? "msg.mca_vie.phone.new_photo" : "msg.mca_vie.phone.new"), true);
             }
         }
     }
 
-    private static void receiveChunk(ServerPlayerEntity player, int number, int id, int index, int total, int thumbnail, byte[] chunk) {
-        UUID uuid = player.getUuid();
+    private static void receiveChunk(ServerPlayer player, int number, int id, int index, int total, int thumbnail, byte[] chunk) {
+        UUID uuid = player.getUUID();
         PhoneRegistry registry = PhoneRegistry.get(player.getServer());
         Phone phone = PhoneNetwork.validNumber(number) ? registry.get(number) : null;
         if (phone == null || !holds(player, number) || !canAccess(player, number, phone) || total < 1 || total > MAX_CHUNKS) {
@@ -530,7 +528,7 @@ public final class PhoneServer {
         }
         byte[] thumb = Arrays.copyOf(data, thumbnail);
         byte[] full = Arrays.copyOfRange(data, thumbnail, data.length);
-        if (!PhotoStore.validThumbnail(thumb) || !PhotoStore.validFull(full) || !cooldown(LAST_PHOTO, player, player.getServerWorld().getTime(), PHOTO_COOLDOWN)) {
+        if (!PhotoStore.validThumbnail(thumb) || !PhotoStore.validFull(full) || !cooldown(LAST_PHOTO, player, player.serverLevel().getGameTime(), PHOTO_COOLDOWN)) {
             return;
         }
         if (phone.gallery.size() >= PhoneNetwork.MAX_PHOTOS) {
@@ -541,69 +539,69 @@ public final class PhoneServer {
         if (!PhotoStore.write(player.getServer(), photo, thumb, full)) {
             return;
         }
-        phone.gallery.add(0, new Photo(photo, player.getServer().getOverworld().getTimeOfDay()));
-        registry.markDirty();
-        player.sendMessage(Text.translatable("msg.mca_vie.phone.photo_saved"), true);
+        phone.gallery.add(0, new Photo(photo, player.getServer().overworld().getDayTime()));
+        registry.setDirty();
+        player.displayClientMessage(Component.translatable("msg.mca_vie.phone.photo_saved"), true);
         sendState(player, number, phone, false);
     }
 
-    private static boolean giveToInventory(ServerPlayerEntity player, ItemStack stack) {
-        PlayerInventory inventory = player.getInventory();
+    private static boolean giveToInventory(ServerPlayer player, ItemStack stack) {
+        Inventory inventory = player.getInventory();
         int slot = -1;
-        for (int i = 0; i < inventory.main.size() && slot < 0; i++) {
-            if (inventory.main.get(i).isEmpty()) {
+        for (int i = 0; i < inventory.items.size() && slot < 0; i++) {
+            if (inventory.items.get(i).isEmpty()) {
                 slot = i;
             }
         }
         if (slot < 0) {
-            player.dropItem(stack, false);
+            player.drop(stack, false);
             return false;
         }
-        inventory.setStack(slot, stack);
+        inventory.setItem(slot, stack);
         return true;
     }
 
-    public static void openResize(ServerPlayerEntity player, PhotoFrameEntity frame) {
-        PacketByteBuf buf = PacketByteBufs.create();
+    public static void openResize(ServerPlayer player, PhotoFrameEntity frame) {
+        FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeVarInt(frame.getId());
         ServerPlayNetworking.send(player, PhoneNetwork.PHOTO_RESIZE_OPEN, buf);
     }
 
-    public static void viewPrint(ServerPlayerEntity player, UUID photo) {
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeUuid(photo);
+    public static void viewPrint(ServerPlayer player, UUID photo) {
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUUID(photo);
         ServerPlayNetworking.send(player, PhoneNetwork.PRINT_VIEW, buf);
     }
 
-    private static void sendPrint(ServerPlayerEntity player, UUID photo, boolean full) {
+    private static void sendPrint(ServerPlayer player, UUID photo, boolean full) {
         boolean allowed = carriesPrint(player, photo);
         if (!allowed) {
-            Box area = player.getBoundingBox().expand(PRINT_VIEW_DISTANCE);
-            ServerWorld world = player.getServerWorld();
-            allowed = !world.getEntitiesByClass(PhotoFrameEntity.class, area, frame -> photo.equals(frame.photo())).isEmpty()
-                    || !world.getEntitiesByClass(ItemEntity.class, area, item -> photo.equals(PhotoItem.photoOf(item.getStack()))).isEmpty()
-                    || world.getPlayers().stream().anyMatch(other -> other.getBoundingBox().intersects(area) && carriesPrint(other, photo));
+            AABB area = player.getBoundingBox().inflate(PRINT_VIEW_DISTANCE);
+            ServerLevel world = player.serverLevel();
+            allowed = !world.getEntitiesOfClass(PhotoFrameEntity.class, area, frame -> photo.equals(frame.photo())).isEmpty()
+                    || !world.getEntitiesOfClass(ItemEntity.class, area, item -> photo.equals(PhotoItem.photoOf(item.getItem()))).isEmpty()
+                    || world.players().stream().anyMatch(other -> other.getBoundingBox().intersects(area) && carriesPrint(other, photo));
         }
         if (allowed) {
             sendImage(player, photo, full);
         }
     }
 
-    private static boolean carriesPrint(ServerPlayerEntity player, UUID photo) {
-        PlayerInventory inventory = player.getInventory();
-        for (int i = 0; i < inventory.size(); i++) {
-            if (photo.equals(PhotoItem.photoOf(inventory.getStack(i)))) {
+    private static boolean carriesPrint(ServerPlayer player, UUID photo) {
+        Inventory inventory = player.getInventory();
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            if (photo.equals(PhotoItem.photoOf(inventory.getItem(i)))) {
                 return true;
             }
         }
         return false;
     }
 
-    private static void sendImage(ServerPlayerEntity player, UUID photo, boolean full) {
+    private static void sendImage(ServerPlayer player, UUID photo, boolean full) {
         PhotoStore.Image image = PhotoStore.read(player.getServer(), photo, full);
         if (image != null) {
-            PacketByteBuf buf = PacketByteBufs.create();
-            buf.writeUuid(photo);
+            FriendlyByteBuf buf = PacketByteBufs.create();
+            buf.writeUUID(photo);
             buf.writeBoolean(full);
             buf.writeBoolean(image.jpeg());
             buf.writeByteArray(image.data());
@@ -611,9 +609,9 @@ public final class PhoneServer {
         }
     }
 
-    private static void setPortrait(ServerPlayerEntity player, Phone phone, @Nullable UUID person, @Nullable UUID photo, long time) {
+    private static void setPortrait(ServerPlayer player, Phone phone, @Nullable UUID person, @Nullable UUID photo, long time) {
         if (person == null || photo == null || !cooldown(LAST_PRINT, player, time, PRINT_COOLDOWN)
-                || FamilyTree.get(player.getServerWorld()).getOrEmpty(person).isEmpty()) {
+                || FamilyTree.get(player.serverLevel()).getOrEmpty(person).isEmpty()) {
             return;
         }
         MinecraftServer server = player.getServer();
@@ -635,7 +633,7 @@ public final class PhoneServer {
         if (old != null) {
             PhotoStore.delete(server, old);
         }
-        player.sendMessage(Text.translatable(image == null ? "msg.mca_vie.phone.portrait_removed" : "msg.mca_vie.phone.portrait_set"), true);
+        player.displayClientMessage(Component.translatable(image == null ? "msg.mca_vie.phone.portrait_removed" : "msg.mca_vie.phone.portrait_set"), true);
     }
 
     private static void release(MinecraftServer server, PhoneRegistry registry, UUID photo) {
@@ -644,7 +642,7 @@ public final class PhoneServer {
         }
     }
 
-    private static boolean updateOwner(Phone phone, ServerPlayerEntity player) {
+    private static boolean updateOwner(Phone phone, ServerPlayer player) {
         String name = player.getGameProfile().getName();
         String skin = player.getGameProfile().getProperties().get("textures").stream().findFirst().map(Property::getValue).orElse("");
         if (name.equals(phone.ownerName) && skin.equals(phone.ownerSkin)) {
@@ -660,35 +658,35 @@ public final class PhoneServer {
         return phone == null || phone.ownerName.isEmpty() ? PhoneRegistry.format(number) : phone.ownerName;
     }
 
-    private static boolean canAccess(ServerPlayerEntity player, int number, Phone phone) {
-        return phone.code == null || player.getUuid().equals(phone.owner) || Integer.valueOf(number).equals(UNLOCKED.get(player.getUuid()));
+    private static boolean canAccess(ServerPlayer player, int number, Phone phone) {
+        return phone.code == null || player.getUUID().equals(phone.owner) || Integer.valueOf(number).equals(UNLOCKED.get(player.getUUID()));
     }
 
-    private static boolean holds(ServerPlayerEntity player, int number) {
-        for (Hand hand : Hand.values()) {
-            if (PhoneItem.numberOf(player.getStackInHand(hand)) == number) {
+    private static boolean holds(ServerPlayer player, int number) {
+        for (InteractionHand hand : InteractionHand.values()) {
+            if (PhoneItem.numberOf(player.getItemInHand(hand)) == number) {
                 return true;
             }
         }
         return false;
     }
 
-    private static boolean carries(ServerPlayerEntity player, int number) {
-        PlayerInventory inventory = player.getInventory();
-        for (int i = 0; i < inventory.size(); i++) {
-            if (PhoneItem.numberOf(inventory.getStack(i)) == number) {
+    private static boolean carries(ServerPlayer player, int number) {
+        Inventory inventory = player.getInventory();
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            if (PhoneItem.numberOf(inventory.getItem(i)) == number) {
                 return true;
             }
         }
         return false;
     }
 
-    private static boolean cooldown(Map<UUID, Long> last, ServerPlayerEntity player, long time, long delay) {
-        Long previous = last.get(player.getUuid());
+    private static boolean cooldown(Map<UUID, Long> last, ServerPlayer player, long time, long delay) {
+        Long previous = last.get(player.getUUID());
         if (previous != null && time - previous >= 0 && time - previous < delay) {
             return false;
         }
-        last.put(player.getUuid(), time);
+        last.put(player.getUUID(), time);
         return true;
     }
 
@@ -698,12 +696,12 @@ public final class PhoneServer {
     }
 
     private static String clean(String text) {
-        return SharedConstants.stripInvalidChars(text).trim();
+        return SharedConstants.filterText(text).trim();
     }
 
-    private static void error(ServerPlayerEntity player, String key) {
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeText(Text.translatable(key));
+    private static void error(ServerPlayer player, String key) {
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeComponent(Component.translatable(key));
         ServerPlayNetworking.send(player, PhoneNetwork.ERROR, buf);
     }
 
@@ -727,15 +725,15 @@ public final class PhoneServer {
         return phone.gallery.stream().anyMatch(p -> p.id().toString().equals(id));
     }
 
-    private static void sendState(ServerPlayerEntity player, int number, Phone phone, boolean open) {
+    private static void sendState(ServerPlayer player, int number, Phone phone, boolean open) {
         boolean access = canAccess(player, number, phone);
         PhoneRegistry registry = PhoneRegistry.get(player.getServer());
-        PacketByteBuf buf = PacketByteBufs.create();
+        FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeBoolean(open);
         buf.writeVarInt(number);
         buf.writeBoolean(access);
         if (access) {
-            buf.writeBoolean(player.getUuid().equals(phone.owner));
+            buf.writeBoolean(player.getUUID().equals(phone.owner));
             buf.writeBoolean(phone.code != null);
             buf.writeVarInt(phone.contacts.size());
             phone.contacts.forEach(buf::writeVarInt);
@@ -745,12 +743,12 @@ public final class PhoneServer {
             for (int other : known) {
                 Phone target = registry.get(other);
                 buf.writeVarInt(other);
-                buf.writeString(target == null ? "" : target.ownerName);
+                buf.writeUtf(target == null ? "" : target.ownerName);
                 buf.writeBoolean(target != null && target.owner != null);
                 if (target != null && target.owner != null) {
-                    buf.writeUuid(target.owner);
+                    buf.writeUUID(target.owner);
                 }
-                buf.writeString(target == null ? "" : target.ownerSkin);
+                buf.writeUtf(target == null ? "" : target.ownerSkin);
             }
             List<Map.Entry<Integer, Conversation>> conversations = new ArrayList<>(phone.conversations.entrySet());
             conversations.removeIf(e -> e.getValue().messages.isEmpty());
@@ -764,46 +762,46 @@ public final class PhoneServer {
                 buf.writeVarInt(conversation.unread);
                 buf.writeBoolean(last.outgoing());
                 buf.writeBoolean(last.photo() != null);
-                buf.writeString(preview);
+                buf.writeUtf(preview);
                 buf.writeVarLong(conversation.lastTime);
             }
             buf.writeVarInt(phone.folders.size());
             phone.folders.forEach((id, name) -> {
                 buf.writeVarInt(id);
-                buf.writeString(name);
+                buf.writeUtf(name);
             });
             buf.writeVarInt(phone.gallery.size());
             for (Photo photo : phone.gallery) {
-                buf.writeUuid(photo.id());
+                buf.writeUUID(photo.id());
                 buf.writeVarLong(photo.time());
                 buf.writeVarInt(photo.folder());
             }
-            buf.writeString(phone.wallpaper);
+            buf.writeUtf(phone.wallpaper);
             buf.writeVarInt(phone.agenda.size());
             for (PhoneRegistry.AgendaEvent event : phone.agenda) {
                 buf.writeVarInt(event.id());
                 buf.writeVarLong(event.day());
                 buf.writeBoolean(event.yearly());
-                buf.writeString(event.title());
+                buf.writeUtf(event.title());
             }
         }
         ServerPlayNetworking.send(player, PhoneNetwork.STATE, buf);
     }
 
-    private static void sendConversation(ServerPlayerEntity player, int number, Phone phone, int other) {
+    private static void sendConversation(ServerPlayer player, int number, Phone phone, int other) {
         Conversation conversation = phone.conversations.get(other);
         List<Message> messages = conversation == null ? List.of() : conversation.messages;
-        PacketByteBuf buf = PacketByteBufs.create();
+        FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeVarInt(number);
         buf.writeVarInt(other);
         buf.writeVarInt(messages.size());
         for (Message message : messages) {
             buf.writeBoolean(message.outgoing());
-            buf.writeString(message.text());
+            buf.writeUtf(message.text());
             buf.writeVarLong(message.time());
             buf.writeBoolean(message.photo() != null);
             if (message.photo() != null) {
-                buf.writeUuid(message.photo());
+                buf.writeUUID(message.photo());
             }
         }
         ServerPlayNetworking.send(player, PhoneNetwork.CONVERSATION, buf);

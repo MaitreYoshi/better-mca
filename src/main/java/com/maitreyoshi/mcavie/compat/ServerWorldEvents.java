@@ -2,8 +2,7 @@ package com.maitreyoshi.mcavie.compat;
 
 import dev.architectury.event.events.common.LifecycleEvent;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.world.ServerWorld;
-
+import net.minecraft.server.level.ServerLevel;
 import java.util.function.BiConsumer;
 
 public final class ServerWorldEvents {
@@ -14,6 +13,6 @@ public final class ServerWorldEvents {
 
     @FunctionalInterface
     public interface Event {
-        void register(BiConsumer<MinecraftServer, ServerWorld> listener);
+        void register(BiConsumer<MinecraftServer, ServerLevel> listener);
     }
 }

@@ -1,15 +1,15 @@
 package com.maitreyoshi.mcavie.mixin.client;
 
-import net.minecraft.entity.LimbAnimator;
+import net.minecraft.world.entity.WalkAnimationState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(LimbAnimator.class)
+@Mixin(WalkAnimationState.class)
 public interface LimbAnimatorAccessor {
-    @Accessor("prevSpeed")
+    @Accessor("speedOld")
     float mcavie$getPrevSpeed();
 
-    @Accessor("prevSpeed")
+    @Accessor("speedOld")
     void mcavie$setPrevSpeed(float value);
 
     @Accessor("speed")
@@ -18,9 +18,9 @@ public interface LimbAnimatorAccessor {
     @Accessor("speed")
     void mcavie$setSpeed(float value);
 
-    @Accessor("pos")
+    @Accessor("position")
     float mcavie$getPos();
 
-    @Accessor("pos")
+    @Accessor("position")
     void mcavie$setPos(float value);
 }

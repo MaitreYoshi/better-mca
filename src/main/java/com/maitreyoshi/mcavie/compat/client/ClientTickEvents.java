@@ -1,9 +1,8 @@
 package com.maitreyoshi.mcavie.compat.client;
 
 import dev.architectury.event.events.client.ClientTickEvent;
-import net.minecraft.client.MinecraftClient;
-
 import java.util.function.Consumer;
+import net.minecraft.client.Minecraft;
 
 public final class ClientTickEvents {
     public static final Event START_CLIENT_TICK = listener -> ClientTickEvent.CLIENT_PRE.register(listener::accept);
@@ -14,6 +13,6 @@ public final class ClientTickEvents {
 
     @FunctionalInterface
     public interface Event {
-        void register(Consumer<MinecraftClient> listener);
+        void register(Consumer<Minecraft> listener);
     }
 }

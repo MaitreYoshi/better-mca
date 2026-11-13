@@ -9,13 +9,12 @@ import net.mca.entity.ai.MoveState;
 import net.mca.server.world.data.Building;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
-import net.minecraft.block.BedBlock;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.BedBlock;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -31,7 +30,7 @@ public final class VillageJustice {
     }
 
     public static boolean isImprisoned(VillagerEntityMCA villager) {
-        return VillageDecrees.residentVillage(villager).map(v -> VillageState.of(v).prisoners.containsKey(villager.getUuid())).orElse(false);
+        return VillageDecrees.residentVillage(villager).map(v -> VillageState.of(v).prisoners.containsKey(villager.getUUID())).orElse(false);
     }
 
     public static boolean isImprisoned(Village village, UUID uuid) {
@@ -45,7 +44,7 @@ public final class VillageJustice {
         }).findFirst();
     }
 
-    public static void daily(Village village, ServerWorld world, VillageState state, Prestige.Result result, long today) {
+    public static void daily(Village village, ServerLevel world, VillageState state, Prestige.Result result, long today) {
         VillageConfig config = VillageConfig.get();
         boolean hasPrison = prison(village, result).isPresent();
         state.cases.removeIf(c -> !village.hasResident(c.suspect));
@@ -62,7 +61,7 @@ public final class VillageJustice {
             if (today >= entry.getValue().releaseDay || !hasPrison || !village.hasResident(entry.getKey())) {
                 it.remove();
                 state.pendingRelease.add(entry.getKey());
-                VillageServer.notify(world, village, Text.translatable("msg.mca_vie.justice.released", entry.getValue().name).formatted(Formatting.GRAY));
+                VillageServer.notify(world, village, Component.translatable("msg.mca_vie.justice.released", entry.getValue().name).withStyle(ChatFormatting.GRAY));
             }
         }
 
@@ -101,14 +100,14 @@ public final class VillageJustice {
                 c.amount = amount;
                 state.cases.add(c);
                 Social.theft(village, world, uuid);
-                VillageServer.notify(world, village, Text.translatable("msg.mca_vie.justice.arrested", village.getName(), c.name, amount).formatted(Formatting.YELLOW));
+                VillageServer.notify(world, village, Component.translatable("msg.mca_vie.justice.arrested", village.getName(), c.name, amount).withStyle(ChatFormatting.YELLOW));
             } else {
-                VillageServer.notify(world, village, Text.translatable("msg.mca_vie.justice.stolen", village.getName(), amount).formatted(Formatting.RED));
+                VillageServer.notify(world, village, Component.translatable("msg.mca_vie.justice.stolen", village.getName(), amount).withStyle(ChatFormatting.RED));
             }
         }
     }
 
-    public static void devCase(Village village, ServerWorld world) {
+    public static void devCase(Village village, ServerLevel world) {
         VillageState state = VillageState.of(village);
         for (UUID uuid : village.getResidentsUUIDs().toList()) {
             if (world.getEntity(uuid) instanceof VillagerEntityMCA villager && !villager.isGuard() && !villager.isBaby()
@@ -121,13 +120,13 @@ public final class VillageJustice {
                 state.cases.add(c);
                 Social.theft(village, world, uuid);
                 village.markDirty();
-                VillageServer.notify(world, village, Text.translatable("msg.mca_vie.justice.arrested", village.getName(), c.name, c.amount).formatted(Formatting.YELLOW));
+                VillageServer.notify(world, village, Component.translatable("msg.mca_vie.justice.arrested", village.getName(), c.name, c.amount).withStyle(ChatFormatting.YELLOW));
                 return;
             }
         }
     }
 
-    public static void tick(Village village, ServerWorld world, VillageState state, Prestige.Result result) {
+    public static void tick(Village village, ServerLevel world, VillageState state, Prestige.Result result) {
         Optional<Building> prison = prison(village, result);
         if (prison.isPresent() != state.prisonActive) {
             state.prisonActive = prison.isPresent();
@@ -152,26 +151,26 @@ public final class VillageJustice {
         }
     }
 
-    private static void confine(ServerWorld world, VillagerEntityMCA villager, Building prison) {
-        if (villager.hasVehicle()) {
+    private static void confine(ServerLevel world, VillagerEntityMCA villager, Building prison) {
+        if (villager.isPassenger()) {
             villager.stopRiding();
         }
-        if (!prison.containsPos(villager.getBlockPos())) {
+        if (!prison.containsPos(villager.blockPosition())) {
             BlockPos cell = cell(world, prison);
             if (cell == null) {
                 return;
             }
             if (villager.isSleeping()) {
-                villager.wakeUp();
+                villager.stopSleeping();
             }
-            villager.requestTeleport(cell.getX() + 0.5, cell.getY(), cell.getZ() + 0.5);
+            villager.teleportTo(cell.getX() + 0.5, cell.getY(), cell.getZ() + 0.5);
         }
         if (villager.getVillagerBrain().getMoveState() != MoveState.STAY) {
             villager.getVillagerBrain().setMoveState(MoveState.STAY, null);
         }
     }
 
-    private static BlockPos cell(ServerWorld world, Building prison) {
+    private static BlockPos cell(ServerLevel world, Building prison) {
         long key = prison.getCenter().asLong();
         BlockPos cached = CELLS.get(key);
         if (cached != null && prison.containsPos(cached) && isStandable(world, cached) && nextToBed(world, prison, cached)) {
@@ -181,8 +180,8 @@ public final class VillageJustice {
         for (List<BlockPos> positions : prison.getBlocks().values()) {
             for (BlockPos pos : positions) {
                 if (isLoaded(world, pos) && world.getBlockState(pos).getBlock() instanceof BedBlock) {
-                    for (net.minecraft.util.math.Direction direction : net.minecraft.util.math.Direction.Type.HORIZONTAL) {
-                        BlockPos floor = pos.offset(direction);
+                    for (net.minecraft.core.Direction direction : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                        BlockPos floor = pos.relative(direction);
                         if (prison.containsPos(floor) && isStandable(world, floor)) {
                             CELLS.put(key, floor);
                             return floor;
@@ -193,18 +192,18 @@ public final class VillageJustice {
         }
         BlockPos p0 = prison.getPos0();
         BlockPos p1 = prison.getPos1();
-        for (BlockPos pos : BlockPos.iterate(Math.min(p0.getX(), p1.getX()), Math.min(p0.getY(), p1.getY()), Math.min(p0.getZ(), p1.getZ()),
+        for (BlockPos pos : BlockPos.betweenClosed(Math.min(p0.getX(), p1.getX()), Math.min(p0.getY(), p1.getY()), Math.min(p0.getZ(), p1.getZ()),
                 Math.max(p0.getX(), p1.getX()), Math.max(p0.getY(), p1.getY()), Math.max(p0.getZ(), p1.getZ()))) {
             if (isStandable(world, pos)) {
-                return pos.toImmutable();
+                return pos.immutable();
             }
         }
         return null;
     }
 
-    private static boolean nextToBed(ServerWorld world, Building prison, BlockPos floor) {
-        for (net.minecraft.util.math.Direction direction : net.minecraft.util.math.Direction.Type.HORIZONTAL) {
-            BlockPos bed = floor.offset(direction);
+    private static boolean nextToBed(ServerLevel world, Building prison, BlockPos floor) {
+        for (net.minecraft.core.Direction direction : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+            BlockPos bed = floor.relative(direction);
             if (prison.containsPos(bed) && isLoaded(world, bed) && world.getBlockState(bed).getBlock() instanceof BedBlock) {
                 return true;
             }
@@ -212,19 +211,19 @@ public final class VillageJustice {
         return false;
     }
 
-    private static boolean isLoaded(ServerWorld world, BlockPos pos) {
-        return world.isChunkLoaded(net.minecraft.util.math.ChunkSectionPos.getSectionCoord(pos.getX()), net.minecraft.util.math.ChunkSectionPos.getSectionCoord(pos.getZ()));
+    private static boolean isLoaded(ServerLevel world, BlockPos pos) {
+        return world.hasChunk(net.minecraft.core.SectionPos.blockToSectionCoord(pos.getX()), net.minecraft.core.SectionPos.blockToSectionCoord(pos.getZ()));
     }
 
-    private static boolean isStandable(ServerWorld world, BlockPos pos) {
+    private static boolean isStandable(ServerLevel world, BlockPos pos) {
         return isLoaded(world, pos)
-                && world.getBlockState(pos.down()).isSolidBlock(world, pos.down())
+                && world.getBlockState(pos.below()).isRedstoneConductor(world, pos.below())
                 && world.getBlockState(pos).getCollisionShape(world, pos).isEmpty()
-                && world.getBlockState(pos.up()).getCollisionShape(world, pos.up()).isEmpty();
+                && world.getBlockState(pos.above()).getCollisionShape(world, pos.above()).isEmpty();
     }
 
-    private static boolean release(ServerWorld world, UUID uuid) {
-        for (ServerWorld level : world.getServer().getWorlds()) {
+    private static boolean release(ServerLevel world, UUID uuid) {
+        for (ServerLevel level : world.getServer().getAllLevels()) {
             if (level.getEntity(uuid) instanceof VillagerEntityMCA villager) {
                 if (villager.getVillagerBrain().getMoveState() == MoveState.STAY) {
                     villager.getVillagerBrain().setMoveState(MoveState.MOVE, null);
@@ -235,10 +234,10 @@ public final class VillageJustice {
         return false;
     }
 
-    public static void judge(ServerPlayerEntity player, int villageId, UUID suspect, int verdict) {
-        VillageManager.get(player.getServerWorld()).getOrEmpty(villageId).ifPresent(village -> {
+    public static void judge(ServerPlayer player, int villageId, UUID suspect, int verdict) {
+        VillageManager.get(player.serverLevel()).getOrEmpty(villageId).ifPresent(village -> {
             if (!VillageRights.personalRank(village, player).isAtLeast(VillageRights.JUSTICE)) {
-                player.sendMessage(Text.translatable("msg.mca_vie.rights.denied", Text.translatable(VillageRights.JUSTICE.getTranslationKey())), true);
+                player.displayClientMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.JUSTICE.getTranslationKey())), true);
                 return;
             }
             VillageState state = VillageState.of(village);
@@ -247,9 +246,9 @@ public final class VillageJustice {
             if (found.isEmpty() || (verdict != PRISON && verdict != PARDON)) {
                 return;
             }
-            ServerWorld world = player.getServerWorld();
+            ServerLevel world = player.serverLevel();
             if (verdict == PRISON && !state.prisonActive) {
-                player.sendMessage(Text.translatable("msg.mca_vie.justice.no_prison"), true);
+                player.displayClientMessage(Component.translatable("msg.mca_vie.justice.no_prison"), true);
                 return;
             }
             state.cases.remove(found.get());
@@ -258,7 +257,7 @@ public final class VillageJustice {
         });
     }
 
-    private static void sentence(Village village, ServerWorld world, VillageState state, VillageState.Case c, int verdict, long today) {
+    private static void sentence(Village village, ServerLevel world, VillageState state, VillageState.Case c, int verdict, long today) {
         VillageConfig config = VillageConfig.get();
         if (verdict == PRISON) {
             VillageState.Prisoner prisoner = new VillageState.Prisoner();
@@ -267,11 +266,11 @@ public final class VillageJustice {
             state.prisoners.put(c.suspect, prisoner);
             Wellbeing.addHappiness(world, c.suspect, -config.prisonHappiness);
             state.addRegistry(new CivilRegistry.Entry(CivilRegistry.JUSTICE, today, c.name, "", config.prisonDays));
-            VillageServer.notify(world, village, Text.translatable("msg.mca_vie.justice.prison", c.name, config.prisonDays).formatted(Formatting.GOLD));
+            VillageServer.notify(world, village, Component.translatable("msg.mca_vie.justice.prison", c.name, config.prisonDays).withStyle(ChatFormatting.GOLD));
         } else {
             Wellbeing.addHappiness(world, c.suspect, config.pardonHappiness);
             state.addRegistry(new CivilRegistry.Entry(CivilRegistry.JUSTICE, today, c.name, "", 0));
-            VillageServer.notify(world, village, Text.translatable("msg.mca_vie.justice.pardon", c.name).formatted(Formatting.GREEN));
+            VillageServer.notify(world, village, Component.translatable("msg.mca_vie.justice.pardon", c.name).withStyle(ChatFormatting.GREEN));
         }
     }
 

@@ -17,14 +17,13 @@ import net.mca.server.world.data.FamilyTreeNode;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
 import net.mca.util.WorldUtils;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.Heightmap;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.level.levelgen.Heightmap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -80,7 +79,7 @@ public final class History {
             return node.gender() == Gender.FEMALE;
         }
 
-        Orientation orientation(ServerWorld world, Random random) {
+        Orientation orientation(ServerLevel world, RandomSource random) {
             if (orientation == null) {
                 orientation = Orientation.known(world, uuid, random);
             }
@@ -98,7 +97,7 @@ public final class History {
     private History() {
     }
 
-    public static void simulate(ServerWorld world, long fromDay, long toDay) {
+    public static void simulate(ServerLevel world, long fromDay, long toDay) {
         if (toDay - fromDay < 2) {
             return;
         }
@@ -130,7 +129,7 @@ public final class History {
                 counts.computeIfAbsent(p.village, k -> new Counts()).alive++;
             }
         }
-        Random random = world.getRandom();
+        RandomSource random = world.getRandom();
 
         long earliest = first;
         for (Person p : people.values()) {
@@ -228,8 +227,8 @@ public final class History {
                 record.lastProcessedDay = Math.max(record.lastProcessedDay, toDay - 1);
             }
         }
-        wellbeing.markDirty();
-        FamilyTree.get(world).markDirty();
+        wellbeing.setDirty();
+        FamilyTree.get(world).setDirty();
 
         int years = (int) Math.round(WorldCalendar.yearsBetween(fromDay, toDay));
         counts.forEach((id, c) -> {
@@ -238,9 +237,9 @@ public final class History {
                 return;
             }
             village.markDirty();
-            Text text = Text.translatable("msg.mca_vie.history.summary", village.getName(), years, c.births, c.marriages, c.deaths)
-                    .formatted(Formatting.GOLD);
-            world.getServer().getPlayerManager().getPlayerList().forEach(player -> player.sendMessage(text, false));
+            Component text = Component.translatable("msg.mca_vie.history.summary", village.getName(), years, c.births, c.marriages, c.deaths)
+                    .withStyle(ChatFormatting.GOLD);
+            world.getServer().getPlayerList().getPlayers().forEach(player -> player.displayClientMessage(text, false));
             MCAVie.LOGGER.info("Histoire de {} : {} naissances, {} mariages, {} décès", village.getName(), c.births, c.marriages, c.deaths);
         });
     }
@@ -249,7 +248,7 @@ public final class History {
         return WorldCalendar.gameDaysFor(fromDay, MAX_DAYS);
     }
 
-    private static Map<UUID, Person> collect(ServerWorld world, Map<UUID, Integer> villageOf, long firstDay) {
+    private static Map<UUID, Person> collect(ServerLevel world, Map<UUID, Integer> villageOf, long firstDay) {
         LifeRegistry life = LifeRegistry.get(world.getServer());
         WellbeingRegistry wellbeing = WellbeingRegistry.get(world.getServer());
         HistoryRegistry history = HistoryRegistry.get(world.getServer());
@@ -281,7 +280,7 @@ public final class History {
         return (state == RelationshipState.SINGLE || state == RelationshipState.WIDOW) && p.age(day) >= MARRIAGE_AGE;
     }
 
-    private static Person choosePartner(ServerWorld world, Person man, List<Person> living, long day, Random random) {
+    private static Person choosePartner(ServerLevel world, Person man, List<Person> living, long day, RandomSource random) {
         SocialRegistry social = SocialRegistry.get(world.getServer());
         FamilyTree tree = FamilyTree.get(world);
         Set<UUID> manLine = lineage(tree, man.node);
@@ -316,7 +315,7 @@ public final class History {
         return candidates.isEmpty() ? null : candidates.get(random.nextInt(candidates.size()));
     }
 
-    private static Person outsider(ServerWorld world, Village village, Person spouse, long day, Random random) {
+    private static Person outsider(ServerLevel world, Village village, Person spouse, long day, RandomSource random) {
         Orientation wanted = spouse.orientation(world, random);
         boolean sameSex = wanted == Orientation.GAY || wanted == Orientation.BISEXUAL && random.nextBoolean();
         Gender gender = spouse.female() != sameSex ? Gender.MALE : Gender.FEMALE;
@@ -357,7 +356,7 @@ public final class History {
         return line;
     }
 
-    private static void die(ServerWorld world, Village village, Person p, long day) {
+    private static void die(ServerLevel world, Village village, Person p, long day) {
         p.alive = false;
         p.node.setDeceased(true);
         if (FamilyTreeNode.isValid(p.node.partner())) {
@@ -382,7 +381,7 @@ public final class History {
         }
     }
 
-    private static Person birth(ServerWorld world, Village village, Person mother, Person father, long day, Random random) {
+    private static Person birth(ServerLevel world, Village village, Person mother, Person father, long day, RandomSource random) {
         FamilyTree tree = FamilyTree.get(world);
         Gender gender = random.nextBoolean() ? Gender.MALE : Gender.FEMALE;
         UUID uuid = UUID.randomUUID();
@@ -400,15 +399,15 @@ public final class History {
         return new Person(uuid, node, day, 60, village.getId(), true, false, Long.MIN_VALUE / 2);
     }
 
-    public static boolean applyPendingDeath(VillagerEntityMCA villager, ServerWorld world) {
-        if (HistoryRegistry.get(world.getServer()).pendingDeath(villager.getUuid()) == null) {
+    public static boolean applyPendingDeath(VillagerEntityMCA villager, ServerLevel world) {
+        if (HistoryRegistry.get(world.getServer()).pendingDeath(villager.getUUID()) == null) {
             return false;
         }
         villager.kill();
         return true;
     }
 
-    public static void spawnPending(Village village, ServerWorld world) {
+    public static void spawnPending(Village village, ServerLevel world) {
         HistoryRegistry history = HistoryRegistry.get(world.getServer());
         List<HistoryRegistry.Spawn> mine = new ArrayList<>();
         for (HistoryRegistry.Spawn spawn : history.pendingSpawns()) {
@@ -423,20 +422,20 @@ public final class History {
             return;
         }
         BlockPos base = new BlockPos(village.getCenter());
-        if (!world.isChunkLoaded(base) || !world.shouldTickEntity(base)) {
+        if (!world.hasChunkAt(base) || !world.isPositionEntityTicking(base)) {
             return;
         }
-        BlockPos center = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING_NO_LEAVES, base);
+        BlockPos center = world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, base);
         for (HistoryRegistry.Spawn spawn : mine) {
             if (world.getEntity(spawn.uuid()) != null || LifeRegistry.get(world.getServer()).getDeathDay(spawn.uuid()) != null) {
                 history.removeSpawn(spawn.uuid());
                 continue;
             }
             VillagerEntityMCA child = VillagerFactory.newVillager(world).withGender(spawn.gender()).withName(spawn.name()).withAge(0).withPosition(center).build();
-            UUID temporary = child.getUuid();
-            child.setUuid(spawn.uuid());
+            UUID temporary = child.getUUID();
+            child.setUUID(spawn.uuid());
             FamilyTree.get(world).remove(temporary);
-            WorldUtils.spawnEntity(world, child, SpawnReason.BREEDING);
+            WorldUtils.spawnEntity(world, child, MobSpawnType.BREEDING);
             FamilyTreeNode node = child.getRelationships().getFamilyEntry();
             if (world.getEntity(node.mother()) instanceof VillagerEntityMCA mother && world.getEntity(node.father()) instanceof VillagerEntityMCA father) {
                 child.getGenetics().combine(mother.getGenetics(), father.getGenetics());

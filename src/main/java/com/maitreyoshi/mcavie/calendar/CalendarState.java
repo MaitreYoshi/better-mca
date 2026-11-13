@@ -1,28 +1,27 @@
 package com.maitreyoshi.mcavie.calendar;
 
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.PersistentState;
-
+import net.minecraft.world.level.saveddata.SavedData;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CalendarState extends PersistentState {
+public class CalendarState extends SavedData {
     private static final String DATA_ID = "mca_vie_calendar";
 
     private final List<WorldCalendar.Segment> segments = new ArrayList<>();
 
     public static CalendarState get(MinecraftServer server) {
-        return server.getOverworld().getPersistentStateManager().getOrCreate(CalendarState::fromNbt, CalendarState::new, DATA_ID);
+        return server.overworld().getDataStorage().computeIfAbsent(CalendarState::fromNbt, CalendarState::new, DATA_ID);
     }
 
-    private static CalendarState fromNbt(NbtCompound nbt) {
+    private static CalendarState fromNbt(CompoundTag nbt) {
         CalendarState state = new CalendarState();
-        NbtList list = nbt.getList("segments", NbtElement.COMPOUND_TYPE);
+        ListTag list = nbt.getList("segments", Tag.TAG_COMPOUND);
         for (int i = 0; i < list.size(); i++) {
-            NbtCompound entry = list.getCompound(i);
+            CompoundTag entry = list.getCompound(i);
             double speed = entry.getDouble("speed");
             if (speed > 0) {
                 // anciens mondes : segments en jours entiers ; désormais en ticks pour garder la date exacte au changement de vitesse
@@ -35,10 +34,10 @@ public class CalendarState extends PersistentState {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
-        NbtList list = new NbtList();
+    public CompoundTag save(CompoundTag nbt) {
+        ListTag list = new ListTag();
         for (WorldCalendar.Segment segment : segments) {
-            NbtCompound entry = new NbtCompound();
+            CompoundTag entry = new CompoundTag();
             entry.putLong("gameTick", segment.gameStart());
             entry.putLong("calendarTick", segment.calendarStart());
             // compatibilité si le monde est rouvert avec une version précédente de l'addon
@@ -58,6 +57,6 @@ public class CalendarState extends PersistentState {
     public void setSegments(List<WorldCalendar.Segment> value) {
         segments.clear();
         segments.addAll(value);
-        markDirty();
+        setDirty();
     }
 }

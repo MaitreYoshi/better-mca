@@ -9,18 +9,18 @@ import com.maitreyoshi.mcavie.life.TombstoneDetails;
 import com.maitreyoshi.mcavie.life.TombReservations;
 import com.maitreyoshi.mcavie.life.TombstonePlacement;
 import net.mca.server.world.data.GraveyardManager;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Mob;
 import com.maitreyoshi.mcavie.life.Wellbeing;
 import com.maitreyoshi.mcavie.social.Social;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.mob.MobEntity;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.ai.Relationship;
 import net.mca.server.world.data.FamilyTreeNode;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -33,7 +33,7 @@ import java.util.Optional;
 public abstract class RelationshipMixin {
     @Shadow
     @Final
-    protected MobEntity entity;
+    protected Mob entity;
 
     @Shadow
     public abstract FamilyTreeNode getFamilyEntry();
@@ -44,23 +44,23 @@ public abstract class RelationshipMixin {
     @Inject(method = "onDeath", at = @At("HEAD"))
     private void mcavie$mourning(DamageSource cause, CallbackInfo ci) {
         mcavie$memorial = false;
-        if (!(entity.getWorld() instanceof ServerWorld world)) {
+        if (!(entity.level() instanceof ServerLevel world)) {
             return;
         }
         LifeRegistry life = LifeRegistry.get(world.getServer());
         HistoryRegistry history = HistoryRegistry.get(world.getServer());
-        Long simulated = history.pendingDeath(entity.getUuid());
+        Long simulated = history.pendingDeath(entity.getUUID());
         if (simulated != null) {
-            history.clearPendingDeath(entity.getUuid());
-            life.setDeathDay(entity.getUuid(), simulated);
+            history.clearPendingDeath(entity.getUUID());
+            life.setDeathDay(entity.getUUID(), simulated);
             if (entity instanceof VillagerEntityMCA villager) {
                 com.maitreyoshi.mcavie.life.Ghosts.died(villager, world);
             }
-            Social.died(world, entity.getUuid(), true);
+            Social.died(world, entity.getUUID(), true);
             return;
         }
-        if (life.getBirthDay(entity.getUuid()) != null) {
-            life.recordDeath(entity.getUuid(), WorldCalendar.now(world).dayIndex(), WorldCalendar.exactCalendarDay(world));
+        if (life.getBirthDay(entity.getUUID()) != null) {
+            life.recordDeath(entity.getUUID(), WorldCalendar.now(world).dayIndex(), WorldCalendar.exactCalendarDay(world));
         }
         FamilyTreeNode node = getFamilyEntry();
         if (FamilyTreeNode.isValid(node.partner())) {
@@ -73,15 +73,15 @@ public abstract class RelationshipMixin {
             com.maitreyoshi.mcavie.life.Ghosts.died(villager, world);
             mcavie$memorial = com.maitreyoshi.mcavie.life.MemorialRegistry.died(villager, world, cause);
         }
-        if (entity instanceof VillagerEntityMCA || life.isZombie(entity.getUuid())) {
-            Social.died(world, entity.getUuid(), true);
+        if (entity instanceof VillagerEntityMCA || life.isZombie(entity.getUUID())) {
+            Social.died(world, entity.getUUID(), true);
         }
     }
 
     @Inject(method = "onDeath", at = @At("RETURN"))
     private void mcavie$forgetDead(DamageSource cause, CallbackInfo ci) {
-        if (entity.getWorld() instanceof ServerWorld world) {
-            LifeCycle.forgetDead(world, entity.getUuid());
+        if (entity.level() instanceof ServerLevel world) {
+            LifeCycle.forgetDead(world, entity.getUUID());
         }
     }
 
@@ -91,22 +91,22 @@ public abstract class RelationshipMixin {
     }
 
     @Redirect(method = "onDeath", at = @At(value = "INVOKE", remap = true,
-            target = "Lnet/mca/server/world/data/GraveyardManager;findNearest(Lnet/minecraft/util/math/BlockPos;Lnet/mca/server/world/data/GraveyardManager$TombstoneState;I)Ljava/util/Optional;"))
+            target = "Lnet/mca/server/world/data/GraveyardManager;findNearest(Lnet/minecraft/core/BlockPos;Lnet/mca/server/world/data/GraveyardManager$TombstoneState;I)Ljava/util/Optional;"))
     private Optional<BlockPos> mcavie$reservedOrFreeTomb(GraveyardManager graveyard, BlockPos pos, GraveyardManager.TombstoneState state, int range) {
         if (mcavie$memorial) {
             return Optional.empty();
         }
-        return entity.getWorld() instanceof ServerWorld world ? TombReservations.findTomb(world, entity, pos, range) : graveyard.findNearest(pos, state, range);
+        return entity.level() instanceof ServerLevel world ? TombReservations.findTomb(world, entity, pos, range) : graveyard.findNearest(pos, state, range);
     }
 
     @Inject(method = "placeTombstone", at = @At("HEAD"), cancellable = true)
-    private void mcavie$placeOnNearestFreeBlock(ServerWorld world, BlockPos entityPos, CallbackInfoReturnable<Optional<BlockPos>> cir) {
+    private void mcavie$placeOnNearestFreeBlock(ServerLevel world, BlockPos entityPos, CallbackInfoReturnable<Optional<BlockPos>> cir) {
         if (mcavie$memorial) {
             cir.setReturnValue(Optional.empty());
             return;
         }
         TombstonePlacement.findSpot(world, entityPos).or(() -> TombstonePlacement.surface(world, entityPos)).ifPresent(pos -> {
-            world.setBlockState(pos, TombstoneBlocks.forTier(TombstoneDetails.tierOf(entity, world)).getDefaultState());
+            world.setBlockAndUpdate(pos, TombstoneBlocks.forTier(TombstoneDetails.tierOf(entity, world)).defaultBlockState());
             cir.setReturnValue(Optional.of(pos));
         });
     }

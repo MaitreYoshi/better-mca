@@ -3,12 +3,12 @@ package com.maitreyoshi.mcavie.tree.server;
 import com.maitreyoshi.mcavie.MCAVie;
 import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtString;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.PersistentState;
+import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -22,7 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class SpouseRegistry extends PersistentState {
+public class SpouseRegistry extends SavedData {
     private static final String DATA_ID = "mca_surnames_spouses";
 
     // REMEMBER : simple mémoire ; MARRIED : ce couple devient le plus récent ; DIVORCED : séparation volontaire ; REVIVED : résurrection
@@ -38,16 +38,16 @@ public class SpouseRegistry extends PersistentState {
     private final Set<String> divorced = new HashSet<>();
 
     public static SpouseRegistry get(MinecraftServer server) {
-        return server.getOverworld().getPersistentStateManager().getOrCreate(SpouseRegistry::fromNbt, SpouseRegistry::new, DATA_ID);
+        return server.overworld().getDataStorage().computeIfAbsent(SpouseRegistry::fromNbt, SpouseRegistry::new, DATA_ID);
     }
 
-    private static SpouseRegistry fromNbt(NbtCompound nbt) {
+    private static SpouseRegistry fromNbt(CompoundTag nbt) {
         SpouseRegistry registry = new SpouseRegistry();
-        NbtCompound entries = nbt.getCompound("spouses");
-        for (String key : entries.getKeys()) {
+        CompoundTag entries = nbt.getCompound("spouses");
+        for (String key : entries.getAllKeys()) {
             try {
                 Set<UUID> set = registry.spouses.computeIfAbsent(UUID.fromString(key), k -> new LinkedHashSet<>());
-                NbtList list = entries.getList(key, NbtElement.STRING_TYPE);
+                ListTag list = entries.getList(key, Tag.TAG_STRING);
                 for (int i = 0; i < list.size(); i++) {
                     set.add(UUID.fromString(list.getString(i)));
                 }
@@ -55,7 +55,7 @@ public class SpouseRegistry extends PersistentState {
                 MCAVie.LOGGER.warn("UUID invalide dans le registre des conjoints : {}", key);
             }
         }
-        NbtList list = nbt.getList("divorced", NbtElement.STRING_TYPE);
+        ListTag list = nbt.getList("divorced", Tag.TAG_STRING);
         for (int i = 0; i < list.size(); i++) {
             registry.divorced.add(list.getString(i));
         }
@@ -63,16 +63,16 @@ public class SpouseRegistry extends PersistentState {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
-        NbtCompound entries = new NbtCompound();
+    public CompoundTag save(CompoundTag nbt) {
+        CompoundTag entries = new CompoundTag();
         spouses.forEach((uuid, set) -> {
-            NbtList list = new NbtList();
-            set.forEach(spouse -> list.add(NbtString.of(spouse.toString())));
+            ListTag list = new ListTag();
+            set.forEach(spouse -> list.add(StringTag.valueOf(spouse.toString())));
             entries.put(uuid.toString(), list);
         });
         nbt.put("spouses", entries);
-        NbtList list = new NbtList();
-        divorced.forEach(key -> list.add(NbtString.of(key)));
+        ListTag list = new ListTag();
+        divorced.forEach(key -> list.add(StringTag.valueOf(key)));
         nbt.put("divorced", list);
         return nbt;
     }
@@ -86,7 +86,7 @@ public class SpouseRegistry extends PersistentState {
         boolean changed = spouses.computeIfAbsent(a, k -> new LinkedHashSet<>()).add(b);
         changed |= spouses.computeIfAbsent(b, k -> new LinkedHashSet<>()).add(a);
         if (changed) {
-            markDirty();
+            setDirty();
         }
     }
 
@@ -114,7 +114,7 @@ public class SpouseRegistry extends PersistentState {
         }
         divorced.clear();
         divorced.addAll(keys);
-        markDirty();
+        setDirty();
     }
 
     private static String rekey(String entry, UUID from, UUID to) {
@@ -131,7 +131,7 @@ public class SpouseRegistry extends PersistentState {
         sb.remove(a);
         sb.add(a);
         divorced.remove(key(a, b));
-        markDirty();
+        setDirty();
     }
 
     public boolean isDivorced(UUID a, UUID b) {
@@ -220,7 +220,7 @@ public class SpouseRegistry extends PersistentState {
                 case DIVORCED -> {
                     registry.add(pending.a(), pending.b());
                     if (registry.divorced.add(key(pending.a(), pending.b()))) {
-                        registry.markDirty();
+                        registry.setDirty();
                     }
                 }
                 case REVIVED -> registry.revive(server, pending.a());
@@ -230,7 +230,7 @@ public class SpouseRegistry extends PersistentState {
 
     // ressuscité : il retrouve son conjoint si celui-ci est en vie et ne s'est pas remarié entre-temps
     private void revive(MinecraftServer server, UUID uuid) {
-        FamilyTree tree = FamilyTree.get(server.getOverworld());
+        FamilyTree tree = FamilyTree.get(server.overworld());
         FamilyTreeNode node = tree.getOrEmpty(uuid).orElse(null);
         if (node == null || node.isDeceased()) {
             return;
@@ -242,7 +242,7 @@ public class SpouseRegistry extends PersistentState {
         }
         node.updatePartner(other);
         other.updatePartner(node);
-        tree.markDirty();
+        tree.setDirty();
     }
 
     public static void clearPending() {

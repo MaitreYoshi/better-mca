@@ -1,9 +1,9 @@
 package com.maitreyoshi.mcavie.work;
 
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 // ordinal sauvegardé : ne jamais réordonner, seulement ajouter à la fin
 public enum Job {
@@ -46,8 +46,8 @@ public enum Job {
         return new ItemStack(tool);
     }
 
-    public Text getName() {
-        return Text.translatable("job.mca_vie." + id);
+    public Component getName() {
+        return Component.translatable("job.mca_vie." + id);
     }
 
     public boolean isSelectable() {

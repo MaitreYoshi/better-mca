@@ -8,9 +8,9 @@ import net.mca.resources.data.BuildingType;
 import net.mca.server.world.data.Building;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -30,14 +30,14 @@ public abstract class ReportBuildingMessageMixin {
     private String data;
 
     @Inject(method = "receive", at = @At("HEAD"), cancellable = true)
-    private void mcavie$checkForceType(ServerPlayerEntity player, CallbackInfo ci) {
-        VillageManager villages = VillageManager.get(player.getServerWorld());
+    private void mcavie$checkForceType(ServerPlayer player, CallbackInfo ci) {
+        VillageManager villages = VillageManager.get(player.serverLevel());
         Optional<Village> village = villages.findNearestVillage(player);
 
         if (action != ReportBuildingMessage.Action.FORCE_TYPE || data == null || data.equals("blocked")) {
             return;
         }
-        BlockPos pos = player.getBlockPos();
+        BlockPos pos = player.blockPosition();
         Optional<Building> building = village.flatMap(v -> v.getBuildings().values().stream()
                 .filter(b -> b.containsPos(pos))
                 .filter(b -> !b.getBuildingType().grouped())
@@ -47,14 +47,14 @@ public abstract class ReportBuildingMessageMixin {
         }
 
         if (!VillageRights.personalRank(village.get(), player).isAtLeast(VillageRights.FORCE_TYPE)) {
-            player.sendMessage(Text.translatable("msg.mca_vie.rights.denied", Text.translatable(VillageRights.FORCE_TYPE.getTranslationKey())), true);
+            player.displayClientMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.FORCE_TYPE.getTranslationKey())), true);
             ci.cancel();
             return;
         }
 
         BuildingType type = BuildingTypes.getInstance().getServerBuildingTypes().get(data);
         if (type == null || !Prestige.hasRequiredBlocks(type, building.get())) {
-            player.sendMessage(Text.translatable("msg.mca_vie.force.missing"), true);
+            player.displayClientMessage(Component.translatable("msg.mca_vie.force.missing"), true);
             ci.cancel();
         }
     }

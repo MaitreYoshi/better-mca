@@ -8,6 +8,7 @@ import com.maitreyoshi.mcavie.phone.client.PhonePhotos;
 import com.maitreyoshi.mcavie.phone.client.PhoneScreen;
 import com.maitreyoshi.mcavie.phone.client.PortraitPickerScreen;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.vertex.PoseStack;
 import com.maitreyoshi.mcavie.tree.FamilyPerson;
 import com.maitreyoshi.mcavie.tree.RelationInfo;
 import com.maitreyoshi.mcavie.tree.TreeProtocol;
@@ -17,19 +18,18 @@ import com.maitreyoshi.mcavie.tree.client.TreeLayout.Segment;
 import net.mca.client.gui.InteractScreen;
 import net.mca.client.gui.MCAScreens;
 import net.mca.client.resources.Icon;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.ChatFormatting;
+import net.minecraft.Util;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.sounds.SoundEvents;
 import com.maitreyoshi.mcavie.phone.client.PhoneSettings;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.screen.ScreenTexts;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -61,7 +61,7 @@ public class TreeScreen extends Screen {
     @Nullable
     private final Screen parent;
     private boolean requested;
-    private ButtonWidget relationsButton;
+    private Button relationsButton;
     @Nullable
     private List<FamilyPerson> treePersons;
     private View view = View.TREE;
@@ -110,33 +110,33 @@ public class TreeScreen extends Screen {
     @Nullable
     private Details details;
 
-    private ButtonWidget upMinus;
-    private ButtonWidget upPlus;
-    private ButtonWidget downMinus;
-    private ButtonWidget downPlus;
-    private ButtonWidget pathButton;
-    private ButtonWidget lineageButton;
-    private ButtonWidget centerButton;
-    private ButtonWidget fitButton;
-    private ButtonWidget previousLink;
-    private ButtonWidget nextLink;
-    private TextFieldWidget searchField;
+    private Button upMinus;
+    private Button upPlus;
+    private Button downMinus;
+    private Button downPlus;
+    private Button pathButton;
+    private Button lineageButton;
+    private Button centerButton;
+    private Button fitButton;
+    private Button previousLink;
+    private Button nextLink;
+    private EditBox searchField;
 
     public TreeScreen(UUID root, @Nullable Screen parent) {
-        super(Text.translatable("tree.mca_vie.title_empty"));
+        super(Component.translatable("tree.mca_vie.title_empty"));
         this.root = root;
         this.parent = parent;
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 
     @Override
-    public void close() {
-        assert client != null;
-        client.setScreen(parent);
+    public void onClose() {
+        assert minecraft != null;
+        minecraft.setScreen(parent);
     }
 
     @Override
@@ -146,38 +146,38 @@ public class TreeScreen extends Screen {
         int minusX = PANEL_WIDTH - 6 - 44;
         int plusX = PANEL_WIDTH - 6 - 14;
 
-        upMinus = addDrawableChild(ButtonWidget.builder(Text.literal("-"), b -> setUp(previous(up))).dimensions(minusX, TOP + 14, 14, 14).build());
-        upPlus = addDrawableChild(ButtonWidget.builder(Text.literal("+"), b -> setUp(next(up))).dimensions(plusX, TOP + 14, 14, 14).build());
-        downMinus = addDrawableChild(ButtonWidget.builder(Text.literal("-"), b -> setDown(previous(down))).dimensions(minusX, TOP + 31, 14, 14).build());
-        downPlus = addDrawableChild(ButtonWidget.builder(Text.literal("+"), b -> setDown(next(down))).dimensions(plusX, TOP + 31, 14, 14).build());
+        upMinus = addRenderableWidget(Button.builder(Component.literal("-"), b -> setUp(previous(up))).bounds(minusX, TOP + 14, 14, 14).build());
+        upPlus = addRenderableWidget(Button.builder(Component.literal("+"), b -> setUp(next(up))).bounds(plusX, TOP + 14, 14, 14).build());
+        downMinus = addRenderableWidget(Button.builder(Component.literal("-"), b -> setDown(previous(down))).bounds(minusX, TOP + 31, 14, 14).build());
+        downPlus = addRenderableWidget(Button.builder(Component.literal("+"), b -> setDown(next(down))).bounds(plusX, TOP + 31, 14, 14).build());
 
-        pathButton = addDrawableChild(ButtonWidget.builder(Text.translatable("tree.mca_vie.path_button"), b -> togglePath())
-                .dimensions(x0, TOP + 52, inner, 18).build());
-        lineageButton = addDrawableChild(ButtonWidget.builder(Text.translatable("tree.mca_vie.lineage_button"), b -> toggleLineage())
-                .dimensions(x0, TOP + 73, inner, 18).build());
+        pathButton = addRenderableWidget(Button.builder(Component.translatable("tree.mca_vie.path_button"), b -> togglePath())
+                .bounds(x0, TOP + 52, inner, 18).build());
+        lineageButton = addRenderableWidget(Button.builder(Component.translatable("tree.mca_vie.lineage_button"), b -> toggleLineage())
+                .bounds(x0, TOP + 73, inner, 18).build());
 
-        searchField = new TextFieldWidget(textRenderer, x0 + 1, TOP + 109, inner - 2, 16, Text.translatable("tree.mca_vie.search"));
+        searchField = new EditBox(font, x0 + 1, TOP + 109, inner - 2, 16, Component.translatable("tree.mca_vie.search"));
         searchField.setMaxLength(32);
-        searchField.setText(searchText);
-        searchField.setPlaceholder(Text.translatable("tree.mca_vie.search_hint").formatted(Formatting.DARK_GRAY));
-        searchField.setChangedListener(this::onSearchChanged);
-        addDrawableChild(searchField);
+        searchField.setValue(searchText);
+        searchField.setHint(Component.translatable("tree.mca_vie.search_hint").withStyle(ChatFormatting.DARK_GRAY));
+        searchField.setResponder(this::onSearchChanged);
+        addRenderableWidget(searchField);
 
         int barY = height - BOTTOM + 4;
-        centerButton = addDrawableChild(ButtonWidget.builder(Text.translatable("tree.mca_vie.center"), b -> {
+        centerButton = addRenderableWidget(Button.builder(Component.translatable("tree.mca_vie.center"), b -> {
             zoom = 1;
             centerOnRoot();
-        }).dimensions(PANEL_WIDTH + 6, barY, 70, 18).build());
-        fitButton = addDrawableChild(ButtonWidget.builder(Text.translatable("tree.mca_vie.fit"), b -> fitAll())
-                .dimensions(PANEL_WIDTH + 80, barY, 70, 18).build());
-        relationsButton = addDrawableChild(ButtonWidget.builder(relationsText(), b -> toggleRelations())
-                .dimensions(PANEL_WIDTH + 154, barY, 100, 18).build());
-        addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, b -> close())
-                .dimensions(width - 6 - 80, barY, 80, 18).build());
-        previousLink = addDrawableChild(ButtonWidget.builder(Text.literal("◀"), b -> changeLink(-1))
-                .dimensions(viewLeft() + 4, viewTop() + 5, 18, 18).build());
-        nextLink = addDrawableChild(ButtonWidget.builder(Text.literal("▶"), b -> changeLink(1))
-                .dimensions(viewRight() - 4 - 18, viewTop() + 5, 18, 18).build());
+        }).bounds(PANEL_WIDTH + 6, barY, 70, 18).build());
+        fitButton = addRenderableWidget(Button.builder(Component.translatable("tree.mca_vie.fit"), b -> fitAll())
+                .bounds(PANEL_WIDTH + 80, barY, 70, 18).build());
+        relationsButton = addRenderableWidget(Button.builder(relationsText(), b -> toggleRelations())
+                .bounds(PANEL_WIDTH + 154, barY, 100, 18).build());
+        addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> onClose())
+                .bounds(width - 6 - 80, barY, 80, 18).build());
+        previousLink = addRenderableWidget(Button.builder(Component.literal("◀"), b -> changeLink(-1))
+                .bounds(viewLeft() + 4, viewTop() + 5, 18, 18).build());
+        nextLink = addRenderableWidget(Button.builder(Component.literal("▶"), b -> changeLink(1))
+                .bounds(viewRight() - 4 - 18, viewTop() + 5, 18, 18).build());
 
         if (!requested) {
             requested = true;
@@ -188,8 +188,8 @@ public class TreeScreen extends Screen {
         updateWidgets();
     }
 
-    private static Text relationsText() {
-        return Text.translatable(PhoneSettings.treeRelations() ? "tree.mca_vie.relations.on" : "tree.mca_vie.relations.off");
+    private static Component relationsText() {
+        return Component.translatable(PhoneSettings.treeRelations() ? "tree.mca_vie.relations.on" : "tree.mca_vie.relations.off");
     }
 
     /** Affiche ou cache les liens de parenté jaunes, puis recalcule les cartes sans bouger la caméra. */
@@ -198,10 +198,10 @@ public class TreeScreen extends Screen {
         PhoneSettings.save();
         relationsButton.setMessage(relationsText());
         if (treePersons != null) {
-            treeLayout = TreeLayout.family(treePersons, root, textRenderer, today(), up, down);
+            treeLayout = TreeLayout.family(treePersons, root, font, today(), up, down);
         }
         if (pathResponse != null) {
-            pathLayout = TreeLayout.path(pathResponse.persons(), pathResponse.path(), textRenderer, today());
+            pathLayout = TreeLayout.path(pathResponse.persons(), pathResponse.path(), font, today());
         }
     }
 
@@ -210,9 +210,9 @@ public class TreeScreen extends Screen {
         upPlus.active = up != TreeProtocol.ALL_GENERATIONS;
         downMinus.active = down != 1;
         downPlus.active = down != TreeProtocol.ALL_GENERATIONS;
-        Text back = Text.translatable("tree.mca_vie.back");
-        pathButton.setMessage(view == View.PATH ? back : Text.translatable("tree.mca_vie.path_button"));
-        lineageButton.setMessage(view == View.LINEAGE ? back : Text.translatable("tree.mca_vie.lineage_button"));
+        Component back = Component.translatable("tree.mca_vie.back");
+        pathButton.setMessage(view == View.PATH ? back : Component.translatable("tree.mca_vie.path_button"));
+        lineageButton.setMessage(view == View.LINEAGE ? back : Component.translatable("tree.mca_vie.lineage_button"));
         lineageButton.active = view == View.LINEAGE || !rootSurname().isEmpty();
         centerButton.visible = view == View.TREE;
         fitButton.visible = view != View.LINEAGE;
@@ -257,12 +257,12 @@ public class TreeScreen extends Screen {
     }
 
     private UUID viewer() {
-        assert client != null && client.player != null;
-        return client.player.getUuid();
+        assert minecraft != null && minecraft.player != null;
+        return minecraft.player.getUUID();
     }
 
     private long today() {
-        return client != null && client.world != null ? WorldCalendar.now(client.world).dayIndex() : 0;
+        return minecraft != null && minecraft.level != null ? WorldCalendar.now(minecraft.level).dayIndex() : 0;
     }
 
     private void requestTree(UUID id) {
@@ -350,7 +350,7 @@ public class TreeScreen extends Screen {
                 treeById.clear();
                 response.persons().forEach(p -> treeById.put(p.id(), p));
                 treePersons = response.persons();
-                treeLayout = TreeLayout.family(response.persons(), root, textRenderer, today(), up, down);
+                treeLayout = TreeLayout.family(response.persons(), root, font, today(), up, down);
                 if (keepCamera) {
                     keepCamera = false;
                 } else if (view == View.TREE) {
@@ -367,7 +367,7 @@ public class TreeScreen extends Screen {
                 pathIndex = response.index();
                 pathCount = response.count();
                 pathResponse = response;
-                pathLayout = TreeLayout.path(response.persons(), response.path(), textRenderer, today());
+                pathLayout = TreeLayout.path(response.persons(), response.path(), font, today());
                 if (view == View.PATH) {
                     fitAll();
                 }
@@ -624,8 +624,8 @@ public class TreeScreen extends Screen {
     }
 
     private void playClick() {
-        assert client != null;
-        client.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.UI_BUTTON_CLICK, 1));
+        assert minecraft != null;
+        minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1));
     }
 
     private void clampScrolls() {
@@ -636,12 +636,12 @@ public class TreeScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
         context.fill(0, TOP, PANEL_WIDTH - 1, height, 0x80000000);
         context.fill(viewLeft(), viewTop(), viewRight(), viewBottom(), 0x66000000);
 
-        context.drawCenteredTextWithShadow(textRenderer, titleText(), (int) viewCenterX(), 8, 0xFFFFFF);
+        context.drawCenteredString(font, titleText(), (int) viewCenterX(), 8, 0xFFFFFF);
 
         switch (view) {
             case TREE -> renderTree(context, mouseX, mouseY);
@@ -657,55 +657,55 @@ public class TreeScreen extends Screen {
         }
     }
 
-    private Text titleText() {
+    private Component titleText() {
         return switch (view) {
-            case PATH -> Text.translatable("tree.mca_vie.path_button");
-            case LINEAGE -> Text.translatable("tree.mca_vie.lineage.title", lineageSurname);
+            case PATH -> Component.translatable("tree.mca_vie.path_button");
+            case LINEAGE -> Component.translatable("tree.mca_vie.lineage.title", lineageSurname);
             case TREE -> {
                 FamilyPerson person = treeById.get(root);
-                yield person == null ? title : Text.translatable("tree.mca_vie.title", TreeTexts.name(person));
+                yield person == null ? title : Component.translatable("tree.mca_vie.title", TreeTexts.name(person));
             }
         };
     }
 
-    private void renderTree(DrawContext context, int mouseX, int mouseY) {
+    private void renderTree(GuiGraphics context, int mouseX, int mouseY) {
         if (treeLayout.isEmpty()) {
-            centeredMessage(context, Text.translatable(treeWaiting ? "tree.mca_vie.loading" : "tree.mca_vie.empty"));
+            centeredMessage(context, Component.translatable(treeWaiting ? "tree.mca_vie.loading" : "tree.mca_vie.empty"));
             return;
         }
         renderLayout(context, treeLayout, mouseX, mouseY);
     }
 
-    private void renderPath(DrawContext context, int mouseX, int mouseY) {
+    private void renderPath(GuiGraphics context, int mouseX, int mouseY) {
         renderLayout(context, pathLayout, mouseX, mouseY);
 
-        Text sentence;
+        Component sentence;
         if (pathWaiting || pathResponse == null) {
-            sentence = Text.translatable("tree.mca_vie.loading");
+            sentence = Component.translatable("tree.mca_vie.loading");
         } else {
             sentence = pathSentence(pathResponse);
         }
         int cx = (int) viewCenterX();
         context.fill(viewLeft(), viewTop(), viewRight(), viewTop() + 28, 0x90000000);
-        context.drawCenteredTextWithShadow(textRenderer, sentence, cx, viewTop() + 4, 0xFFFF55);
-        MutableText slots = Text.translatable("tree.mca_vie.path.a", nameOf(pathA))
+        context.drawCenteredString(font, sentence, cx, viewTop() + 4, 0xFFFF55);
+        MutableComponent slots = Component.translatable("tree.mca_vie.path.a", nameOf(pathA))
                 .append("   ")
-                .append(Text.translatable("tree.mca_vie.path.b", nameOf(pathB)));
+                .append(Component.translatable("tree.mca_vie.path.b", nameOf(pathB)));
         if (pathCount > 1) {
-            slots.append("   ").append(Text.translatable("tree.mca_vie.path.link", pathIndex + 1, pathCount));
+            slots.append("   ").append(Component.translatable("tree.mca_vie.path.link", pathIndex + 1, pathCount));
         }
-        context.drawCenteredTextWithShadow(textRenderer, slots, cx, viewTop() + 16, 0xAAAAAA);
-        context.drawTextWithShadow(textRenderer, Text.translatable("tree.mca_vie.path.pick"),
+        context.drawCenteredString(font, slots, cx, viewTop() + 16, 0xAAAAAA);
+        context.drawString(font, Component.translatable("tree.mca_vie.path.pick"),
                 viewLeft() + 6, viewBottom() - 12, 0x808080);
     }
 
-    private Text pathSentence(TreeProtocol.Response response) {
+    private Component pathSentence(TreeProtocol.Response response) {
         RelationInfo relation = response.relation();
         if (relation != null && "self".equals(relation.code())) {
-            return Text.translatable("tree.mca_vie.path.self");
+            return Component.translatable("tree.mca_vie.path.self");
         }
         if (relation == null || "none".equals(relation.code()) || response.path().isEmpty()) {
-            return Text.translatable("tree.mca_vie.path.none", nameOf(pathB), nameOf(pathA));
+            return Component.translatable("tree.mca_vie.path.none", nameOf(pathB), nameOf(pathA));
         }
         int gender = 0;
         for (FamilyPerson person : response.persons()) {
@@ -713,15 +713,15 @@ public class TreeScreen extends Screen {
                 gender = person.gender();
             }
         }
-        return Text.translatable("tree.mca_vie.path.relation", nameOf(pathB), TreeTexts.theRelation(relation, gender), nameOf(pathA));
+        return Component.translatable("tree.mca_vie.path.relation", nameOf(pathB), TreeTexts.theRelation(relation, gender), nameOf(pathA));
     }
 
     private String nameOf(@Nullable UUID id) {
         if (id == null) {
             return "?";
         }
-        if (client != null && client.player != null && id.equals(client.player.getUuid()) && !knownNames.containsKey(id)) {
-            return client.player.getName().getString();
+        if (minecraft != null && minecraft.player != null && id.equals(minecraft.player.getUUID()) && !knownNames.containsKey(id)) {
+            return minecraft.player.getName().getString();
         }
         return knownNames.getOrDefault(id, "?");
     }
@@ -738,14 +738,14 @@ public class TreeScreen extends Screen {
         return person;
     }
 
-    private void centeredMessage(DrawContext context, Text text) {
-        context.drawCenteredTextWithShadow(textRenderer, text, (int) viewCenterX(), (int) viewCenterY() - 4, 0xAAAAAA);
+    private void centeredMessage(GuiGraphics context, Component text) {
+        context.drawCenteredString(font, text, (int) viewCenterX(), (int) viewCenterY() - 4, 0xAAAAAA);
     }
 
-    private void renderLayout(DrawContext context, TreeLayout layout, int mouseX, int mouseY) {
+    private void renderLayout(GuiGraphics context, TreeLayout layout, int mouseX, int mouseY) {
         context.enableScissor(viewLeft(), viewTop(), viewRight(), viewBottom());
-        MatrixStack matrices = context.getMatrices();
-        matrices.push();
+        PoseStack matrices = context.pose();
+        matrices.pushPose();
         matrices.translate(viewCenterX(), viewCenterY(), 0);
         matrices.scale(zoom, zoom, 1);
         matrices.translate(-camX, -camY, 0);
@@ -788,11 +788,11 @@ public class TreeScreen extends Screen {
             drawCard(context, card, card == hovered, text);
         }
 
-        matrices.pop();
+        matrices.popPose();
         context.disableScissor();
     }
 
-    private static void drawSegment(DrawContext context, int x0, int y0, int x1, int y1, int color, boolean dashed, int thickness) {
+    private static void drawSegment(GuiGraphics context, int x0, int y0, int x1, int y1, int color, boolean dashed, int thickness) {
         int half = thickness / 2;
         if (x0 == x1) {
             if (!dashed) {
@@ -813,12 +813,12 @@ public class TreeScreen extends Screen {
         }
     }
 
-    private static void drawIcon(DrawContext context, String key, int x, int y, int size) {
+    private static void drawIcon(GuiGraphics context, String key, int x, int y, int size) {
         Icon icon = MCAScreens.getInstance().getIcon(key);
-        context.drawTexture(InteractScreen.ICON_TEXTURES, x, y, size, size, icon.u(), icon.v(), 16, 16, 256, 256);
+        context.blit(InteractScreen.ICON_TEXTURES, x, y, size, size, icon.u(), icon.v(), 16, 16, 256, 256);
     }
 
-    private void drawCard(DrawContext context, Card card, boolean hovered, boolean text) {
+    private void drawCard(GuiGraphics context, Card card, boolean hovered, boolean text) {
         int l = card.left();
         int t = card.y;
         int r = card.right();
@@ -834,9 +834,9 @@ public class TreeScreen extends Screen {
         context.fill(l, t + 1, r, b - 1, background);
         context.fill(l + 1, t, r - 1, t + 1, background);
         context.fill(l + 1, b - 1, r - 1, b, background);
-        context.drawBorder(l + 1, t + 1, r - l - 2, b - t - 2, border);
+        context.renderOutline(l + 1, t + 1, r - l - 2, b - t - 2, border);
         if (card.highlighted) {
-            context.drawBorder(l, t, r - l, b - t, CARD_BORDER_ROOT);
+            context.renderOutline(l, t, r - l, b - t, CARD_BORDER_ROOT);
         }
 
         int x = l + TreeLayout.PADDING;
@@ -855,18 +855,18 @@ public class TreeScreen extends Screen {
             nameX += TreeLayout.ICON_SPACE;
         }
         for (int i = 0; i < card.lines.length; i++) {
-            context.drawText(textRenderer, card.lines[i], i == 0 ? nameX : x, y + i * TreeLayout.LINE_HEIGHT, card.colors[i], true);
+            context.drawString(font, card.lines[i], i == 0 ? nameX : x, y + i * TreeLayout.LINE_HEIGHT, card.colors[i], true);
         }
     }
 
-    private static void drawPortrait(DrawContext context, UUID id, int x, int y) {
+    private static void drawPortrait(GuiGraphics context, UUID id, int x, int y) {
         int size = TreeLayout.PORTRAIT;
         PhonePhotos.Picture picture = PhonePhotos.portrait(id);
         if (picture == null) {
             context.fill(x, y, x + size, y + size, 0xFF202030);
             return;
         }
-        context.drawTexture(picture.texture(), x, y, size, size, 0, 0, picture.width(), picture.height(), picture.width(), picture.height());
+        context.blit(picture.texture(), x, y, size, size, 0, 0, picture.width(), picture.height(), picture.width(), picture.height());
     }
 
     @Nullable
@@ -897,7 +897,7 @@ public class TreeScreen extends Screen {
         return index >= 0 && index < lineage.size() ? lineage.get(index) : null;
     }
 
-    private record LineageRow(Text status, int statusWidth, int statusColor, String name, String second) {
+    private record LineageRow(Component status, int statusWidth, int statusColor, String name, String second) {
     }
 
     private List<LineageRow> lineageRows(long today, int width) {
@@ -907,15 +907,15 @@ public class TreeScreen extends Screen {
         List<LineageRow> rows = new ArrayList<>(lineage.size());
         for (FamilyPerson person : lineage) {
             boolean dead = person.deceased() || person.deathDay() != null;
-            Text status = Text.translatable((dead ? "tree.mca_vie.dead." : "tree.mca_vie.alive.") + TreeTexts.g(person.gender()));
-            int statusWidth = textRenderer.getWidth(status);
-            String name = TreeTexts.trim(textRenderer, TreeTexts.name(person), width - statusWidth - 10);
-            Text years = TreeTexts.yearsLine(person, today);
+            Component status = Component.translatable((dead ? "tree.mca_vie.dead." : "tree.mca_vie.alive.") + TreeTexts.g(person.gender()));
+            int statusWidth = font.width(status);
+            String name = TreeTexts.trim(font, TreeTexts.name(person), width - statusWidth - 10);
+            Component years = TreeTexts.yearsLine(person, today);
             String profession = TreeTexts.profession(person);
             String second = (years == null ? "" : years.getString())
                     + (years != null && !profession.isEmpty() ? "  ·  " : "")
                     + profession;
-            rows.add(new LineageRow(status, statusWidth, dead ? 0x909090 : 0x55FF55, name, TreeTexts.trim(textRenderer, second, width)));
+            rows.add(new LineageRow(status, statusWidth, dead ? 0x909090 : 0x55FF55, name, TreeTexts.trim(font, second, width)));
         }
         lineageRows = rows;
         lineageRowsSource = lineage;
@@ -924,13 +924,13 @@ public class TreeScreen extends Screen {
         return rows;
     }
 
-    private void renderLineage(DrawContext context, int mouseX, int mouseY) {
-        Text header = lineageWaiting
-                ? Text.translatable("tree.mca_vie.loading")
-                : Text.translatable("tree.mca_vie.lineage.count", lineage.size());
-        context.drawCenteredTextWithShadow(textRenderer, header, (int) viewCenterX(), viewTop() + 5, 0xAAAAAA);
+    private void renderLineage(GuiGraphics context, int mouseX, int mouseY) {
+        Component header = lineageWaiting
+                ? Component.translatable("tree.mca_vie.loading")
+                : Component.translatable("tree.mca_vie.lineage.count", lineage.size());
+        context.drawCenteredString(font, header, (int) viewCenterX(), viewTop() + 5, 0xAAAAAA);
         if (!lineageWaiting && lineage.isEmpty()) {
-            centeredMessage(context, Text.translatable("tree.mca_vie.no_result"));
+            centeredMessage(context, Component.translatable("tree.mca_vie.no_result"));
             return;
         }
 
@@ -952,9 +952,9 @@ public class TreeScreen extends Screen {
                 context.fill(left - 4, y, right + 4, y + LINEAGE_ROW_HEIGHT - 1, 0x20FFFFFF);
             }
             LineageRow row = rows.get(i);
-            context.drawTextWithShadow(textRenderer, row.status(), right - row.statusWidth(), y + 2, row.statusColor());
-            context.drawTextWithShadow(textRenderer, row.name(), left, y + 2, TreeTexts.nameColor(person.gender()));
-            context.drawTextWithShadow(textRenderer, row.second(), left, y + 11, 0xAAAAAA);
+            context.drawString(font, row.status(), right - row.statusWidth(), y + 2, row.statusColor());
+            context.drawString(font, row.name(), left, y + 2, TreeTexts.nameColor(person.gender()));
+            context.drawString(font, row.second(), left, y + 11, 0xAAAAAA);
         }
         context.disableScissor();
     }
@@ -963,23 +963,23 @@ public class TreeScreen extends Screen {
         return TOP + 130;
     }
 
-    private void renderPanel(DrawContext context, int mouseX, int mouseY) {
+    private void renderPanel(GuiGraphics context, int mouseX, int mouseY) {
         int x0 = 6;
-        context.drawTextWithShadow(textRenderer, Text.translatable("tree.mca_vie.generations"), x0, TOP + 3, 0xFFFFFF);
-        context.drawTextWithShadow(textRenderer, Text.translatable("tree.mca_vie.up"), x0, TOP + 17, 0xAAAAAA);
-        context.drawTextWithShadow(textRenderer, Text.translatable("tree.mca_vie.down"), x0, TOP + 34, 0xAAAAAA);
+        context.drawString(font, Component.translatable("tree.mca_vie.generations"), x0, TOP + 3, 0xFFFFFF);
+        context.drawString(font, Component.translatable("tree.mca_vie.up"), x0, TOP + 17, 0xAAAAAA);
+        context.drawString(font, Component.translatable("tree.mca_vie.down"), x0, TOP + 34, 0xAAAAAA);
         int valueX = PANEL_WIDTH - 6 - 22;
-        context.drawCenteredTextWithShadow(textRenderer, generationText(up), valueX, TOP + 17, 0xFFFFFF);
-        context.drawCenteredTextWithShadow(textRenderer, generationText(down), valueX, TOP + 34, 0xFFFFFF);
-        context.drawTextWithShadow(textRenderer, Text.translatable("tree.mca_vie.search"), x0, TOP + 98, 0xFFFFFF);
+        context.drawCenteredString(font, generationText(up), valueX, TOP + 17, 0xFFFFFF);
+        context.drawCenteredString(font, generationText(down), valueX, TOP + 34, 0xFFFFFF);
+        context.drawString(font, Component.translatable("tree.mca_vie.search"), x0, TOP + 98, 0xFFFFFF);
 
         int top = resultsTop();
         int bottom = height - 6;
         if (searchResults.isEmpty()) {
             if (searchWaiting) {
-                context.drawTextWithShadow(textRenderer, Text.translatable("tree.mca_vie.loading"), x0, top + 2, 0x808080);
+                context.drawString(font, Component.translatable("tree.mca_vie.loading"), x0, top + 2, 0x808080);
             } else if (!searchText.isBlank() && searchDelay < 0) {
-                context.drawTextWithShadow(textRenderer, Text.translatable("tree.mca_vie.no_result"), x0, top + 2, 0x808080);
+                context.drawString(font, Component.translatable("tree.mca_vie.no_result"), x0, top + 2, 0x808080);
             }
             return;
         }
@@ -999,11 +999,11 @@ public class TreeScreen extends Screen {
             if (hover) {
                 context.fill(2, y, PANEL_WIDTH - 3, y + RESULT_HEIGHT - 1, 0x40FFFFFF);
             }
-            context.drawTextWithShadow(textRenderer, TreeTexts.trim(textRenderer, TreeTexts.name(person), nameWidth),
+            context.drawString(font, TreeTexts.trim(font, TreeTexts.name(person), nameWidth),
                     x0, y + 1, TreeTexts.nameColor(person.gender()));
-            Text years = TreeTexts.yearsLine(person, today);
+            Component years = TreeTexts.yearsLine(person, today);
             if (years != null) {
-                context.drawTextWithShadow(textRenderer, TreeTexts.trim(textRenderer, years.getString(), nameWidth), x0, y + 10, 0x909090);
+                context.drawString(font, TreeTexts.trim(font, years.getString(), nameWidth), x0, y + 10, 0x909090);
             }
             if (slots) {
                 drawSlot(context, "A", slotX(0), y + 4, person.id().equals(pathA), mouseX, mouseY);
@@ -1017,11 +1017,11 @@ public class TreeScreen extends Screen {
         return PANEL_WIDTH - 32 + slot * 14;
     }
 
-    private void drawSlot(DrawContext context, String letter, int x, int y, boolean selected, int mouseX, int mouseY) {
+    private void drawSlot(GuiGraphics context, String letter, int x, int y, boolean selected, int mouseX, int mouseY) {
         boolean hover = mouseX >= x && mouseX < x + 12 && mouseY >= y && mouseY < y + 12;
         context.fill(x, y, x + 12, y + 12, selected ? 0xFF6040A0 : hover ? 0xFF404060 : 0xFF202030);
-        context.drawBorder(x, y, 12, 12, selected ? CARD_BORDER_ROOT : 0xFF707090);
-        context.drawCenteredTextWithShadow(textRenderer, letter, x + 6, y + 2, 0xFFFFFF);
+        context.renderOutline(x, y, 12, 12, selected ? CARD_BORDER_ROOT : 0xFF707090);
+        context.drawCenteredString(font, letter, x + 6, y + 2, 0xFFFFFF);
     }
 
     private boolean clickResult(double mouseX, double mouseY) {
@@ -1049,7 +1049,7 @@ public class TreeScreen extends Screen {
 
     private final class Details {
         private static final int LINE = 11;
-        private final List<Text> lines = new ArrayList<>();
+        private final List<Component> lines = new ArrayList<>();
         private final List<Integer> colors = new ArrayList<>();
         private final List<Runnable> actions = new ArrayList<>();
         private final int x;
@@ -1060,13 +1060,13 @@ public class TreeScreen extends Screen {
         private Details(FamilyPerson person, int mouseX, int mouseY) {
             long today = today();
             String g = TreeTexts.g(person.gender());
-            add(Text.literal(TreeTexts.name(person)), TreeTexts.nameColor(person.gender()));
+            add(Component.literal(TreeTexts.name(person)), TreeTexts.nameColor(person.gender()));
             if (PhoneSettings.treeRelations() && TreeTexts.isShown(person.relationToViewer())) {
-                add(Text.literal(TreeTexts.yourRelation(person.relationToViewer(), person.gender())), 0xFFFF55);
+                add(Component.literal(TreeTexts.yourRelation(person.relationToViewer(), person.gender())), 0xFFFF55);
             }
             String profession = TreeTexts.profession(person);
             if (!profession.isEmpty()) {
-                add(Text.literal(profession), 0xAAAAAA);
+                add(Component.literal(profession), 0xAAAAAA);
             }
 
             Long birth = person.birthDay();
@@ -1074,27 +1074,27 @@ public class TreeScreen extends Screen {
             boolean dead = person.deceased() || death != null;
             List<Long> lives = person.pastLives();
             if (birth != null) {
-                add(Text.translatable("tree.mca_vie.born." + g, TreeTexts.date(person.exactBirth(), birth)), 0xFFFFFF);
+                add(Component.translatable("tree.mca_vie.born." + g, TreeTexts.date(person.exactBirth(), birth)), 0xFFFFFF);
             } else {
-                add(Text.translatable("tree.mca_vie.born_unknown"), 0x909090);
+                add(Component.translatable("tree.mca_vie.born_unknown"), 0x909090);
             }
             for (int i = 0; i + 1 < lives.size(); i += 2) {
-                add(Text.translatable("tree.mca_vie.died." + g, TreeTexts.calendarDate(lives.get(i))), 0xC0C0C0);
-                add(Text.translatable("tree.mca_vie.resurrected." + g, TreeTexts.calendarDate(lives.get(i + 1))), 0xB48CFF);
+                add(Component.translatable("tree.mca_vie.died." + g, TreeTexts.calendarDate(lives.get(i))), 0xC0C0C0);
+                add(Component.translatable("tree.mca_vie.resurrected." + g, TreeTexts.calendarDate(lives.get(i + 1))), 0xB48CFF);
             }
             if (birth != null && !dead) {
-                add(Text.translatable("tree.mca_vie.details.age", TreeTexts.age(TreeTexts.liveAge(person.exactBirth(), birth, today))), 0xFFFFFF);
+                add(Component.translatable("tree.mca_vie.details.age", TreeTexts.age(TreeTexts.liveAge(person.exactBirth(), birth, today))), 0xFFFFFF);
             }
             if (death != null) {
                 if (birth != null) {
-                    add(Text.translatable("tree.mca_vie.died_age." + g, TreeTexts.date(person.exactDeath(), death),
+                    add(Component.translatable("tree.mca_vie.died_age." + g, TreeTexts.date(person.exactDeath(), death),
                             TreeTexts.age(person.exactDeath() != null ? TreeTexts.ageBetween(person.exactBirth(), birth, person.exactDeath())
                                     : LifeCycle.ageInYears(birth, death))), 0xC0C0C0);
                 } else {
-                    add(Text.translatable("tree.mca_vie.died." + g, TreeTexts.date(person.exactDeath(), death)), 0xC0C0C0);
+                    add(Component.translatable("tree.mca_vie.died." + g, TreeTexts.date(person.exactDeath(), death)), 0xC0C0C0);
                 }
             } else if (dead) {
-                add(Text.translatable("tree.mca_vie.dead." + g), 0xC0C0C0);
+                add(Component.translatable("tree.mca_vie.dead." + g), 0xC0C0C0);
             }
 
             List<UUID> spouses = person.spouses();
@@ -1102,7 +1102,7 @@ public class TreeScreen extends Screen {
             if (!spouses.isEmpty() && spouses.get(0).equals(person.spouse())) {
                 FamilyPerson current = findPerson(spouses.get(0));
                 String key = "tree.mca_vie.details.spouse." + (current == null ? "m" : TreeTexts.g(current.gender()));
-                add(Text.translatable(key, spouseName(spouses.get(0))), 0xFFFFFF);
+                add(Component.translatable(key, spouseName(spouses.get(0))), 0xFFFFFF);
                 pastFrom = 1;
             }
             if (spouses.size() > pastFrom) {
@@ -1110,32 +1110,32 @@ public class TreeScreen extends Screen {
                 for (UUID id : spouses.subList(pastFrom, spouses.size())) {
                     names.add(spouseName(id));
                 }
-                String joined = TreeTexts.trim(textRenderer, String.join(", ", names), 200);
-                add(Text.translatable("tree.mca_vie.details.past_spouses", joined), 0xC0C0C0);
+                String joined = TreeTexts.trim(font, String.join(", ", names), 200);
+                add(Component.translatable("tree.mca_vie.details.past_spouses", joined), 0xC0C0C0);
             }
             if (!person.children().isEmpty()) {
-                add(Text.translatable("tree.mca_vie.details.children", person.children().size()), 0xFFFFFF);
+                add(Component.translatable("tree.mca_vie.details.children", person.children().size()), 0xFFFFFF);
             }
             if (person.happiness() >= 0 && !dead) {
-                add(Text.translatable("tree.mca_vie.details.happiness", person.happiness()), 0xFFFFFF);
+                add(Component.translatable("tree.mca_vie.details.happiness", person.happiness()), 0xFFFFFF);
             }
 
             if (view != View.TREE || !person.id().equals(root)) {
-                addAction(Text.translatable("tree.mca_vie.details.show_tree"), () -> showTree(person.id()));
+                addAction(Component.translatable("tree.mca_vie.details.show_tree"), () -> showTree(person.id()));
             }
             if (!person.id().equals(viewer())) {
-                addAction(Text.translatable("tree.mca_vie.details.show_link"), () -> showPath(viewer(), person.id()));
+                addAction(Component.translatable("tree.mca_vie.details.show_link"), () -> showPath(viewer(), person.id()));
             }
             PhoneScreen phone = phone();
             if (phone != null) {
                 boolean has = person.portrait() != null;
-                addAction(Text.translatable(has ? "tree.mca_vie.details.change_portrait" : "tree.mca_vie.details.set_portrait"),
-                        () -> client.setScreen(new PortraitPickerScreen(TreeScreen.this, phone.state(), person.id(), TreeTexts.name(person))));
+                addAction(Component.translatable(has ? "tree.mca_vie.details.change_portrait" : "tree.mca_vie.details.set_portrait"),
+                        () -> minecraft.setScreen(new PortraitPickerScreen(TreeScreen.this, phone.state(), person.id(), TreeTexts.name(person))));
                 if (has) {
-                    addAction(Text.translatable("tree.mca_vie.details.remove_portrait"), () -> {
+                    addAction(Component.translatable("tree.mca_vie.details.remove_portrait"), () -> {
                         PhoneClient.send(phone.number(), PhoneNetwork.OP_SET_PORTRAIT, buf -> {
-                            buf.writeUuid(person.id());
-                            buf.writeUuid(Util.NIL_UUID);
+                            buf.writeUUID(person.id());
+                            buf.writeUUID(Util.NIL_UUID);
                         });
                         refreshPortraits();
                     });
@@ -1143,8 +1143,8 @@ public class TreeScreen extends Screen {
             }
 
             int width = 0;
-            for (Text line : lines) {
-                width = Math.max(width, textRenderer.getWidth(line));
+            for (Component line : lines) {
+                width = Math.max(width, font.width(line));
             }
             w = width + 12;
             h = lines.size() * LINE + 8;
@@ -1168,13 +1168,13 @@ public class TreeScreen extends Screen {
             return spouse.deceased() ? TreeTexts.name(spouse) + " ✝" : TreeTexts.name(spouse);
         }
 
-        private void add(Text text, int color) {
+        private void add(Component text, int color) {
             lines.add(text);
             colors.add(color);
             actions.add(null);
         }
 
-        private void addAction(Text text, Runnable action) {
+        private void addAction(Component text, Runnable action) {
             lines.add(text);
             colors.add(0x55FFFF);
             actions.add(action);
@@ -1198,23 +1198,23 @@ public class TreeScreen extends Screen {
             return index < 0 ? null : actions.get(index);
         }
 
-        private void render(DrawContext context, int mouseX, int mouseY) {
-            MatrixStack matrices = context.getMatrices();
-            matrices.push();
+        private void render(GuiGraphics context, int mouseX, int mouseY) {
+            PoseStack matrices = context.pose();
+            matrices.pushPose();
             matrices.translate(0, 0, 400);
             context.fill(x, y + 1, x + w, y + h - 1, CARD_BG);
             context.fill(x + 1, y, x + w - 1, y + 1, CARD_BG);
             context.fill(x + 1, y + h - 1, x + w - 1, y + h, CARD_BG);
-            context.drawBorder(x + 1, y + 1, w - 2, h - 2, 0xFF5000FF);
+            context.renderOutline(x + 1, y + 1, w - 2, h - 2, 0xFF5000FF);
             int hovered = lineAt(mouseX, mouseY);
             for (int i = 0; i < lines.size(); i++) {
                 int color = colors.get(i);
                 if (actions.get(i) != null && i == hovered) {
                     color = 0xFFFF55;
                 }
-                context.drawTextWithShadow(textRenderer, lines.get(i), x + 6, y + 5 + i * LINE, color);
+                context.drawString(font, lines.get(i), x + 6, y + 5 + i * LINE, color);
             }
-            matrices.pop();
+            matrices.popPose();
         }
     }
 }

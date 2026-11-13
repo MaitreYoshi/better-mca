@@ -12,13 +12,12 @@ import net.mca.entity.ai.relationship.AgeState;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.ai.relationship.RelationshipState;
 import net.mca.server.world.data.FamilyTreeNode;
-import net.minecraft.entity.effect.StatusEffectInstance;
-import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.TypeFilter;
-import net.minecraft.util.math.random.Random;
-
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.effect.MobEffectInstance;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.level.entity.EntityTypeTest;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -56,26 +55,26 @@ public final class Wellbeing {
     }
 
     public static void update(VillagerEntityMCA villager, boolean scanNeighbours) {
-        if (!(villager.getWorld() instanceof ServerWorld world) || !villager.isAlive()) {
+        if (!(villager.level() instanceof ServerLevel world) || !villager.isAlive()) {
             return;
         }
         WellbeingRegistry registry = WellbeingRegistry.get(world.getServer());
-        Long birth = LifeRegistry.get(world.getServer()).getBodyBirthDay(villager.getUuid());
+        Long birth = LifeRegistry.get(world.getServer()).getBodyBirthDay(villager.getUUID());
         if (birth == null) {
             return;
         }
         long today = WorldCalendar.now(world).dayIndex();
-        long night = world.getTimeOfDay() / WorldCalendar.TICKS_PER_DAY;
+        long night = world.getDayTime() / WorldCalendar.TICKS_PER_DAY;
         FamilyTreeNode node = villager.getRelationships().getFamilyEntry();
 
-        Record record = registry.get(villager.getUuid());
+        Record record = registry.get(villager.getUUID());
         if (record == null) {
             record = create(world.getRandom(), birth == today, today, night, node);
-            registry.put(villager.getUuid(), record);
+            registry.put(villager.getUUID(), record);
         }
         Object[] before = state(record);
 
-        long now = world.getServer().getOverworld().getTime();
+        long now = world.getServer().overworld().getGameTime();
         if (record.sick) {
             if (record.sickUntil < 0) {
                 record.sickUntil = now + SICK_TICKS;
@@ -91,12 +90,12 @@ public final class Wellbeing {
 
         if (scanNeighbours) {
             List<VillagerEntityMCA> near = new ArrayList<>(2);
-            world.collectEntitiesByType(TypeFilter.instanceOf(VillagerEntityMCA.class), villager.getBoundingBox().expand(16),
-                    e -> e != villager && e.isAlive() && e.squaredDistanceTo(villager) <= 16 * 16, near, 2);
+            world.getEntities(EntityTypeTest.forClass(VillagerEntityMCA.class), villager.getBoundingBox().inflate(16),
+                    e -> e != villager && e.isAlive() && e.distanceToSqr(villager) <= 16 * 16, near, 2);
             int close = near.size();
             boolean anyone = close > 0;
             if (!anyone) {
-                world.collectEntitiesByType(TypeFilter.instanceOf(VillagerEntityMCA.class), villager.getBoundingBox().expand(32),
+                world.getEntities(EntityTypeTest.forClass(VillagerEntityMCA.class), villager.getBoundingBox().inflate(32),
                         e -> e != villager && e.isAlive(), near, 1);
                 anyone = !near.isEmpty();
             }
@@ -150,8 +149,8 @@ public final class Wellbeing {
                     record.addHappiness(NO_SLEEP_DAY);
                 }
                 record.addHappiness(villager.getResidency().getHome().isPresent() ? HOME_DAY : HOMELESS_DAY);
-                if (AgeState.byCurrentAge(villager.getBreedingAge()) == AgeState.ADULT) {
-                    boolean employed = WorkRegistry.get(world.getServer()).getJob(villager.getUuid()) != Job.NONE;
+                if (AgeState.byCurrentAge(villager.getAge()) == AgeState.ADULT) {
+                    boolean employed = WorkRegistry.get(world.getServer()).getJob(villager.getUUID()) != Job.NONE;
                     record.addHappiness(employed ? EMPLOYED_DAY : UNEMPLOYED_DAY);
                 }
             }
@@ -159,7 +158,7 @@ public final class Wellbeing {
             record.lastProcessedDay++;
 
             if (dailyHealth(villager, world, record, WorldCalendar.yearsBetween(birth, day + 1), WorldCalendar.calendarDaysPerGameDay(day + 1), now, lastDay)) {
-                registry.markDirty();
+                registry.setDirty();
                 return;
             }
         }
@@ -169,7 +168,7 @@ public final class Wellbeing {
         }
 
         if (!Arrays.equals(before, state(record))) {
-            registry.markDirty();
+            registry.setDirty();
         }
         syncIfChanged(villager, record);
     }
@@ -180,7 +179,7 @@ public final class Wellbeing {
                 record.sick, record.sickUntil};
     }
 
-    private static Record create(Random random, boolean newborn, long today, long night, FamilyTreeNode node) {
+    private static Record create(RandomSource random, boolean newborn, long today, long night, FamilyTreeNode node) {
         Record record = new Record();
         record.happiness = newborn ? 70 : 40 + random.nextInt(41);
         record.lastProcessedDay = today;
@@ -204,8 +203,8 @@ public final class Wellbeing {
         }
     }
 
-    private static boolean dailyHealth(VillagerEntityMCA villager, ServerWorld world, Record record, double age, double days, long now, boolean lastDay) {
-        Random random = world.getRandom();
+    private static boolean dailyHealth(VillagerEntityMCA villager, ServerLevel world, Record record, double age, double days, long now, boolean lastDay) {
+        RandomSource random = world.getRandom();
         double h = record.happiness;
 
         if (age >= MAX_AGE || random.nextDouble() < overDays(oldAgeDeathChance(age, h), days)) {
@@ -244,45 +243,45 @@ public final class Wellbeing {
         return perYear / LifeCycle.DAYS_PER_YEAR;
     }
 
-    private static void showSickness(VillagerEntityMCA villager, ServerWorld world) {
-        villager.addStatusEffect(new StatusEffectInstance(StatusEffects.SLOWNESS, 40, 0, false, false));
+    private static void showSickness(VillagerEntityMCA villager, ServerLevel world) {
+        villager.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 0, false, false));
         if (world.getRandom().nextInt(4) == 0) {
-            world.spawnParticles(ParticleTypes.SNEEZE, villager.getX(), villager.getEyeY(), villager.getZ(), 3, 0.2, 0.1, 0.2, 0.01);
+            world.sendParticles(ParticleTypes.SNEEZE, villager.getX(), villager.getEyeY(), villager.getZ(), 3, 0.2, 0.1, 0.2, 0.01);
         }
     }
 
     public static boolean cure(VillagerEntityMCA villager) {
-        if (!(villager.getWorld() instanceof ServerWorld world)) {
+        if (!(villager.level() instanceof ServerLevel world)) {
             return false;
         }
         WellbeingRegistry registry = WellbeingRegistry.get(world.getServer());
-        Record record = registry.get(villager.getUuid());
+        Record record = registry.get(villager.getUUID());
         if (record == null || !record.sick) {
             return false;
         }
         record.sick = false;
         record.sickUntil = 0;
-        registry.markDirty();
-        villager.removeStatusEffect(StatusEffects.SLOWNESS);
+        registry.setDirty();
+        villager.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
         syncIfChanged(villager, record);
         return true;
     }
 
-    public static boolean isSick(ServerWorld world, UUID uuid) {
+    public static boolean isSick(ServerLevel world, UUID uuid) {
         Record record = WellbeingRegistry.get(world.getServer()).get(uuid);
         return record != null && record.sick;
     }
 
-    public static void resume(ServerWorld world, UUID uuid, long today) {
+    public static void resume(ServerLevel world, UUID uuid, long today) {
         WellbeingRegistry registry = WellbeingRegistry.get(world.getServer());
         Record record = registry.get(uuid);
         if (record != null && record.lastProcessedDay < today) {
             record.lastProcessedDay = today;
-            registry.markDirty();
+            registry.setDirty();
         }
     }
 
-    public static void addHappiness(ServerWorld world, UUID uuid, float delta) {
+    public static void addHappiness(ServerLevel world, UUID uuid, float delta) {
         WellbeingRegistry.get(world.getServer()).addHappiness(uuid, delta);
     }
 
@@ -295,9 +294,9 @@ public final class Wellbeing {
         }
     }
 
-    public static void sendTo(VillagerEntityMCA villager, net.minecraft.server.network.ServerPlayerEntity player) {
-        if (villager.getWorld() instanceof ServerWorld world) {
-            Record record = WellbeingRegistry.get(world.getServer()).get(villager.getUuid());
+    public static void sendTo(VillagerEntityMCA villager, net.minecraft.server.level.ServerPlayer player) {
+        if (villager.level() instanceof ServerLevel world) {
+            Record record = WellbeingRegistry.get(world.getServer()).get(villager.getUUID());
             if (record != null) {
                 SurnameNetwork.sendHappinessTo(player, villager, Math.round(record.happiness), record.sick);
             }

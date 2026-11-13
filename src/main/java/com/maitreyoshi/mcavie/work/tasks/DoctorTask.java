@@ -5,15 +5,14 @@ import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
-import net.minecraft.entity.Entity;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.BlockPos;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.AABB;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -39,8 +38,8 @@ public class DoctorTask extends AbstractJobTask {
     }
 
     @Override
-    protected boolean canWork(ServerWorld world, VillagerEntityMCA villager) {
-        long now = world.getTime();
+    protected boolean canWork(ServerLevel world, VillagerEntityMCA villager) {
+        long now = world.getGameTime();
         if (now < cooldownUntil) {
             return false;
         }
@@ -54,18 +53,18 @@ public class DoctorTask extends AbstractJobTask {
         nextScan = now + SCAN_INTERVAL;
         VillagerEntityMCA found = findPatient(world, villager);
         if (found != null) {
-            patientId = found.getUuid();
+            patientId = found.getUUID();
         }
         return patientId != null;
     }
 
     @Override
-    protected boolean keepWorking(ServerWorld world, VillagerEntityMCA villager) {
+    protected boolean keepWorking(ServerLevel world, VillagerEntityMCA villager) {
         return !treated && patientId != null && patient(world, villager) != null;
     }
 
     @Override
-    protected void run(ServerWorld world, VillagerEntityMCA villager, long time) {
+    protected void start(ServerLevel world, VillagerEntityMCA villager, long time) {
         treatTicks = 0;
         treated = false;
         reach.reset();
@@ -73,13 +72,13 @@ public class DoctorTask extends AbstractJobTask {
     }
 
     @Override
-    protected void keepRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+    protected void tick(ServerLevel world, VillagerEntityMCA villager, long time) {
         VillagerEntityMCA patient = patient(world, villager);
         if (patient == null) {
             return;
         }
-        BlockPos pos = patient.getBlockPos();
-        if (villager.squaredDistanceTo(patient) > REACH_SQ) {
+        BlockPos pos = patient.blockPosition();
+        if (villager.distanceToSqr(patient) > REACH_SQ) {
             walkTo(villager, pos);
             if (reach.giveUp(world, patientId)) {
                 patientId = null;
@@ -92,26 +91,26 @@ public class DoctorTask extends AbstractJobTask {
         holdTool(villager);
         treatTicks++;
         if (treatTicks % 10 == 1) {
-            villager.swingHand(Hand.MAIN_HAND);
-            world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, patient.getX(), patient.getBodyY(0.6), patient.getZ(), 4, 0.4, 0.5, 0.4, 0.02);
-            world.playSound(null, villager.getBlockPos(), SoundEvents.ITEM_BOTTLE_FILL, SoundCategory.NEUTRAL, 0.4F, 1.2F);
+            villager.swing(InteractionHand.MAIN_HAND);
+            world.sendParticles(ParticleTypes.HAPPY_VILLAGER, patient.getX(), patient.getY(0.6), patient.getZ(), 4, 0.4, 0.5, 0.4, 0.02);
+            world.playSound(null, villager.blockPosition(), SoundEvents.BOTTLE_FILL, SoundSource.NEUTRAL, 0.4F, 1.2F);
         }
         if (treatTicks < TREAT_TICKS) {
             return;
         }
-        if (Wellbeing.isSick(world, patient.getUuid())) {
+        if (Wellbeing.isSick(world, patient.getUUID())) {
             Wellbeing.cure(patient);
         } else if (patient.getHealth() < patient.getMaxHealth()) {
             patient.heal(HEAL_AMOUNT);
         }
-        world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, patient.getX(), patient.getBodyY(0.6), patient.getZ(), 12, 0.5, 0.6, 0.5, 0.05);
+        world.sendParticles(ParticleTypes.HAPPY_VILLAGER, patient.getX(), patient.getY(0.6), patient.getZ(), 12, 0.5, 0.6, 0.5, 0.05);
         gainExperience(villager, 1);
         treated = true;
     }
 
     @Override
-    protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
-        super.finishRunning(world, villager, time);
+    protected void stop(ServerLevel world, VillagerEntityMCA villager, long time) {
+        super.stop(world, villager, time);
         if (treated) {
             cooldownUntil = time + COOLDOWN;
         }
@@ -120,33 +119,33 @@ public class DoctorTask extends AbstractJobTask {
         treated = false;
     }
 
-    private VillagerEntityMCA patient(ServerWorld world, VillagerEntityMCA villager) {
+    private VillagerEntityMCA patient(ServerLevel world, VillagerEntityMCA villager) {
         if (patientId == null) {
             return null;
         }
         Entity entity = world.getEntity(patientId);
         if (entity instanceof VillagerEntityMCA patient && patient != villager && patient.isAlive()
-                && inZone(villager, patient.getBlockPos()) && needsCare(world, patient)) {
+                && inZone(villager, patient.blockPosition()) && needsCare(world, patient)) {
             return patient;
         }
         return null;
     }
 
-    private static boolean needsCare(ServerWorld world, VillagerEntityMCA patient) {
-        return Wellbeing.isSick(world, patient.getUuid()) || patient.getHealth() < patient.getMaxHealth();
+    private static boolean needsCare(ServerLevel world, VillagerEntityMCA patient) {
+        return Wellbeing.isSick(world, patient.getUUID()) || patient.getHealth() < patient.getMaxHealth();
     }
 
-    private VillagerEntityMCA findPatient(ServerWorld world, VillagerEntityMCA villager) {
+    private VillagerEntityMCA findPatient(ServerLevel world, VillagerEntityMCA villager) {
         reach.prune(world);
         WorkManager.Zone zone = zone(villager);
         int radius = zone.radius();
-        Box box = new Box(zone.center()).expand(radius, radius, radius);
-        List<VillagerEntityMCA> candidates = world.getEntitiesByClass(VillagerEntityMCA.class, box,
-                v -> v != villager && v.isAlive() && zone.contains(v.getBlockPos()) && needsCare(world, v)
-                        && !reach.isBlacklisted(world, v.getUuid()));
+        AABB box = new AABB(zone.center()).inflate(radius, radius, radius);
+        List<VillagerEntityMCA> candidates = world.getEntitiesOfClass(VillagerEntityMCA.class, box,
+                v -> v != villager && v.isAlive() && zone.contains(v.blockPosition()) && needsCare(world, v)
+                        && !reach.isBlacklisted(world, v.getUUID()));
         return candidates.stream()
-                .min(Comparator.<VillagerEntityMCA>comparingInt(v -> Wellbeing.isSick(world, v.getUuid()) ? 0 : 1)
-                        .thenComparingDouble(villager::squaredDistanceTo))
+                .min(Comparator.<VillagerEntityMCA>comparingInt(v -> Wellbeing.isSick(world, v.getUUID()) ? 0 : 1)
+                        .thenComparingDouble(villager::distanceToSqr))
                 .orElse(null);
     }
 }

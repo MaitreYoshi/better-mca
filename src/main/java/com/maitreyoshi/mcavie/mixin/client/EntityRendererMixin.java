@@ -1,14 +1,14 @@
 package com.maitreyoshi.mcavie.mixin.client;
 
 import com.maitreyoshi.mcavie.client.HappinessDisplay;
+import com.mojang.blaze3d.vertex.PoseStack;
 import net.mca.entity.VillagerEntityMCA;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderDispatcher;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.entity.EntityRenderDispatcher;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.Entity;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -28,14 +28,14 @@ public abstract class EntityRendererMixin {
 
     @Shadow
     @Final
-    protected EntityRenderDispatcher dispatcher;
+    protected EntityRenderDispatcher entityRenderDispatcher;
 
     @Shadow
-    public abstract TextRenderer getTextRenderer();
+    public abstract Font getFont();
 
-    @Inject(method = "renderLabelIfPresent", at = @At("TAIL"))
-    private void mcavie$drawHappinessBar(Entity entity, Text text, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, CallbackInfo ci) {
-        if (!(entity instanceof VillagerEntityMCA) || dispatcher.getSquaredDistanceToCamera(entity) > 4096) {
+    @Inject(method = "renderNameTag", at = @At("TAIL"))
+    private void mcavie$drawHappinessBar(Entity entity, Component text, PoseStack matrices, MultiBufferSource vertexConsumers, int light, CallbackInfo ci) {
+        if (!(entity instanceof VillagerEntityMCA) || entityRenderDispatcher.distanceToSqr(entity) > 4096) {
             return;
         }
         HappinessDisplay.Entry entry = HappinessDisplay.get(entity.getId());
@@ -43,21 +43,21 @@ public abstract class EntityRendererMixin {
             return;
         }
 
-        matrices.push();
-        matrices.translate(0.0F, entity.getNameLabelHeight(), 0.0F);
-        matrices.multiply(dispatcher.getRotation());
+        matrices.pushPose();
+        matrices.translate(0.0F, entity.getNameTagOffsetY(), 0.0F);
+        matrices.mulPose(entityRenderDispatcher.cameraOrientation());
         matrices.scale(-0.025F, -0.025F, 0.025F);
         matrices.translate(0.0F, 10.0F, 0.0F);
         matrices.scale(BAR_SCALE, BAR_SCALE, 1.0F);
 
-        Text bar = HappinessDisplay.bar(entry.happiness());
-        TextRenderer textRenderer = getTextRenderer();
+        Component bar = HappinessDisplay.bar(entry.happiness());
+        Font textRenderer = getFont();
         if (Float.isNaN(mcavie$barX)) {
-            mcavie$barX = -textRenderer.getWidth(bar) / 2f;
+            mcavie$barX = -textRenderer.width(bar) / 2f;
         }
         float x = mcavie$barX;
-        Matrix4f matrix = matrices.peek().getPositionMatrix();
-        textRenderer.draw(bar, x, 0, 0xFFFFFFFF, false, matrix, vertexConsumers, TextRenderer.TextLayerType.NORMAL, 0x40000000, light);
-        matrices.pop();
+        Matrix4f matrix = matrices.last().pose();
+        textRenderer.drawInBatch(bar, x, 0, 0xFFFFFFFF, false, matrix, vertexConsumers, Font.DisplayMode.NORMAL, 0x40000000, light);
+        matrices.popPose();
     }
 }

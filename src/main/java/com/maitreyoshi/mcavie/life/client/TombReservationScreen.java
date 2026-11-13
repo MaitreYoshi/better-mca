@@ -3,18 +3,18 @@ package com.maitreyoshi.mcavie.life.client;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import com.maitreyoshi.mcavie.life.TombReservations;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.screen.ScreenTexts;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
 
 public class TombReservationScreen extends Screen {
     private static final int ROW_H = 14;
@@ -32,7 +32,7 @@ public class TombReservationScreen extends Screen {
     private double scroll;
 
     private TombReservationScreen(BlockPos pos, String village, @Nullable UUID current, List<Entry> entries) {
-        super(Text.translatable("gui.mca_vie.tomb.title", village));
+        super(Component.translatable("gui.mca_vie.tomb.title", village));
         this.pos = pos;
         this.current = current;
         this.entries = entries;
@@ -41,19 +41,19 @@ public class TombReservationScreen extends Screen {
     public static void register() {
         ClientPlayNetworking.registerGlobalReceiver(TombReservations.OPEN, (client, handler, buf, responseSender) -> {
             BlockPos pos = buf.readBlockPos();
-            String village = buf.readString();
-            UUID current = buf.readBoolean() ? buf.readUuid() : null;
+            String village = buf.readUtf();
+            UUID current = buf.readBoolean() ? buf.readUUID() : null;
             int count = buf.readVarInt();
             List<Entry> entries = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
-                entries.add(new Entry(buf.readUuid(), buf.readString(), buf.readBoolean()));
+                entries.add(new Entry(buf.readUUID(), buf.readUtf(), buf.readBoolean()));
             }
             client.execute(() -> client.setScreen(new TombReservationScreen(pos, village, current, entries)));
         });
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 
@@ -61,25 +61,25 @@ public class TombReservationScreen extends Screen {
     protected void init() {
         int y = height - BOTTOM + 7;
         if (current != null) {
-            addDrawableChild(ButtonWidget.builder(Text.translatable("gui.mca_vie.tomb.clear"), b -> send(null))
-                    .dimensions(width / 2 - 104, y, 100, 20).build());
-            addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, b -> close())
-                    .dimensions(width / 2 + 4, y, 100, 20).build());
+            addRenderableWidget(Button.builder(Component.translatable("gui.mca_vie.tomb.clear"), b -> send(null))
+                    .bounds(width / 2 - 104, y, 100, 20).build());
+            addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> onClose())
+                    .bounds(width / 2 + 4, y, 100, 20).build());
         } else {
-            addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, b -> close())
-                    .dimensions(width / 2 - 50, y, 100, 20).build());
+            addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> onClose())
+                    .bounds(width / 2 - 50, y, 100, 20).build());
         }
     }
 
     private void send(@Nullable UUID villager) {
-        PacketByteBuf buf = PacketByteBufs.create();
+        FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeBlockPos(pos);
         buf.writeBoolean(villager != null);
         if (villager != null) {
-            buf.writeUuid(villager);
+            buf.writeUUID(villager);
         }
         ClientPlayNetworking.send(TombReservations.CHOOSE, buf);
-        close();
+        onClose();
     }
 
     private int left() {
@@ -99,11 +99,11 @@ public class TombReservationScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 10, 0xFFFFFF);
-        Text hint = entries.isEmpty() ? Text.translatable("gui.mca_vie.tomb.empty") : Text.translatable("gui.mca_vie.tomb.hint");
-        context.drawCenteredTextWithShadow(textRenderer, hint, width / 2, 21, 0xA0A0A0);
+        context.drawCenteredString(font, title, width / 2, 10, 0xFFFFFF);
+        Component hint = entries.isEmpty() ? Component.translatable("gui.mca_vie.tomb.empty") : Component.translatable("gui.mca_vie.tomb.hint");
+        context.drawCenteredString(font, hint, width / 2, 21, 0xA0A0A0);
         int hovered = indexAt(mouseX, mouseY);
         context.enableScissor(0, TOP, width, height - BOTTOM);
         for (int i = 0; i < entries.size(); i++) {
@@ -117,10 +117,10 @@ public class TombReservationScreen extends Screen {
                 context.fill(left(), y, left() + ROW_W, y + ROW_H, selected ? 0x6050A050 : 0x40FFFFFF);
             }
             int color = selected ? 0x80FF80 : entry.hasTomb() ? 0x909090 : 0xFFFFFF;
-            context.drawTextWithShadow(textRenderer, entry.name(), left() + 4, y + 3, color);
+            context.drawString(font, entry.name(), left() + 4, y + 3, color);
             if (entry.hasTomb() && !selected) {
-                Text tag = Text.translatable("gui.mca_vie.tomb.has_one");
-                context.drawTextWithShadow(textRenderer, tag, left() + ROW_W - 4 - textRenderer.getWidth(tag), y + 3, 0x909090);
+                Component tag = Component.translatable("gui.mca_vie.tomb.has_one");
+                context.drawString(font, tag, left() + ROW_W - 4 - font.width(tag), y + 3, 0x909090);
             }
         }
         context.disableScissor();

@@ -4,15 +4,15 @@ import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.life.LifeRegistry;
 import com.maitreyoshi.mcavie.life.TombstoneDetails;
 import net.mca.block.TombstoneBlock;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.world.World;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 import net.mca.util.localization.FlowingText;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
@@ -77,22 +77,22 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
     }
 
     @Shadow(remap = false)
-    public abstract Optional<Text> getEntityName();
+    public abstract Optional<Component> getEntityName();
 
     @Inject(method = "setEntity", at = @At("HEAD"), remap = false)
     private void mcavie$recordDates(@Nullable Entity entity, CallbackInfo ci) {
         mcavie$years = null;
         mcavie$details = null;
-        if (entity == null || !(entity.getWorld() instanceof ServerWorld world)) {
+        if (entity == null || !(entity.level() instanceof ServerLevel world)) {
             return;
         }
         LifeRegistry registry = LifeRegistry.get(world.getServer());
-        Long birth = registry.getBirthDay(entity.getUuid());
-        Long death = registry.getDeathDay(entity.getUuid());
+        Long birth = registry.getBirthDay(entity.getUUID());
+        Long death = registry.getDeathDay(entity.getUUID());
         if (death == null) {
             death = WorldCalendar.now(world).dayIndex();
             if (birth != null) {
-                registry.recordDeath(entity.getUuid(), death, WorldCalendar.exactCalendarDay(world));
+                registry.recordDeath(entity.getUUID(), death, WorldCalendar.exactCalendarDay(world));
             }
         }
         mcavie$details = TombstoneDetails.of(entity, world, birth, death);
@@ -115,30 +115,30 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
     }
 
     @Inject(method = "getEntityName", at = @At("RETURN"), cancellable = true, remap = false)
-    private void mcavie$appendDates(CallbackInfoReturnable<Optional<Text>> cir) {
+    private void mcavie$appendDates(CallbackInfoReturnable<Optional<Component>> cir) {
         if (mcavie$years != null) {
             String years = mcavie$years;
-            cir.setReturnValue(cir.getReturnValue().map(name -> Text.literal(name.getString() + " " + years)));
+            cir.setReturnValue(cir.getReturnValue().map(name -> Component.literal(name.getString() + " " + years)));
         }
     }
 
     @Inject(method = "getOrCreateEntityName", at = @At("HEAD"), cancellable = true, remap = false)
-    private void mcavie$datesOnOwnLine(Function<Text, FlowingText> factory, CallbackInfoReturnable<FlowingText> cir) {
+    private void mcavie$datesOnOwnLine(Function<Component, FlowingText> factory, CallbackInfoReturnable<FlowingText> cir) {
         if (computedName == null && mcavie$years != null) {
             String years = mcavie$years;
-            String name = getEntityName().map(Text::getString).orElse("");
+            String name = getEntityName().map(Component::getString).orElse("");
             if (name.endsWith(" " + years)) {
                 name = name.substring(0, name.length() - years.length() - 1);
             }
-            computedName = factory.apply(Text.literal(name + "\n" + years));
+            computedName = factory.apply(Component.literal(name + "\n" + years));
         }
         if (computedName != null) {
             cir.setReturnValue(computedName);
         }
     }
 
-    @Inject(method = "writeNbt", at = @At("TAIL"))
-    private void mcavie$writeDates(NbtCompound nbt, CallbackInfo ci) {
+    @Inject(method = "saveAdditional", at = @At("TAIL"))
+    private void mcavie$writeDates(CompoundTag nbt, CallbackInfo ci) {
         if (mcavie$years != null) {
             nbt.putString(KEY, mcavie$years);
         }
@@ -149,13 +149,13 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
             nbt.putString(TITLE_KEY, mcavie$vaultTitle);
         }
         if (mcavie$vaultOwner != null) {
-            nbt.putUuid(OWNER_KEY, mcavie$vaultOwner);
+            nbt.putUUID(OWNER_KEY, mcavie$vaultOwner);
         }
     }
 
     @Inject(method = "writeToStack", at = @At("TAIL"), remap = false)
     private void mcavie$writeDatesToStack(ItemStack stack, CallbackInfo ci) {
-        NbtCompound data = stack.getSubNbt("entityData");
+        CompoundTag data = stack.getTagElement("entityData");
         if (mcavie$years != null && data != null) {
             data.putString(KEY, mcavie$years);
         }
@@ -166,24 +166,24 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
 
     @Inject(method = "readFromStack", at = @At("TAIL"), remap = false)
     private void mcavie$readDatesFromStack(ItemStack stack, CallbackInfo ci) {
-        NbtCompound data = stack == null ? null : stack.getSubNbt("entityData");
+        CompoundTag data = stack == null ? null : stack.getTagElement("entityData");
         mcavie$years = data != null && data.contains(KEY) ? data.getString(KEY) : null;
         mcavie$details = TombstoneDetails.read(data);
         computedName = null;
     }
 
-    @Inject(method = "readNbt", at = @At("TAIL"))
-    private void mcavie$readDates(NbtCompound nbt, CallbackInfo ci) {
+    @Inject(method = "load", at = @At("TAIL"))
+    private void mcavie$readDates(CompoundTag nbt, CallbackInfo ci) {
         mcavie$years = nbt.contains(KEY) ? nbt.getString(KEY) : null;
         TombstoneDetails previous = mcavie$details;
         mcavie$details = TombstoneDetails.read(nbt);
         mcavie$vaultTitle = nbt.contains(TITLE_KEY) ? nbt.getString(TITLE_KEY) : null;
-        mcavie$vaultOwner = nbt.containsUuid(OWNER_KEY) ? nbt.getUuid(OWNER_KEY) : null;
+        mcavie$vaultOwner = nbt.hasUUID(OWNER_KEY) ? nbt.getUUID(OWNER_KEY) : null;
         computedName = null;
         BlockEntity self = (BlockEntity) (Object) this;
-        World world = self.getWorld();
-        if (world != null && world.isClient && !java.util.Objects.equals(previous, mcavie$details)) {
-            world.updateListeners(self.getPos(), self.getCachedState(), self.getCachedState(), 8);
+        Level world = self.getLevel();
+        if (world != null && world.isClientSide && !java.util.Objects.equals(previous, mcavie$details)) {
+            world.sendBlockUpdated(self.getBlockPos(), self.getBlockState(), self.getBlockState(), 8);
         }
     }
 }

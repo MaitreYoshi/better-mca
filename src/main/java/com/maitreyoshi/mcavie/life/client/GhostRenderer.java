@@ -2,22 +2,22 @@ package com.maitreyoshi.mcavie.life.client;
 
 import com.maitreyoshi.mcavie.life.GhostEntity;
 import com.maitreyoshi.mcavie.mixin.client.LimbAnimatorAccessor;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.entity.EntityRenderer;
-import net.minecraft.client.render.entity.EntityRendererFactory;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.screen.PlayerScreenHandler;
-import net.minecraft.util.Identifier;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.entity.EntityRenderer;
+import net.minecraft.client.renderer.entity.EntityRendererProvider;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.item.ItemStack;
 
 /** Dessine le fantôme avec le rendu MCA du défunt, blanchâtre et translucide. */
 public class GhostRenderer extends EntityRenderer<GhostEntity> {
@@ -25,18 +25,18 @@ public class GhostRenderer extends EntityRenderer<GhostEntity> {
     public static boolean active;
     private static final float ALPHA = 0.45f;
 
-    public GhostRenderer(EntityRendererFactory.Context context) {
+    public GhostRenderer(EntityRendererProvider.Context context) {
         super(context);
         shadowRadius = 0;
     }
 
     @Override
-    public Identifier getTexture(GhostEntity entity) {
-        return PlayerScreenHandler.BLOCK_ATLAS_TEXTURE;
+    public ResourceLocation getTextureLocation(GhostEntity entity) {
+        return InventoryMenu.BLOCK_ATLAS;
     }
 
     private static LivingEntity body(GhostEntity ghost) {
-        NbtCompound look = ghost.look();
+        CompoundTag look = ghost.look();
         if (look.isEmpty()) {
             return null;
         }
@@ -45,12 +45,12 @@ public class GhostRenderer extends EntityRenderer<GhostEntity> {
         }
         ghost.clientLook = look;
         ghost.clientBody = null;
-        NbtCompound nbt = look.copy();
+        CompoundTag nbt = look.copy();
         nbt.remove("isPanicking"); // mort en panique : le fantôme revient apaisé
-        Entity entity = EntityType.getEntityFromNbt(nbt, ghost.getWorld()).orElse(null);
+        Entity entity = EntityType.create(nbt, ghost.level()).orElse(null);
         if (entity instanceof LivingEntity body) {
             for (EquipmentSlot slot : EquipmentSlot.values()) {
-                body.equipStack(slot, ItemStack.EMPTY);
+                body.setItemSlot(slot, ItemStack.EMPTY);
             }
             body.setCustomName(null);
             ghost.clientBody = body;
@@ -60,32 +60,32 @@ public class GhostRenderer extends EntityRenderer<GhostEntity> {
     }
 
     private static void sync(GhostEntity ghost, LivingEntity body) {
-        body.setPos(ghost.getX(), ghost.getY(), ghost.getZ());
-        body.prevX = ghost.prevX;
-        body.prevY = ghost.prevY;
-        body.prevZ = ghost.prevZ;
-        body.lastRenderX = ghost.lastRenderX;
-        body.lastRenderY = ghost.lastRenderY;
-        body.lastRenderZ = ghost.lastRenderZ;
-        body.setYaw(ghost.getYaw());
-        body.prevYaw = ghost.prevYaw;
-        body.setPitch(ghost.getPitch());
-        body.prevPitch = ghost.prevPitch;
-        body.bodyYaw = ghost.bodyYaw;
-        body.prevBodyYaw = ghost.prevBodyYaw;
-        body.headYaw = ghost.headYaw;
-        body.prevHeadYaw = ghost.prevHeadYaw;
-        body.age = ghost.age;
-        body.setOnGround(ghost.isOnGround());
-        LimbAnimatorAccessor from = (LimbAnimatorAccessor) ghost.limbAnimator;
-        LimbAnimatorAccessor to = (LimbAnimatorAccessor) body.limbAnimator;
+        body.setPosRaw(ghost.getX(), ghost.getY(), ghost.getZ());
+        body.xo = ghost.xo;
+        body.yo = ghost.yo;
+        body.zo = ghost.zo;
+        body.xOld = ghost.xOld;
+        body.yOld = ghost.yOld;
+        body.zOld = ghost.zOld;
+        body.setYRot(ghost.getYRot());
+        body.yRotO = ghost.yRotO;
+        body.setXRot(ghost.getXRot());
+        body.xRotO = ghost.xRotO;
+        body.yBodyRot = ghost.yBodyRot;
+        body.yBodyRotO = ghost.yBodyRotO;
+        body.yHeadRot = ghost.yHeadRot;
+        body.yHeadRotO = ghost.yHeadRotO;
+        body.tickCount = ghost.tickCount;
+        body.setOnGround(ghost.onGround());
+        LimbAnimatorAccessor from = (LimbAnimatorAccessor) ghost.walkAnimation;
+        LimbAnimatorAccessor to = (LimbAnimatorAccessor) body.walkAnimation;
         to.mcavie$setPrevSpeed(from.mcavie$getPrevSpeed());
         to.mcavie$setSpeed(from.mcavie$getSpeed());
         to.mcavie$setPos(from.mcavie$getPos());
     }
 
     @Override
-    public void render(GhostEntity ghost, float yaw, float tickDelta, MatrixStack matrices, VertexConsumerProvider consumers, int light) {
+    public void render(GhostEntity ghost, float yaw, float tickDelta, PoseStack matrices, MultiBufferSource consumers, int light) {
         LivingEntity body = body(ghost);
         if (body == null) {
             return;
@@ -93,8 +93,8 @@ public class GhostRenderer extends EntityRenderer<GhostEntity> {
         sync(ghost, body);
         active = true;
         try {
-            MinecraftClient.getInstance().getEntityRenderDispatcher().getRenderer(body)
-                    .render(body, yaw, tickDelta, matrices, new Ghostly(consumers, ALPHA * Math.min(1f, (ghost.age + tickDelta) / 30f)), LightmapTextureManager.MAX_LIGHT_COORDINATE);
+            Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(body)
+                    .render(body, yaw, tickDelta, matrices, new Ghostly(consumers, ALPHA * Math.min(1f, (ghost.tickCount + tickDelta) / 30f)), LightTexture.FULL_BRIGHT);
         } catch (RuntimeException e) {
             ghost.clientBody = null;
         } finally {
@@ -102,9 +102,9 @@ public class GhostRenderer extends EntityRenderer<GhostEntity> {
         }
     }
 
-    private record Ghostly(VertexConsumerProvider inner, float alpha) implements VertexConsumerProvider {
+    private record Ghostly(MultiBufferSource inner, float alpha) implements MultiBufferSource {
         @Override
-        public VertexConsumer getBuffer(RenderLayer layer) {
+        public VertexConsumer getBuffer(RenderType layer) {
             return new Pale(inner.getBuffer(layer), alpha);
         }
     }
@@ -128,20 +128,20 @@ public class GhostRenderer extends EntityRenderer<GhostEntity> {
         }
 
         @Override
-        public VertexConsumer texture(float u, float v) {
-            delegate.texture(u, v);
+        public VertexConsumer uv(float u, float v) {
+            delegate.uv(u, v);
             return this;
         }
 
         @Override
-        public VertexConsumer overlay(int u, int v) {
-            delegate.overlay(u, v);
+        public VertexConsumer overlayCoords(int u, int v) {
+            delegate.overlayCoords(u, v);
             return this;
         }
 
         @Override
-        public VertexConsumer light(int u, int v) {
-            delegate.light(u, v);
+        public VertexConsumer uv2(int u, int v) {
+            delegate.uv2(u, v);
             return this;
         }
 
@@ -152,18 +152,18 @@ public class GhostRenderer extends EntityRenderer<GhostEntity> {
         }
 
         @Override
-        public void next() {
-            delegate.next();
+        public void endVertex() {
+            delegate.endVertex();
         }
 
         @Override
-        public void fixedColor(int red, int green, int blue, int alpha) {
-            delegate.fixedColor(pale(red, 0), pale(green, 5), pale(blue, 20), (int) (alpha * this.alpha));
+        public void defaultColor(int red, int green, int blue, int alpha) {
+            delegate.defaultColor(pale(red, 0), pale(green, 5), pale(blue, 20), (int) (alpha * this.alpha));
         }
 
         @Override
-        public void unfixColor() {
-            delegate.unfixColor();
+        public void unsetDefaultColor() {
+            delegate.unsetDefaultColor();
         }
 
         @Override

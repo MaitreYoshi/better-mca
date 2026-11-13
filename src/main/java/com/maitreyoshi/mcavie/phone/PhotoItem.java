@@ -2,38 +2,38 @@ package com.maitreyoshi.mcavie.phone;
 
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar.CalendarDate;
-import net.minecraft.client.item.TooltipContext;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ItemUsageContext;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.TypedActionResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.TooltipFlag;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 public class PhotoItem extends Item {
     private static final String PHOTO_KEY = "mca_vie_photo";
 
-    public PhotoItem(Settings settings) {
+    public PhotoItem(Properties settings) {
         super(settings);
     }
 
     public static ItemStack create(UUID photo, String author, long date) {
         ItemStack stack = new ItemStack(PhoneServer.PHOTO);
-        NbtCompound nbt = stack.getOrCreateSubNbt(PHOTO_KEY);
-        nbt.putUuid("id", photo);
+        CompoundTag nbt = stack.getOrCreateTagElement(PHOTO_KEY);
+        nbt.putUUID("id", photo);
         nbt.putString("author", author);
         nbt.putLong("date", date);
         return stack;
@@ -41,85 +41,85 @@ public class PhotoItem extends Item {
 
     @Nullable
     public static UUID photoOf(ItemStack stack) {
-        NbtCompound nbt = stack.getItem() instanceof PhotoItem ? stack.getSubNbt(PHOTO_KEY) : null;
-        return nbt != null && nbt.containsUuid("id") ? nbt.getUuid("id") : null;
+        CompoundTag nbt = stack.getItem() instanceof PhotoItem ? stack.getTagElement(PHOTO_KEY) : null;
+        return nbt != null && nbt.hasUUID("id") ? nbt.getUUID("id") : null;
     }
 
     @Override
-    public TypedActionResult<ItemStack> use(World world, PlayerEntity user, Hand hand) {
-        ItemStack stack = user.getStackInHand(hand);
+    public InteractionResultHolder<ItemStack> use(Level world, Player user, InteractionHand hand) {
+        ItemStack stack = user.getItemInHand(hand);
         UUID photo = photoOf(stack);
         if (photo == null) {
-            return TypedActionResult.pass(stack);
+            return InteractionResultHolder.pass(stack);
         }
-        if (user instanceof ServerPlayerEntity player) {
+        if (user instanceof ServerPlayer player) {
             PhoneServer.viewPrint(player, photo);
         }
-        return TypedActionResult.success(stack, world.isClient());
+        return InteractionResultHolder.sidedSuccess(stack, world.isClientSide());
     }
 
     public interface Placer {
-        void open(BlockPos clicked, Direction side, Hand hand, UUID photo, Direction top);
+        void open(BlockPos clicked, Direction side, InteractionHand hand, UUID photo, Direction top);
     }
 
     @Nullable
     public static Placer placer;
 
     @Override
-    public ActionResult useOnBlock(ItemUsageContext context) {
-        Direction side = context.getSide();
-        ItemStack stack = context.getStack();
+    public InteractionResult useOn(UseOnContext context) {
+        Direction side = context.getClickedFace();
+        ItemStack stack = context.getItemInHand();
         UUID photo = photoOf(stack);
-        PlayerEntity player = context.getPlayer();
+        Player player = context.getPlayer();
         if (photo == null || player == null) {
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         }
-        if (!player.canPlaceOn(context.getBlockPos().offset(side), side, stack)) {
-            return ActionResult.FAIL;
+        if (!player.mayUseItemAt(context.getClickedPos().relative(side), side, stack)) {
+            return InteractionResult.FAIL;
         }
-        if (context.getWorld().isClient) {
+        if (context.getLevel().isClientSide) {
             if (placer != null) {
-                placer.open(context.getBlockPos(), side, context.getHand(), photo, PhotoFrameEntity.topFor(side, player.getHorizontalFacing()));
+                placer.open(context.getClickedPos(), side, context.getHand(), photo, PhotoFrameEntity.topFor(side, player.getDirection()));
             }
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         }
-        return ActionResult.CONSUME;
+        return InteractionResult.CONSUME;
     }
 
-    public static void place(ServerPlayerEntity player, BlockPos clicked, Direction side, Hand hand, int width, int height) {
-        ItemStack stack = player.getStackInHand(hand);
+    public static void place(ServerPlayer player, BlockPos clicked, Direction side, InteractionHand hand, int width, int height) {
+        ItemStack stack = player.getItemInHand(hand);
         UUID photo = photoOf(stack);
-        BlockPos pos = clicked.offset(side);
-        World world = player.getWorld();
-        if (photo == null || player.squaredDistanceTo(Vec3d.ofCenter(pos)) > 64 || !player.canPlaceOn(pos, side, stack)
-                || !world.canPlayerModifyAt(player, clicked)) {
+        BlockPos pos = clicked.relative(side);
+        Level world = player.level();
+        if (photo == null || player.distanceToSqr(Vec3.atCenterOf(pos)) > 64 || !player.mayUseItemAt(pos, side, stack)
+                || !world.mayInteract(player, clicked)) {
             return;
         }
-        NbtCompound nbt = stack.getSubNbt(PHOTO_KEY);
-        Direction top = PhotoFrameEntity.topFor(side, player.getHorizontalFacing());
+        CompoundTag nbt = stack.getTagElement(PHOTO_KEY);
+        Direction top = PhotoFrameEntity.topFor(side, player.getDirection());
         PhotoFrameEntity frame = new PhotoFrameEntity(world, pos, side, top, width, height, photo, nbt.getString("author"), nbt.getLong("date"));
-        if (!frame.canStayAttached()) {
-            player.sendMessage(Text.translatable("msg.mca_vie.photo.no_support"), true);
+        if (!frame.survives()) {
+            player.displayClientMessage(Component.translatable("msg.mca_vie.photo.no_support"), true);
             return;
         }
-        frame.onPlace();
-        world.spawnEntity(frame);
-        if (!player.getAbilities().creativeMode) {
-            stack.decrement(1);
+        frame.playPlacementSound();
+        world.addFreshEntity(frame);
+        if (!player.getAbilities().instabuild) {
+            stack.shrink(1);
         }
     }
 
     @Override
-    public void appendTooltip(ItemStack stack, @Nullable World world, List<Text> tooltip, TooltipContext context) {
-        NbtCompound nbt = stack.getSubNbt(PHOTO_KEY);
+    public void appendHoverText(ItemStack stack, @Nullable Level world, List<Component> tooltip, TooltipFlag context) {
+        CompoundTag nbt = stack.getTagElement(PHOTO_KEY);
         if (nbt == null) {
             return;
         }
         if (!nbt.getString("author").isEmpty()) {
-            tooltip.add(Text.translatable("item.mca_vie.photo.author", nbt.getString("author")).formatted(Formatting.GRAY));
+            tooltip.add(Component.translatable("item.mca_vie.photo.author", nbt.getString("author")).withStyle(ChatFormatting.GRAY));
         }
         CalendarDate date = WorldCalendar.flowingFromTicks(nbt.getLong("date"));
-        tooltip.add(Text.translatable("item.mca_vie.photo.date", date.day() + "/" + date.month() + "/" + date.year()).formatted(Formatting.GRAY));
-        tooltip.add(Text.translatable("item.mca_vie.photo.hint").formatted(Formatting.DARK_GRAY));
+        tooltip.add(Component.translatable("item.mca_vie.photo.date", date.day() + "/" + date.month() + "/" + date.year()).withStyle(ChatFormatting.GRAY));
+        tooltip.add(Component.translatable("item.mca_vie.photo.hint").withStyle(ChatFormatting.DARK_GRAY));
     }
 }

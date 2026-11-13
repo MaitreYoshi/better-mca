@@ -6,43 +6,43 @@ import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
 import net.mca.block.TombstoneBlock;
 import net.mca.item.ScytheItem;
 import net.mca.item.StaffOfLifeItem;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.ShapeContext;
-import net.minecraft.block.entity.BlockEntity;
 import net.mca.server.world.data.GraveyardManager;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtString;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ItemUsageContext;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.state.StateManager;
-import net.minecraft.state.property.IntProperty;
-import net.minecraft.state.property.Properties;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.BlockView;
-import net.minecraft.world.World;
-import net.minecraft.world.WorldView;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.BlockGetter;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LevelReader;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.phys.shapes.VoxelShape;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumMap;
@@ -51,15 +51,15 @@ import java.util.Optional;
 import java.util.UUID;
 
 public class VaultBlock extends TombstoneBlock {
-    public static final IntProperty PART = IntProperty.of("part", 0, 11);
+    public static final IntegerProperty PART = IntegerProperty.create("part", 0, 11);
     public static final int PLACED = 0;
     public static final int[] SLOTS = {8, 11, 2, 5};
     public static final int NONE = -2;
     public static final int TITLE = -1;
     public static final int TITLE_MAX = 32;
     private static final String SLOTS_KEY = "mca_vie:vault_slots";
-    public static final Identifier TITLE_OPEN = MCAVie.id("vault_title_open");
-    public static final Identifier TITLE_SET = MCAVie.id("vault_title_set");
+    public static final ResourceLocation TITLE_OPEN = MCAVie.id("vault_title_open");
+    public static final ResourceLocation TITLE_SET = MCAVie.id("vault_title_set");
     private static final double[][] BOXES = {
             {-16, 0, 0, 32, 1, 32}, {-15, 1, 1, 31, 2, 31}, {-13, 2, 3, 27, 12, 29}, {-14, 12, 2, 28, 14, 30},
             {-11, 14, 5, 19, 15, 27}, {19, 14, 3, 27, 15.5, 29}, {21, 15.5, 4, 24, 32, 28}
@@ -67,10 +67,10 @@ public class VaultBlock extends TombstoneBlock {
 
     private final Map<Direction, VoxelShape[]> shapes = new EnumMap<>(Direction.class);
 
-    public VaultBlock(Settings settings) {
-        super(settings, 70, 30, Vec3d.ZERO, 0, false, VoxelShapes.fullCube());
-        setDefaultState(getDefaultState().with(PART, PLACED));
-        for (Direction facing : Direction.Type.HORIZONTAL) {
+    public VaultBlock(Properties settings) {
+        super(settings, 70, 30, Vec3.ZERO, 0, false, Shapes.block());
+        registerDefaultState(defaultBlockState().setValue(PART, PLACED));
+        for (Direction facing : Direction.Plane.HORIZONTAL) {
             VoxelShape[] parts = new VoxelShape[12];
             for (int part = 0; part < 12; part++) {
                 parts[part] = shape(facing, part);
@@ -82,7 +82,7 @@ public class VaultBlock extends TombstoneBlock {
     public static void registerNetwork() {
         ServerPlayNetworking.registerGlobalReceiver(TITLE_SET, (server, player, handler, buf, responseSender) -> {
             BlockPos pos = buf.readBlockPos();
-            String title = buf.readString(TITLE_MAX * 4);
+            String title = buf.readUtf(TITLE_MAX * 4);
             server.execute(() -> setTitle(player, pos, title));
         });
     }
@@ -109,35 +109,35 @@ public class VaultBlock extends TombstoneBlock {
     }
 
     public static boolean isSlot(BlockState state) {
-        return state.getBlock() instanceof VaultBlock && slotOf(state.get(PART)) >= 0;
+        return state.getBlock() instanceof VaultBlock && slotOf(state.getValue(PART)) >= 0;
     }
 
     public static BlockPos offset(Direction facing, int part) {
         Direction back = facing.getOpposite();
-        Direction left = facing.rotateYCounterclockwise();
+        Direction left = facing.getCounterClockWise();
         int x = cx(part);
         int z = cz(part);
-        return new BlockPos(back.getOffsetX() * x + left.getOffsetX() * z, cy(part), back.getOffsetZ() * x + left.getOffsetZ() * z);
+        return new BlockPos(back.getStepX() * x + left.getStepX() * z, cy(part), back.getStepZ() * x + left.getStepZ() * z);
     }
 
     public static BlockPos master(BlockPos pos, BlockState state) {
-        return pos.subtract(offset(state.get(Properties.HORIZONTAL_FACING), state.get(PART)));
+        return pos.subtract(offset(state.getValue(BlockStateProperties.HORIZONTAL_FACING), state.getValue(PART)));
     }
 
     public static BlockPos partPos(BlockPos master, Direction facing, int part) {
-        return master.add(offset(facing, part));
+        return master.offset(offset(facing, part));
     }
 
-    public static Vec3d local(BlockPos master, Direction facing, Vec3d hit) {
+    public static Vec3 local(BlockPos master, Direction facing, Vec3 hit) {
         Direction back = facing.getOpposite();
-        Direction left = facing.rotateYCounterclockwise();
+        Direction left = facing.getCounterClockWise();
         double dx = hit.x - master.getX() - 0.5;
         double dz = hit.z - master.getZ() - 0.5;
-        return new Vec3d(8 + 16 * (dx * back.getOffsetX() + dz * back.getOffsetZ()), 16 * (hit.y - master.getY()),
-                8 + 16 * (dx * left.getOffsetX() + dz * left.getOffsetZ()));
+        return new Vec3(8 + 16 * (dx * back.getStepX() + dz * back.getStepZ()), 16 * (hit.y - master.getY()),
+                8 + 16 * (dx * left.getStepX() + dz * left.getStepZ()));
     }
 
-    public static int slotAt(Vec3d local) {
+    public static int slotAt(Vec3 local) {
         if (local.x < 20 || local.y < 15.5) {
             return NONE;
         }
@@ -149,11 +149,11 @@ public class VaultBlock extends TombstoneBlock {
 
     private static VoxelShape shape(Direction facing, int part) {
         Direction back = facing.getOpposite();
-        Direction left = facing.rotateYCounterclockwise();
+        Direction left = facing.getCounterClockWise();
         double ox = cx(part) * 16;
         double oy = cy(part) * 16;
         double oz = cz(part) * 16;
-        VoxelShape shape = VoxelShapes.empty();
+        VoxelShape shape = Shapes.empty();
         for (double[] b : BOXES) {
             double x0 = Math.max(b[0] - ox, 0);
             double x1 = Math.min(b[3] - ox, 16);
@@ -164,105 +164,105 @@ public class VaultBlock extends TombstoneBlock {
             if (x0 >= x1 || y0 >= y1 || z0 >= z1) {
                 continue;
             }
-            double ax = 8 + back.getOffsetX() * (x0 - 8) + left.getOffsetX() * (z0 - 8);
-            double az = 8 + back.getOffsetZ() * (x0 - 8) + left.getOffsetZ() * (z0 - 8);
-            double bx = 8 + back.getOffsetX() * (x1 - 8) + left.getOffsetX() * (z1 - 8);
-            double bz = 8 + back.getOffsetZ() * (x1 - 8) + left.getOffsetZ() * (z1 - 8);
-            shape = VoxelShapes.union(shape, Block.createCuboidShape(Math.min(ax, bx), y0, Math.min(az, bz), Math.max(ax, bx), y1, Math.max(az, bz)));
+            double ax = 8 + back.getStepX() * (x0 - 8) + left.getStepX() * (z0 - 8);
+            double az = 8 + back.getStepZ() * (x0 - 8) + left.getStepZ() * (z0 - 8);
+            double bx = 8 + back.getStepX() * (x1 - 8) + left.getStepX() * (z1 - 8);
+            double bz = 8 + back.getStepZ() * (x1 - 8) + left.getStepZ() * (z1 - 8);
+            shape = Shapes.or(shape, Block.box(Math.min(ax, bx), y0, Math.min(az, bz), Math.max(ax, bx), y1, Math.max(az, bz)));
         }
         return shape;
     }
 
     @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
-        super.appendProperties(builder);
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
+        super.createBlockStateDefinition(builder);
         builder.add(PART);
     }
 
     @Override
-    public VoxelShape getOutlineShape(BlockState state, BlockView view, BlockPos pos, ShapeContext context) {
-        return shapes.get(state.get(Properties.HORIZONTAL_FACING))[state.get(PART)];
+    public VoxelShape getShape(BlockState state, BlockGetter view, BlockPos pos, CollisionContext context) {
+        return shapes.get(state.getValue(BlockStateProperties.HORIZONTAL_FACING))[state.getValue(PART)];
     }
 
     @Override
-    public boolean canPlaceAt(BlockState state, WorldView world, BlockPos pos) {
+    public boolean canSurvive(BlockState state, LevelReader world, BlockPos pos) {
         return true;
     }
 
     @Nullable
     @Override
-    public BlockState getPlacementState(ItemPlacementContext context) {
-        Direction facing = context.getHorizontalPlayerFacing().getOpposite();
-        BlockPos master = context.getBlockPos().subtract(offset(facing, PLACED));
-        World world = context.getWorld();
+    public BlockState getStateForPlacement(BlockPlaceContext context) {
+        Direction facing = context.getHorizontalDirection().getOpposite();
+        BlockPos master = context.getClickedPos().subtract(offset(facing, PLACED));
+        Level world = context.getLevel();
         for (int part = 0; part < 12; part++) {
             BlockPos pos = partPos(master, facing, part);
-            if (!world.isInBuildLimit(pos) || !(part == PLACED ? world.getBlockState(pos).canReplace(context) : world.getBlockState(pos).isReplaceable())) {
+            if (!world.isInWorldBounds(pos) || !(part == PLACED ? world.getBlockState(pos).canBeReplaced(context) : world.getBlockState(pos).canBeReplaced())) {
                 return null;
             }
         }
-        return getDefaultState().with(Properties.HORIZONTAL_FACING, facing).with(PART, PLACED);
+        return defaultBlockState().setValue(BlockStateProperties.HORIZONTAL_FACING, facing).setValue(PART, PLACED);
     }
 
     @Override
-    public void onPlaced(World world, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
-        if (world.isClient) {
+    public void setPlacedBy(Level world, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
+        if (world.isClientSide) {
             return;
         }
         BlockPos master = master(pos, state);
-        Direction facing = state.get(Properties.HORIZONTAL_FACING);
+        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
         for (int part = 0; part < 12; part++) {
             BlockPos target = partPos(master, facing, part);
             if (!target.equals(pos)) {
-                world.setBlockState(target, state.with(PART, part).with(Properties.WATERLOGGED, false), Block.NOTIFY_ALL);
+                world.setBlock(target, state.setValue(PART, part).setValue(BlockStateProperties.WATERLOGGED, false), Block.UPDATE_ALL);
             }
         }
-        NbtCompound tag = stack.getNbt();
-        if (tag != null && tag.contains(SLOTS_KEY) && world instanceof ServerWorld server) {
-            restore(server, master, facing, tag.getList(SLOTS_KEY, NbtElement.COMPOUND_TYPE));
+        CompoundTag tag = stack.getTag();
+        if (tag != null && tag.contains(SLOTS_KEY) && world instanceof ServerLevel server) {
+            restore(server, master, facing, tag.getList(SLOTS_KEY, Tag.TAG_COMPOUND));
         }
-        if (placer instanceof PlayerEntity player) {
+        if (placer instanceof Player player) {
             titleHolder(world, master, facing).ifPresent(data -> {
                 TombstoneDetails.Holder holder = (TombstoneDetails.Holder) data;
                 if (holder.mcavie$vaultOwner() == null) {
-                    holder.mcavie$setVaultOwner(player.getUuid());
-                    data.markDirty();
+                    holder.mcavie$setVaultOwner(player.getUUID());
+                    data.setChanged();
                 }
             });
         }
     }
 
     @Override
-    public void onBlockAdded(BlockState state, World world, BlockPos pos, BlockState oldState, boolean notify) {
+    public void onPlace(BlockState state, Level world, BlockPos pos, BlockState oldState, boolean notify) {
         if (isSlot(state)) {
-            super.onBlockAdded(state, world, pos, oldState, notify);
+            super.onPlace(state, world, pos, oldState, notify);
         }
     }
 
     @Override
-    public void onStateReplaced(BlockState state, World world, BlockPos pos, BlockState newState, boolean moved) {
-        super.onStateReplaced(state, world, pos, newState, moved);
-        if (world.isClient || state.isOf(newState.getBlock())) {
+    public void onRemove(BlockState state, Level world, BlockPos pos, BlockState newState, boolean moved) {
+        super.onRemove(state, world, pos, newState, moved);
+        if (world.isClientSide || state.is(newState.getBlock())) {
             return;
         }
         BlockPos master = master(pos, state);
-        Direction facing = state.get(Properties.HORIZONTAL_FACING);
+        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
         for (int part = 0; part < 12; part++) {
             BlockPos target = partPos(master, facing, part);
             BlockState other = world.getBlockState(target);
-            if (!target.equals(pos) && other.isOf(this) && other.get(Properties.HORIZONTAL_FACING) == facing && other.get(PART) == part) {
-                world.setBlockState(target, other.get(Properties.WATERLOGGED) ? Blocks.WATER.getDefaultState() : Blocks.AIR.getDefaultState(), Block.NOTIFY_ALL);
+            if (!target.equals(pos) && other.is(this) && other.getValue(BlockStateProperties.HORIZONTAL_FACING) == facing && other.getValue(PART) == part) {
+                world.setBlock(target, other.getValue(BlockStateProperties.WATERLOGGED) ? Blocks.WATER.defaultBlockState() : Blocks.AIR.defaultBlockState(), Block.UPDATE_ALL);
             }
         }
     }
 
     @Nullable
     @Override
-    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
-        return isSlot(state) ? super.createBlockEntity(pos, state) : null;
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
+        return isSlot(state) ? super.newBlockEntity(pos, state) : null;
     }
 
-    public static boolean occupied(BlockView world, BlockPos master, Direction facing) {
+    public static boolean occupied(BlockGetter world, BlockPos master, Direction facing) {
         for (int part : SLOTS) {
             if (Data.of(world.getBlockEntity(partPos(master, facing, part))).map(Data::hasEntity).orElse(false)) {
                 return true;
@@ -271,122 +271,122 @@ public class VaultBlock extends TombstoneBlock {
         return false;
     }
 
-    public static boolean silkTouch(PlayerEntity player) {
-        return EnchantmentHelper.getLevel(Enchantments.SILK_TOUCH, player.getMainHandStack()) > 0;
+    public static boolean silkTouch(Player player) {
+        return EnchantmentHelper.getItemEnchantmentLevel(Enchantments.SILK_TOUCH, player.getMainHandItem()) > 0;
     }
 
     @Override
-    public float calcBlockBreakingDelta(BlockState state, PlayerEntity player, BlockView world, BlockPos pos) {
-        return !silkTouch(player) && occupied(world, master(pos, state), state.get(Properties.HORIZONTAL_FACING)) ? 0 : super.calcBlockBreakingDelta(state, player, world, pos);
+    public float getDestroyProgress(BlockState state, Player player, BlockGetter world, BlockPos pos) {
+        return !silkTouch(player) && occupied(world, master(pos, state), state.getValue(BlockStateProperties.HORIZONTAL_FACING)) ? 0 : super.getDestroyProgress(state, player, world, pos);
     }
 
     @Override
-    public void onBlockBreakStart(BlockState state, World world, BlockPos pos, PlayerEntity player) {
-        if (!world.isClient && !silkTouch(player) && occupied(world, master(pos, state), state.get(Properties.HORIZONTAL_FACING))) {
-            player.sendMessage(Text.translatable("tomb.mca_vie.vault.occupied").formatted(Formatting.GOLD), true);
+    public void attack(BlockState state, Level world, BlockPos pos, Player player) {
+        if (!world.isClientSide && !silkTouch(player) && occupied(world, master(pos, state), state.getValue(BlockStateProperties.HORIZONTAL_FACING))) {
+            player.displayClientMessage(Component.translatable("tomb.mca_vie.vault.occupied").withStyle(ChatFormatting.GOLD), true);
         }
     }
 
     @Override
-    public void onBreak(World world, BlockPos pos, BlockState state, PlayerEntity player) {
+    public void playerWillDestroy(Level world, BlockPos pos, BlockState state, Player player) {
         BlockPos master = master(pos, state);
-        Direction facing = state.get(Properties.HORIZONTAL_FACING);
+        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
         boolean occupied = occupied(world, master, facing);
-        if (!world.isClient && (occupied ? silkTouch(player) : !player.isCreative() && player.canHarvest(state))) {
+        if (!world.isClientSide && (occupied ? silkTouch(player) : !player.isCreative() && player.hasCorrectToolForDrops(state))) {
             ItemStack stack = new ItemStack(this);
             if (occupied) {
-                NbtList slots = new NbtList();
-                NbtList lore = new NbtList();
+                ListTag slots = new ListTag();
+                ListTag lore = new ListTag();
                 for (int part : SLOTS) {
                     Optional<Data> data = Data.of(world.getBlockEntity(partPos(master, facing, part)));
-                    slots.add(data.map(BlockEntity::createNbt).orElseGet(NbtCompound::new));
+                    slots.add(data.map(BlockEntity::saveWithoutMetadata).orElseGet(CompoundTag::new));
                     data.filter(Data::hasEntity).flatMap(Data::getEntityName)
-                            .ifPresent(name -> lore.add(NbtString.of(Text.Serializer.toJson(Text.literal(name.getString()).formatted(Formatting.GRAY)))));
+                            .ifPresent(name -> lore.add(StringTag.valueOf(Component.Serializer.toJson(Component.literal(name.getString()).withStyle(ChatFormatting.GRAY)))));
                 }
-                stack.getOrCreateNbt().put(SLOTS_KEY, slots);
-                stack.getOrCreateSubNbt(ItemStack.DISPLAY_KEY).put(ItemStack.LORE_KEY, lore);
+                stack.getOrCreateTag().put(SLOTS_KEY, slots);
+                stack.getOrCreateTagElement(ItemStack.TAG_DISPLAY).put(ItemStack.TAG_LORE, lore);
             }
-            Block.dropStack(world, pos, stack);
+            Block.popResource(world, pos, stack);
         }
-        super.onBreak(world, pos, state, player);
+        super.playerWillDestroy(world, pos, state, player);
     }
 
-    private static void restore(ServerWorld world, BlockPos master, Direction facing, NbtList slots) {
+    private static void restore(ServerLevel world, BlockPos master, Direction facing, ListTag slots) {
         for (int i = 0; i < SLOTS.length && i < slots.size(); i++) {
             BlockPos target = partPos(master, facing, SLOTS[i]);
-            NbtCompound nbt = slots.getCompound(i);
+            CompoundTag nbt = slots.getCompound(i);
             Data.of(world.getBlockEntity(target)).ifPresent(data -> {
-                data.readNbt(nbt);
-                data.markDirty();
+                data.load(nbt);
+                data.setChanged();
                 GraveyardManager.get(world).setTombstoneState(target,
                         data.hasEntity() ? GraveyardManager.TombstoneState.FILLED : GraveyardManager.TombstoneState.EMPTY);
-                world.updateListeners(target, data.getCachedState(), data.getCachedState(), Block.NOTIFY_ALL);
+                world.sendBlockUpdated(target, data.getBlockState(), data.getBlockState(), Block.UPDATE_ALL);
             });
         }
     }
 
     @Override
-    public ActionResult onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
-        if (hand != Hand.MAIN_HAND) {
-            return ActionResult.PASS;
+    public InteractionResult use(BlockState state, Level world, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
+        if (hand != InteractionHand.MAIN_HAND) {
+            return InteractionResult.PASS;
         }
         BlockPos master = master(pos, state);
-        Direction facing = state.get(Properties.HORIZONTAL_FACING);
-        int slot = slotAt(local(master, facing, hit.getPos()));
+        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+        int slot = slotAt(local(master, facing, hit.getLocation()));
         if (slot == NONE) {
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         }
-        ItemStack stack = player.getMainHandStack();
-        if (player.isSneaking() && stack.isEmpty()) {
-            if (world instanceof ServerWorld server && player instanceof ServerPlayerEntity serverPlayer) {
+        ItemStack stack = player.getMainHandItem();
+        if (player.isShiftKeyDown() && stack.isEmpty()) {
+            if (world instanceof ServerLevel server && player instanceof ServerPlayer serverPlayer) {
                 if (slot == TITLE) {
                     openTitle(serverPlayer, server, master, facing);
                 } else {
                     TombReservations.openAt(serverPlayer, server, partPos(master, facing, SLOTS[slot]));
                 }
             }
-            return ActionResult.success(world.isClient);
+            return InteractionResult.sidedSuccess(world.isClientSide);
         }
         if (slot == TITLE) {
-            return ActionResult.PASS;
+            return InteractionResult.PASS;
         }
         BlockPos target = partPos(master, facing, SLOTS[slot]);
         if (!target.equals(pos) && (stack.getItem() instanceof ScytheItem || stack.getItem() instanceof StaffOfLifeItem)) {
-            return stack.useOnBlock(new ItemUsageContext(player, hand, new BlockHitResult(hit.getPos(), hit.getSide(), target, hit.isInsideBlock())));
+            return stack.useOn(new UseOnContext(player, hand, new BlockHitResult(hit.getLocation(), hit.getDirection(), target, hit.isInside())));
         }
-        if (stack.isEmpty() && world instanceof ServerWorld server) {
+        if (stack.isEmpty() && world instanceof ServerLevel server) {
             TombReservations.announce(player, server, target);
         }
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
-    public static Optional<Data> titleHolder(BlockView world, BlockPos master, Direction facing) {
+    public static Optional<Data> titleHolder(BlockGetter world, BlockPos master, Direction facing) {
         return Data.of(world.getBlockEntity(partPos(master, facing, SLOTS[0])));
     }
 
-    private static boolean canEdit(ServerPlayerEntity player, Data holder) {
+    private static boolean canEdit(ServerPlayer player, Data holder) {
         UUID owner = ((TombstoneDetails.Holder) holder).mcavie$vaultOwner();
-        return owner == null || owner.equals(player.getUuid()) || player.hasPermissionLevel(2);
+        return owner == null || owner.equals(player.getUUID()) || player.hasPermissions(2);
     }
 
-    private static void openTitle(ServerPlayerEntity player, ServerWorld world, BlockPos master, Direction facing) {
+    private static void openTitle(ServerPlayer player, ServerLevel world, BlockPos master, Direction facing) {
         titleHolder(world, master, facing).ifPresent(holder -> {
             if (!canEdit(player, holder)) {
-                player.sendMessage(Text.translatable("tomb.mca_vie.vault.not_owner").formatted(Formatting.RED), true);
+                player.displayClientMessage(Component.translatable("tomb.mca_vie.vault.not_owner").withStyle(ChatFormatting.RED), true);
                 return;
             }
             String title = ((TombstoneDetails.Holder) holder).mcavie$vaultTitle();
-            PacketByteBuf out = PacketByteBufs.create();
-            out.writeBlockPos(holder.getPos());
-            out.writeString(title == null ? "" : title);
+            FriendlyByteBuf out = PacketByteBufs.create();
+            out.writeBlockPos(holder.getBlockPos());
+            out.writeUtf(title == null ? "" : title);
             ServerPlayNetworking.send(player, TITLE_OPEN, out);
         });
     }
 
-    private static void setTitle(ServerPlayerEntity player, BlockPos pos, String title) {
-        ServerWorld world = player.getServerWorld();
+    private static void setTitle(ServerPlayer player, BlockPos pos, String title) {
+        ServerLevel world = player.serverLevel();
         BlockState state = world.getBlockState(pos);
-        if (player.squaredDistanceTo(pos.toCenterPos()) > 64 || !(state.getBlock() instanceof VaultBlock) || state.get(PART) != SLOTS[0]) {
+        if (player.distanceToSqr(pos.getCenter()) > 64 || !(state.getBlock() instanceof VaultBlock) || state.getValue(PART) != SLOTS[0]) {
             return;
         }
         Data.of(world.getBlockEntity(pos)).filter(holder -> canEdit(player, holder)).ifPresent(holder -> {
@@ -395,8 +395,8 @@ public class VaultBlock extends TombstoneBlock {
                 clean = clean.substring(0, TITLE_MAX);
             }
             ((TombstoneDetails.Holder) holder).mcavie$setVaultTitle(clean.isEmpty() ? null : clean);
-            holder.markDirty();
-            world.updateListeners(pos, state, state, Block.NOTIFY_ALL);
+            holder.setChanged();
+            world.sendBlockUpdated(pos, state, state, Block.UPDATE_ALL);
         });
     }
 }

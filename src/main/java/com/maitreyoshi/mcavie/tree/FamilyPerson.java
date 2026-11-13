@@ -1,12 +1,12 @@
 package com.maitreyoshi.mcavie.tree;
 
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.Util;
+import net.minecraft.network.FriendlyByteBuf;
 
 public record FamilyPerson(
         UUID id,
@@ -50,24 +50,24 @@ public record FamilyPerson(
         return !Util.NIL_UUID.equals(mother);
     }
 
-    public void write(PacketByteBuf buf) {
-        buf.writeUuid(id);
-        buf.writeString(name);
-        buf.writeString(surname);
+    public void write(FriendlyByteBuf buf) {
+        buf.writeUUID(id);
+        buf.writeUtf(name);
+        buf.writeUtf(surname);
         buf.writeVarInt(gender);
         buf.writeBoolean(player);
         buf.writeBoolean(deceased);
-        buf.writeUuid(father);
-        buf.writeUuid(mother);
+        buf.writeUUID(father);
+        buf.writeUUID(mother);
         writeUuids(buf, spouses);
         writeUuids(buf, children);
-        buf.writeString(professionKey);
+        buf.writeUtf(professionKey);
         writeNullableLong(buf, birthDay);
         writeNullableLong(buf, deathDay);
         buf.writeVarInt(happiness + 1);
         buf.writeBoolean(portrait != null);
         if (portrait != null) {
-            buf.writeUuid(portrait);
+            buf.writeUUID(portrait);
         }
         buf.writeBoolean(relationToViewer != null);
         if (relationToViewer != null) {
@@ -77,39 +77,39 @@ public record FamilyPerson(
         pastLives.forEach(buf::writeLong);
         writeNullableLong(buf, exactBirth);
         writeNullableLong(buf, exactDeath);
-        buf.writeUuid(spouse);
+        buf.writeUUID(spouse);
         writeUuids(buf, divorced);
         writeUuids(buf, formerSpouses);
     }
 
-    public static FamilyPerson read(PacketByteBuf buf) {
+    public static FamilyPerson read(FriendlyByteBuf buf) {
         return new FamilyPerson(
-                buf.readUuid(),
-                buf.readString(),
-                buf.readString(),
+                buf.readUUID(),
+                buf.readUtf(),
+                buf.readUtf(),
                 buf.readVarInt(),
                 buf.readBoolean(),
                 buf.readBoolean(),
-                buf.readUuid(),
-                buf.readUuid(),
+                buf.readUUID(),
+                buf.readUUID(),
                 readUuids(buf),
                 readUuids(buf),
-                buf.readString(),
+                buf.readUtf(),
                 readNullableLong(buf),
                 readNullableLong(buf),
                 buf.readVarInt() - 1,
-                buf.readBoolean() ? buf.readUuid() : null,
+                buf.readBoolean() ? buf.readUUID() : null,
                 buf.readBoolean() ? RelationInfo.read(buf) : null,
                 readLongs(buf),
                 readNullableLong(buf),
                 readNullableLong(buf),
-                buf.readUuid(),
+                buf.readUUID(),
                 readUuids(buf),
                 readUuids(buf)
         );
     }
 
-    private static List<Long> readLongs(PacketByteBuf buf) {
+    private static List<Long> readLongs(FriendlyByteBuf buf) {
         int size = buf.readVarInt();
         List<Long> list = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
@@ -118,21 +118,21 @@ public record FamilyPerson(
         return list;
     }
 
-    static void writeUuids(PacketByteBuf buf, List<UUID> uuids) {
+    static void writeUuids(FriendlyByteBuf buf, List<UUID> uuids) {
         buf.writeVarInt(uuids.size());
-        uuids.forEach(buf::writeUuid);
+        uuids.forEach(buf::writeUUID);
     }
 
-    static List<UUID> readUuids(PacketByteBuf buf) {
+    static List<UUID> readUuids(FriendlyByteBuf buf) {
         int size = buf.readVarInt();
         List<UUID> list = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            list.add(buf.readUuid());
+            list.add(buf.readUUID());
         }
         return list;
     }
 
-    private static void writeNullableLong(PacketByteBuf buf, @Nullable Long value) {
+    private static void writeNullableLong(FriendlyByteBuf buf, @Nullable Long value) {
         buf.writeBoolean(value != null);
         if (value != null) {
             buf.writeLong(value);
@@ -140,7 +140,7 @@ public record FamilyPerson(
     }
 
     @Nullable
-    private static Long readNullableLong(PacketByteBuf buf) {
+    private static Long readNullableLong(FriendlyByteBuf buf) {
         return buf.readBoolean() ? buf.readLong() : null;
     }
 }

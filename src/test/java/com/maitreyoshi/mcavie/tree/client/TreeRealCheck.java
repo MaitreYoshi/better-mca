@@ -4,10 +4,10 @@ import com.maitreyoshi.mcavie.SurnameText;
 import com.maitreyoshi.mcavie.tree.FamilyPerson;
 import com.maitreyoshi.mcavie.tree.TreeSelection;
 import net.mca.entity.ai.relationship.Gender;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.ListTag;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,10 +29,10 @@ public final class TreeRealCheck {
     final Map<UUID, Long> deaths = new HashMap<>();
     final Map<UUID, FamilyPerson> persons = new LinkedHashMap<>();
 
-    static NbtCompound read(File dir, String name) throws IOException {
+    static CompoundTag read(File dir, String name) throws IOException {
         File file = new File(dir, name);
         if (!file.exists()) {
-            return new NbtCompound();
+            return new CompoundTag();
         }
         return NbtIo.readCompressed(file).getCompound("data");
     }
@@ -41,8 +41,8 @@ public final class TreeRealCheck {
         if (!new File(dir, "MCA-FamilyTree.dat").exists() && new File(dir, "data/MCA-FamilyTree.dat").exists()) {
             dir = new File(dir, "data");
         }
-        NbtCompound tree = read(dir, "MCA-FamilyTree.dat");
-        for (String key : tree.getKeys()) {
+        CompoundTag tree = read(dir, "MCA-FamilyTree.dat");
+        for (String key : tree.getAllKeys()) {
             UUID id;
             try {
                 id = UUID.fromString(key);
@@ -52,34 +52,34 @@ public final class TreeRealCheck {
             if (DEBUG_ENTRY.equals(id)) {
                 continue;
             }
-            NbtCompound nbt = tree.getCompound(key);
+            CompoundTag nbt = tree.getCompound(key);
             List<UUID> kids = new ArrayList<>();
-            NbtList list = nbt.getList("children", NbtElement.COMPOUND_TYPE);
+            ListTag list = nbt.getList("children", Tag.TAG_COMPOUND);
             for (int i = 0; i < list.size(); i++) {
-                kids.add(list.getCompound(i).getUuid("uuid"));
+                kids.add(list.getCompound(i).getUUID("uuid"));
             }
             nodes.put(id, new Node(id, nbt.getString("name"), nbt.getInt("gender"), nbt.getBoolean("isPlayer"), nbt.getBoolean("isDeceased"),
-                    nbt.getUuid("father"), nbt.getUuid("mother"), nbt.containsUuid("spouse") ? nbt.getUuid("spouse") : TreeLayoutCheck.NIL,
+                    nbt.getUUID("father"), nbt.getUUID("mother"), nbt.hasUUID("spouse") ? nbt.getUUID("spouse") : TreeLayoutCheck.NIL,
                     nbt.getInt("marriageState"), kids));
         }
-        NbtCompound spouses = read(dir, "mca_surnames_spouses.dat").getCompound("spouses");
-        for (String key : spouses.getKeys()) {
-            NbtList list = spouses.getList(key, NbtElement.STRING_TYPE);
+        CompoundTag spouses = read(dir, "mca_surnames_spouses.dat").getCompound("spouses");
+        for (String key : spouses.getAllKeys()) {
+            ListTag list = spouses.getList(key, Tag.TAG_STRING);
             List<UUID> ids = new ArrayList<>();
             for (int i = 0; i < list.size(); i++) {
                 ids.add(UUID.fromString(list.getString(i)));
             }
             history.put(UUID.fromString(key), ids);
         }
-        NbtCompound names = read(dir, "mca_surnames.dat").getCompound("surnames");
-        for (String key : names.getKeys()) {
+        CompoundTag names = read(dir, "mca_surnames.dat").getCompound("surnames");
+        for (String key : names.getAllKeys()) {
             surnames.put(UUID.fromString(key), names.getString(key));
         }
-        NbtCompound life = read(dir, "mca_surnames_life.dat");
-        for (String key : life.getCompound("births").getKeys()) {
+        CompoundTag life = read(dir, "mca_surnames_life.dat");
+        for (String key : life.getCompound("births").getAllKeys()) {
             births.put(UUID.fromString(key), life.getCompound("births").getLong(key));
         }
-        for (String key : life.getCompound("deaths").getKeys()) {
+        for (String key : life.getCompound("deaths").getAllKeys()) {
             deaths.put(UUID.fromString(key), life.getCompound("deaths").getLong(key));
         }
         for (Node node : nodes.values()) {

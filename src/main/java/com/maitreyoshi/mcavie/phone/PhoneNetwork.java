@@ -1,23 +1,23 @@
 package com.maitreyoshi.mcavie.phone;
 
 import com.maitreyoshi.mcavie.MCAVie;
-import net.minecraft.util.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 public final class PhoneNetwork {
-    public static final Identifier ACTION = MCAVie.id("phone_action");
-    public static final Identifier STATE = MCAVie.id("phone_state");
-    public static final Identifier CONVERSATION = MCAVie.id("phone_conversation");
-    public static final Identifier ERROR = MCAVie.id("phone_error");
-    public static final Identifier PHOTO_UPLOAD = MCAVie.id("phone_photo_upload");
-    public static final Identifier PHOTO = MCAVie.id("phone_photo");
-    public static final Identifier PRINT_REQUEST = MCAVie.id("photo_print_request");
-    public static final Identifier PRINT_VIEW = MCAVie.id("photo_print_view");
-    public static final Identifier PRINTED = MCAVie.id("photo_printed");
-    public static final Identifier PORTRAIT_REQUEST = MCAVie.id("portrait_request");
-    public static final Identifier PHOTO_PLACE = MCAVie.id("photo_place");
-    public static final Identifier PHOTO_RESIZE = MCAVie.id("photo_resize");
-    public static final Identifier PHOTO_RESIZE_OPEN = MCAVie.id("photo_resize_open");
-    public static final Identifier NOTIFY = MCAVie.id("phone_notify");
+    public static final ResourceLocation ACTION = MCAVie.id("phone_action");
+    public static final ResourceLocation STATE = MCAVie.id("phone_state");
+    public static final ResourceLocation CONVERSATION = MCAVie.id("phone_conversation");
+    public static final ResourceLocation ERROR = MCAVie.id("phone_error");
+    public static final ResourceLocation PHOTO_UPLOAD = MCAVie.id("phone_photo_upload");
+    public static final ResourceLocation PHOTO = MCAVie.id("phone_photo");
+    public static final ResourceLocation PRINT_REQUEST = MCAVie.id("photo_print_request");
+    public static final ResourceLocation PRINT_VIEW = MCAVie.id("photo_print_view");
+    public static final ResourceLocation PRINTED = MCAVie.id("photo_printed");
+    public static final ResourceLocation PORTRAIT_REQUEST = MCAVie.id("portrait_request");
+    public static final ResourceLocation PHOTO_PLACE = MCAVie.id("photo_place");
+    public static final ResourceLocation PHOTO_RESIZE = MCAVie.id("photo_resize");
+    public static final ResourceLocation PHOTO_RESIZE_OPEN = MCAVie.id("photo_resize_open");
+    public static final ResourceLocation NOTIFY = MCAVie.id("phone_notify");
     public static final int NOTIFY_MESSAGE = 0;
     public static final int NOTIFY_REMINDER = 1;
 

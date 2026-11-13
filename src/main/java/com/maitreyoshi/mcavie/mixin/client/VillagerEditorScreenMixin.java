@@ -3,11 +3,11 @@ package com.maitreyoshi.mcavie.mixin.client;
 import com.maitreyoshi.mcavie.SurnameText;
 import com.maitreyoshi.mcavie.client.SurnameFieldHolder;
 import net.mca.client.gui.VillagerEditorScreen;
-import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -41,9 +41,9 @@ public abstract class VillagerEditorScreenMixin extends Screen implements Surnam
 
     @Unique
     @Nullable
-    private TextFieldWidget mcavie$editorSurnameField;
+    private EditBox mcavie$editorSurnameField;
 
-    protected VillagerEditorScreenMixin(Text title) {
+    protected VillagerEditorScreenMixin(Component title) {
         super(title);
     }
 
@@ -64,52 +64,52 @@ public abstract class VillagerEditorScreenMixin extends Screen implements Surnam
         if ((Object) getClass() != VillagerEditorScreen.class || !"general".equals(page) || villagerUUID.equals(playerUUID)) {
             return;
         }
-        TextFieldWidget nameField = ((VillagerEditorScreenAccessor) this).mcavie$getNameField();
+        EditBox nameField = ((VillagerEditorScreenAccessor) this).mcavie$getNameField();
         if (nameField == null) {
             return;
         }
 
         int x = nameField.getX();
         int nameY = nameField.getY();
-        for (Element element : new ArrayList<>(children())) {
-            if (element instanceof ClickableWidget widget && widget.getX() >= x && widget.getY() > nameY + 10) {
+        for (GuiEventListener element : new ArrayList<>(children())) {
+            if (element instanceof AbstractWidget widget && widget.getX() >= x && widget.getY() > nameY + 10) {
                 widget.setY(widget.getY() + ROW_HEIGHT);
             }
         }
 
-        String full = nameField.getText().trim();
+        String full = nameField.getValue().trim();
         int space = full.lastIndexOf(' ');
         String first = space > 0 ? full.substring(0, space).trim() : full;
         String surname = space > 0 ? full.substring(space + 1).trim() : "";
 
-        TextFieldWidget field = new TextFieldWidget(textRenderer, x, nameY + ROW_HEIGHT, FIELD_WIDTH, 18, Text.translatable("gui.mca_vie.surname"));
+        EditBox field = new EditBox(font, x, nameY + ROW_HEIGHT, FIELD_WIDTH, 18, Component.translatable("gui.mca_vie.surname"));
         field.setMaxLength(SurnameText.MAX_LENGTH);
-        field.setPlaceholder(Text.translatable("gui.mca_vie.surname"));
-        field.setText(surname);
+        field.setHint(Component.translatable("gui.mca_vie.surname"));
+        field.setValue(surname);
         mcavie$editorSurnameField = field;
-        field.setChangedListener(s -> {
-            TextFieldWidget name = ((VillagerEditorScreenAccessor) this).mcavie$getNameField();
+        field.setResponder(s -> {
+            EditBox name = ((VillagerEditorScreenAccessor) this).mcavie$getNameField();
             if (name != null) {
-                ((VillagerEditorScreen) (Object) this).updateName(name.getText());
+                ((VillagerEditorScreen) (Object) this).updateName(name.getValue());
             }
         });
-        addDrawableChild(field);
+        addRenderableWidget(field);
 
         if (!first.isBlank() && !first.equals(full)) {
-            nameField.setText(first);
+            nameField.setValue(first);
         }
     }
 
     @Override
     @Nullable
     public String mcavie$getSurname() {
-        return mcavie$editorSurnameField == null ? null : mcavie$editorSurnameField.getText();
+        return mcavie$editorSurnameField == null ? null : mcavie$editorSurnameField.getValue();
     }
 
     @Override
     public void mcavie$setSurname(String surname) {
         if (mcavie$editorSurnameField != null) {
-            mcavie$editorSurnameField.setText(surname);
+            mcavie$editorSurnameField.setValue(surname);
         }
     }
 }

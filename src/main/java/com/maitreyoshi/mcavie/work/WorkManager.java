@@ -22,29 +22,28 @@ import net.mca.entity.ai.Chore;
 import net.mca.entity.ai.MoveState;
 import net.mca.entity.ai.relationship.AgeState;
 import net.mca.server.world.data.FamilyTreeNode;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.entity.ai.brain.Activity;
-import net.minecraft.entity.ai.brain.Brain;
-import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.random.Random;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.ai.Brain;
+import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraft.world.entity.schedule.Activity;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.Nullable;
-import net.minecraft.inventory.SimpleInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
 import com.maitreyoshi.mcavie.life.LifeCycle;
 import com.maitreyoshi.mcavie.life.LifeRegistry;
 import net.mca.ProfessionsMCA;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.village.VillagerProfession;
-import net.minecraft.world.World;
-
 import java.time.DayOfWeek;
 import java.util.Map;
 import java.util.UUID;
@@ -68,57 +67,57 @@ public final class WorkManager {
     private WorkManager() {
     }
 
-    public static boolean isWorkTime(World world) {
+    public static boolean isWorkTime(Level world) {
         WorldCalendar.CalendarDate date = WorldCalendar.now(world);
         return WorldCalendar.rhythmDay(date) != DayOfWeek.SUNDAY && date.hour() >= START_HOUR && date.hour() < END_HOUR;
     }
 
     public static boolean isWorking(VillagerEntityMCA villager) {
-        return WORKING.getOrDefault(villager.getUuid(), false);
+        return WORKING.getOrDefault(villager.getUUID(), false);
     }
 
     public static WorkStatus getStatus(VillagerEntityMCA villager) {
-        return STATUS.getOrDefault(villager.getUuid(), WorkStatus.SEARCHING);
+        return STATUS.getOrDefault(villager.getUUID(), WorkStatus.SEARCHING);
     }
 
     public static void setStatus(VillagerEntityMCA villager, WorkStatus status) {
-        if (STATUS.put(villager.getUuid(), status) != status) {
+        if (STATUS.put(villager.getUUID(), status) != status) {
             WorkNetwork.sendJobInfo(villager);
         }
     }
 
     public static WorkGesture getGesture(VillagerEntityMCA villager) {
-        return GESTURE.getOrDefault(villager.getUuid(), WorkGesture.NONE);
+        return GESTURE.getOrDefault(villager.getUUID(), WorkGesture.NONE);
     }
 
     public static void setGesture(VillagerEntityMCA villager, WorkGesture gesture) {
-        if (GESTURE.getOrDefault(villager.getUuid(), WorkGesture.NONE) != gesture) {
-            GESTURE.put(villager.getUuid(), gesture);
+        if (GESTURE.getOrDefault(villager.getUUID(), WorkGesture.NONE) != gesture) {
+            GESTURE.put(villager.getUUID(), gesture);
             WorkNetwork.sendJobInfo(villager);
         }
     }
 
     public static Job getJob(VillagerEntityMCA villager) {
-        if (villager.getWorld() instanceof ServerWorld world) {
-            return WorkRegistry.get(world.getServer()).getJob(villager.getUuid());
+        if (villager.level() instanceof ServerLevel world) {
+            return WorkRegistry.get(world.getServer()).getJob(villager.getUUID());
         }
         return Job.NONE;
     }
 
     public static WorkRegistry.Record getRecord(VillagerEntityMCA villager) {
-        return WorkRegistry.get(((ServerWorld) villager.getWorld()).getServer()).getOrCreate(villager.getUuid());
+        return WorkRegistry.get(((ServerLevel) villager.level()).getServer()).getOrCreate(villager.getUUID());
     }
 
     @Nullable
     public static WorkRegistry.Record findRecord(VillagerEntityMCA villager) {
-        if (villager.getWorld() instanceof ServerWorld world) {
-            long time = world.getTime();
-            if (cachedRecord != null && time == cachedTime && villager.getUuid().equals(cachedUuid)) {
+        if (villager.level() instanceof ServerLevel world) {
+            long time = world.getGameTime();
+            if (cachedRecord != null && time == cachedTime && villager.getUUID().equals(cachedUuid)) {
                 return cachedRecord;
             }
-            WorkRegistry.Record record = WorkRegistry.get(world.getServer()).get(villager.getUuid());
+            WorkRegistry.Record record = WorkRegistry.get(world.getServer()).get(villager.getUUID());
             if (record != null) {
-                cachedUuid = villager.getUuid();
+                cachedUuid = villager.getUUID();
                 cachedTime = time;
                 cachedRecord = record;
             }
@@ -128,14 +127,14 @@ public final class WorkManager {
     }
 
     public static void markDirty(VillagerEntityMCA villager) {
-        if (villager.getWorld() instanceof ServerWorld world) {
-            WorkRegistry.get(world.getServer()).markDirty();
+        if (villager.level() instanceof ServerLevel world) {
+            WorkRegistry.get(world.getServer()).setDirty();
         }
     }
 
     public record Zone(BlockPos center, int radius) {
         public boolean contains(BlockPos pos) {
-            return center.getSquaredDistance(pos) <= (double) radius * radius;
+            return center.distSqr(pos) <= (double) radius * radius;
         }
     }
 
@@ -148,7 +147,7 @@ public final class WorkManager {
 
     public static Zone getZone(VillagerEntityMCA villager) {
         WorkRegistry.Record record = findRecord(villager);
-        BlockPos center = record != null && record.center != null ? record.center : villager.getBlockPos();
+        BlockPos center = record != null && record.center != null ? record.center : villager.blockPosition();
         return new Zone(center, record != null ? record.radius : WorkRegistry.DEFAULT_RADIUS);
     }
 
@@ -161,7 +160,7 @@ public final class WorkManager {
     }
 
     public static void update(VillagerEntityMCA villager) {
-        if (!(villager.getWorld() instanceof ServerWorld world)) {
+        if (!(villager.level() instanceof ServerLevel world)) {
             return;
         }
         int age = ageInYears(villager, world);
@@ -171,21 +170,21 @@ public final class WorkManager {
         if (employee != null) {
             PhoneEmployees.update(villager, world, employee);
         }
-        Job job = WorkRegistry.get(world.getServer()).getJob(villager.getUuid());
+        Job job = WorkRegistry.get(world.getServer()).getJob(villager.getUUID());
         syncProfession(villager, job);
         WorkRegistry.Record work = findRecord(villager);
         boolean hasWorkstation = work != null && work.depot != null;
-        if (job.isCraft() && !hasWorkstation && (world.getTime() / 20 + villager.getId()) % 5 == 0) {
+        if (job.isCraft() && !hasWorkstation && (world.getGameTime() / 20 + villager.getId()) % 5 == 0) {
             hasWorkstation = linkNearestWorkstation(villager, world, getRecord(villager));
         }
         boolean shouldWork = job.isCraft()
                 && hasWorkstation
-                && (AgeState.byCurrentAge(villager.getBreedingAge()) == AgeState.ADULT || age >= APPRENTICE_AGE)
+                && (AgeState.byCurrentAge(villager.getAge()) == AgeState.ADULT || age >= APPRENTICE_AGE)
                 && isWorkTime(world)
                 && !VillageMarket.isMarketDayFor(villager, world)
                 && !VillageJustice.isImprisoned(villager)
                 && !villager.isSleeping()
-                && !Wellbeing.isSick(world, villager.getUuid())
+                && !Wellbeing.isSick(world, villager.getUUID())
                 && villager.getVillagerBrain().getCurrentJob() == Chore.NONE
                 && villager.getVillagerBrain().getMoveState() == MoveState.MOVE
                 && !villager.getVillagerBrain().isPanicking()
@@ -197,84 +196,84 @@ public final class WorkManager {
         }
         boolean wasWorking = isWorking(villager);
         if (shouldWork == wasWorking) {
-            if (!shouldWork && isMarkedTool(villager.getMainHandStack())) {
+            if (!shouldWork && isMarkedTool(villager.getMainHandItem())) {
                 putToolAway(villager);
             }
             return;
         }
-        WORKING.put(villager.getUuid(), shouldWork);
+        WORKING.put(villager.getUUID(), shouldWork);
         if (shouldWork) {
-            STATUS.put(villager.getUuid(), WorkStatus.SEARCHING);
+            STATUS.put(villager.getUUID(), WorkStatus.SEARCHING);
         }
         WorkNetwork.sendJobInfo(villager);
 
         if (shouldWork) {
-            villager.getBrain().doExclusively(ActivityMCA.CHORE.get());
+            villager.getBrain().setActiveActivityIfPossible(ActivityMCA.CHORE.get());
             giveTool(villager, job);
         } else {
-            villager.getBrain().doExclusively(Activity.IDLE);
+            villager.getBrain().setActiveActivityIfPossible(Activity.IDLE);
             putToolAway(villager);
         }
     }
 
     public static void giveTool(VillagerEntityMCA villager, Job job) {
-        ItemStack hand = villager.getMainHandStack();
-        if (job == Job.MINER && isMarkedTool(hand) && hand.isIn(ItemTags.PICKAXES)) {
+        ItemStack hand = villager.getMainHandItem();
+        if (job == Job.MINER && isMarkedTool(hand) && hand.is(ItemTags.PICKAXES)) {
             return;
         }
         giveTool(villager, job.tool());
     }
 
     public static void giveTool(VillagerEntityMCA villager, ItemStack tool) {
-        ItemStack hand = villager.getMainHandStack();
-        if (tool.isEmpty() || (hand.isOf(tool.getItem())
-                && EnchantmentHelper.get(hand).equals(EnchantmentHelper.get(tool)))) {
+        ItemStack hand = villager.getMainHandItem();
+        if (tool.isEmpty() || (hand.is(tool.getItem())
+                && EnchantmentHelper.getEnchantments(hand).equals(EnchantmentHelper.getEnchantments(tool)))) {
             return;
         }
         ItemStack original = ItemStack.EMPTY;
         if (isMarkedTool(hand)) {
             original = originalOf(hand);
         } else if (!hand.isEmpty()) {
-            ItemStack rest = villager.getInventory().addStack(hand.copy());
+            ItemStack rest = villager.getInventory().addItem(hand.copy());
             if (!rest.isEmpty()) {
-                villager.setStackInHand(Hand.MAIN_HAND, rest);
+                villager.setItemInHand(InteractionHand.MAIN_HAND, rest);
                 return;
             }
             original = hand.copy();
         }
-        NbtCompound mark = new NbtCompound();
+        CompoundTag mark = new CompoundTag();
         if (!original.isEmpty()) {
-            mark.put("held", original.writeNbt(new NbtCompound()));
+            mark.put("held", original.save(new CompoundTag()));
         }
-        tool.getOrCreateNbt().put(TOOL_KEY, mark);
-        villager.setStackInHand(Hand.MAIN_HAND, tool);
+        tool.getOrCreateTag().put(TOOL_KEY, mark);
+        villager.setItemInHand(InteractionHand.MAIN_HAND, tool);
     }
 
     public static void putToolAway(VillagerEntityMCA villager) {
-        SimpleInventory inventory = villager.getInventory();
-        for (int i = 0; i < inventory.size(); i++) {
-            if (isMarkedTool(inventory.getStack(i))) {
-                inventory.setStack(i, ItemStack.EMPTY);
+        SimpleContainer inventory = villager.getInventory();
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            if (isMarkedTool(inventory.getItem(i))) {
+                inventory.setItem(i, ItemStack.EMPTY);
             }
         }
-        ItemStack hand = villager.getMainHandStack();
+        ItemStack hand = villager.getMainHandItem();
         if (!isMarkedTool(hand)) {
             return;
         }
         ItemStack original = originalOf(hand);
         ItemStack back = ItemStack.EMPTY;
-        for (int i = 0; i < inventory.size() && !original.isEmpty(); i++) {
-            ItemStack stack = inventory.getStack(i);
-            if (ItemStack.canCombine(stack, original)) {
+        for (int i = 0; i < inventory.getContainerSize() && !original.isEmpty(); i++) {
+            ItemStack stack = inventory.getItem(i);
+            if (ItemStack.isSameItemSameTags(stack, original)) {
                 back = stack.split(original.getCount());
                 break;
             }
         }
-        villager.setStackInHand(Hand.MAIN_HAND, back);
+        villager.setItemInHand(InteractionHand.MAIN_HAND, back);
     }
 
     private static boolean isMarkedTool(ItemStack stack) {
-        return !stack.isEmpty() && stack.hasNbt() && stack.getNbt().contains(TOOL_KEY);
+        return !stack.isEmpty() && stack.hasTag() && stack.getTag().contains(TOOL_KEY);
     }
 
     public static boolean isWorkTool(ItemStack stack) {
@@ -282,42 +281,42 @@ public final class WorkManager {
     }
 
     public static ItemStack heldOriginal(VillagerEntityMCA villager) {
-        ItemStack hand = villager.getMainHandStack();
+        ItemStack hand = villager.getMainHandItem();
         return isMarkedTool(hand) ? originalOf(hand) : ItemStack.EMPTY;
     }
 
     private static ItemStack originalOf(ItemStack tool) {
-        NbtCompound mark = tool.getNbt() == null ? null : tool.getNbt().getCompound(TOOL_KEY);
-        return mark == null || !mark.contains("held") ? ItemStack.EMPTY : ItemStack.fromNbt(mark.getCompound("held"));
+        CompoundTag mark = tool.getTag() == null ? null : tool.getTag().getCompound(TOOL_KEY);
+        return mark == null || !mark.contains("held") ? ItemStack.EMPTY : ItemStack.of(mark.getCompound("held"));
     }
 
-    private static int ageInYears(VillagerEntityMCA villager, ServerWorld world) {
-        Long birth = LifeRegistry.get(world.getServer()).getBodyBirthDay(villager.getUuid());
+    private static int ageInYears(VillagerEntityMCA villager, ServerLevel world) {
+        Long birth = LifeRegistry.get(world.getServer()).getBodyBirthDay(villager.getUUID());
         return birth == null ? -1 : LifeCycle.ageInYears(birth, WorldCalendar.now(world).dayIndex());
     }
 
     // clé de traduction du refus d'un métier proposé par un joueur, ou null s'il l'accepte
     public static String jobRefusal(VillagerEntityMCA villager) {
-        if (!(villager.getWorld() instanceof ServerWorld world)) {
+        if (!(villager.level() instanceof ServerLevel world)) {
             return null;
         }
         int age = ageInYears(villager, world);
         if (age >= AgingConfig.get().retirementAge) {
             return "job.mca_vie.refused_old";
         }
-        boolean adult = AgeState.byCurrentAge(villager.getBreedingAge()) == AgeState.ADULT;
+        boolean adult = AgeState.byCurrentAge(villager.getAge()) == AgeState.ADULT;
         if (age >= 0 ? age < APPRENTICE_AGE : !adult) {
             return "job.mca_vie.refused_young";
         }
         return null;
     }
 
-    private static void updateCareer(VillagerEntityMCA villager, ServerWorld world, int age) {
+    private static void updateCareer(VillagerEntityMCA villager, ServerLevel world, int age) {
         if (age < 0) {
             return;
         }
         WorkRegistry registry = WorkRegistry.get(world.getServer());
-        WorkRegistry.Record record = registry.get(villager.getUuid());
+        WorkRegistry.Record record = registry.get(villager.getUUID());
         Job job = record == null ? Job.NONE : record.job;
 
         if (age >= AgingConfig.get().retirementAge) {
@@ -328,29 +327,29 @@ public final class WorkManager {
                 if (villager.isGuard() || isSyncedProfession(villager, job)) {
                     villager.setProfession(VillagerProfession.NONE);
                 }
-                record = registry.getOrCreate(villager.getUuid());
+                record = registry.getOrCreate(villager.getUUID());
                 record.job = Job.RETIRED;
                 record.formerJob = former;
                 record.employer = null;
-                registry.markDirty();
+                registry.setDirty();
                 WorkNetwork.sendJobInfo(villager);
             }
             return;
         }
 
         if (age >= APPRENTICE_AGE && age < ADULT_AGE && job == Job.NONE && (record == null || !record.apprenticeChosen)) {
-            record = registry.getOrCreate(villager.getUuid());
+            record = registry.getOrCreate(villager.getUUID());
             record.apprenticeChosen = true;
             record.job = chooseApprenticeship(villager, world);
             record.level = 1;
             record.experience = 0;
-            record.center = villager.getBlockPos();
-            registry.markDirty();
+            record.center = villager.blockPosition();
+            registry.setDirty();
             WorkNetwork.sendJobInfo(villager);
         }
     }
 
-    private static Job chooseApprenticeship(VillagerEntityMCA villager, ServerWorld world) {
+    private static Job chooseApprenticeship(VillagerEntityMCA villager, ServerLevel world) {
         WorkRegistry registry = WorkRegistry.get(world.getServer());
         FamilyTreeNode node = villager.getRelationships().getFamilyEntry();
         List<Job> parentJobs = new ArrayList<>();
@@ -360,7 +359,7 @@ public final class WorkManager {
                 parentJobs.add(parentJob);
             }
         }
-        Random random = world.getRandom();
+        RandomSource random = world.getRandom();
         if (!parentJobs.isEmpty() && random.nextFloat() < 0.6f) {
             return parentJobs.get(random.nextInt(parentJobs.size()));
         }
@@ -388,9 +387,9 @@ public final class WorkManager {
 
     public static void keepWorking(VillagerEntityMCA villager) {
         if (isWorking(villager) && !isInDanger(villager)) {
-            villager.getBrain().getFirstPossibleNonCoreActivity().ifPresent(activity -> {
+            villager.getBrain().getActiveNonCoreActivity().ifPresent(activity -> {
                 if (!activity.equals(ActivityMCA.CHORE.get())) {
-                    villager.getBrain().doExclusively(ActivityMCA.CHORE.get());
+                    villager.getBrain().setActiveActivityIfPossible(ActivityMCA.CHORE.get());
                 }
             });
         }
@@ -398,8 +397,8 @@ public final class WorkManager {
 
     private static boolean isInDanger(VillagerEntityMCA villager) {
         Brain<?> brain = villager.getBrain();
-        return brain.hasActivity(Activity.PANIC) || brain.hasActivity(Activity.HIDE)
-                || brain.hasActivity(Activity.RAID) || brain.hasActivity(Activity.PRE_RAID);
+        return brain.isActive(Activity.PANIC) || brain.isActive(Activity.HIDE)
+                || brain.isActive(Activity.RAID) || brain.isActive(Activity.PRE_RAID);
     }
 
     @Nullable
@@ -414,16 +413,16 @@ public final class WorkManager {
 
     private static void syncProfession(VillagerEntityMCA villager, Job job) {
         VillagerProfession profession = professionFor(job);
-        if (profession == null || AgeState.byCurrentAge(villager.getBreedingAge()) != AgeState.ADULT) {
+        if (profession == null || AgeState.byCurrentAge(villager.getAge()) != AgeState.ADULT) {
             return;
         }
         if (villager.getProfession() != profession) {
             villager.setProfession(profession);
-            villager.setVillagerData(villager.getVillagerData().withLevel(1));
-            villager.setExperience(0);
+            villager.setVillagerData(villager.getVillagerData().setLevel(1));
+            villager.setVillagerXp(0);
         }
-        if (villager.getExperience() == 0) {
-            villager.setExperience(1);
+        if (villager.getVillagerXp() == 0) {
+            villager.setVillagerXp(1);
         }
         WorkRegistry.Record tradeRecord = findRecord(villager);
         if (tradeRecord != null) {
@@ -433,14 +432,14 @@ public final class WorkManager {
 
     public static final int WORKSTATION_SEARCH_RADIUS = 32;
 
-    public static boolean linkNearestWorkstation(VillagerEntityMCA villager, ServerWorld world, WorkRegistry.Record record) {
+    public static boolean linkNearestWorkstation(VillagerEntityMCA villager, ServerLevel world, WorkRegistry.Record record) {
         WorkstationBlock wanted = WorkBlocks.forJob(record.job);
         if (wanted == null) {
             return false;
         }
         WorkRegistry registry = WorkRegistry.get(world.getServer());
-        Identifier dimension = world.getRegistryKey().getValue();
-        BlockPos origin = villager.getBlockPos();
+        ResourceLocation dimension = world.dimension().location();
+        BlockPos origin = villager.blockPosition();
         int chunkRadius = (WORKSTATION_SEARCH_RADIUS >> 4) + 1;
         int cx = origin.getX() >> 4;
         int cz = origin.getZ() >> 4;
@@ -448,14 +447,14 @@ public final class WorkManager {
         double bestDistance = (double) WORKSTATION_SEARCH_RADIUS * WORKSTATION_SEARCH_RADIUS;
         for (int dx = -chunkRadius; dx <= chunkRadius; dx++) {
             for (int dz = -chunkRadius; dz <= chunkRadius; dz++) {
-                if (!world.isChunkLoaded(cx + dx, cz + dz)) {
+                if (!world.hasChunk(cx + dx, cz + dz)) {
                     continue;
                 }
                 for (BlockEntity entity : world.getChunk(cx + dx, cz + dz).getBlockEntities().values()) {
-                    BlockPos pos = entity.getPos();
-                    double distance = pos.getSquaredDistance(origin);
+                    BlockPos pos = entity.getBlockPos();
+                    double distance = pos.distSqr(origin);
                     if (entity instanceof WorkstationBlockEntity && distance <= bestDistance
-                            && entity.getCachedState().isOf(wanted) && !registry.isClaimed(dimension, pos, villager.getUuid())) {
+                            && entity.getBlockState().is(wanted) && !registry.isClaimed(dimension, pos, villager.getUUID())) {
                         bestDistance = distance;
                         best = pos;
                     }
@@ -465,10 +464,10 @@ public final class WorkManager {
         if (best == null) {
             return false;
         }
-        record.depot = best.toImmutable();
+        record.depot = best.immutable();
         record.depotDimension = dimension;
         record.center = record.depot;
-        registry.markDirty();
+        registry.setDirty();
         WorkNetwork.sendJobInfo(villager);
         return true;
     }
@@ -484,10 +483,10 @@ public final class WorkManager {
         if (previous != job) {
             record.depot = null;
             record.depotDimension = null;
-            record.center = villager.getBlockPos();
+            record.center = villager.blockPosition();
         }
         record.apprenticeChosen = true;
-        if (job.isCraft() && record.depot == null && villager.getWorld() instanceof ServerWorld world) {
+        if (job.isCraft() && record.depot == null && villager.level() instanceof ServerLevel world) {
             linkNearestWorkstation(villager, world, record);
         }
         markDirty(villager);
@@ -501,8 +500,8 @@ public final class WorkManager {
             villager.setProfession(VillagerProfession.NONE);
         }
         if (isWorking(villager)) {
-            WORKING.put(villager.getUuid(), false);
-            villager.getBrain().doExclusively(Activity.IDLE);
+            WORKING.put(villager.getUUID(), false);
+            villager.getBrain().setActiveActivityIfPossible(Activity.IDLE);
             putToolAway(villager);
         }
         WorkNetwork.sendJobInfo(villager);
@@ -515,9 +514,9 @@ public final class WorkManager {
         int level = levelFor(record.experience);
         if (level > record.level) {
             record.level = level;
-            if (villager.getWorld() instanceof ServerWorld world) {
-                world.spawnParticles(ParticleTypes.HAPPY_VILLAGER, villager.getX(), villager.getEyeY() + 0.3, villager.getZ(), 12, 0.4, 0.4, 0.4, 0.05);
-                world.playSound(null, villager.getBlockPos(), SoundEvents.ENTITY_VILLAGER_CELEBRATE, SoundCategory.NEUTRAL, 0.8f, 1.0f);
+            if (villager.level() instanceof ServerLevel world) {
+                world.sendParticles(ParticleTypes.HAPPY_VILLAGER, villager.getX(), villager.getEyeY() + 0.3, villager.getZ(), 12, 0.4, 0.4, 0.4, 0.05);
+                world.playSound(null, villager.blockPosition(), SoundEvents.VILLAGER_CELEBRATE, SoundSource.NEUTRAL, 0.8f, 1.0f);
             }
             WorkNetwork.sendJobInfo(villager);
         }
@@ -534,7 +533,7 @@ public final class WorkManager {
     public static void register() {
         ServerEntityEvents.ENTITY_UNLOAD.register((entity, world) -> {
             if (entity instanceof VillagerEntityMCA) {
-                forget(entity.getUuid());
+                forget(entity.getUUID());
             }
         });
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {

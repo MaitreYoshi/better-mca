@@ -4,20 +4,19 @@ import com.maitreyoshi.mcavie.life.Wellbeing;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.server.world.data.Building;
 import net.mca.server.world.data.Village;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.passive.VillagerEntity;
-import net.minecraft.entity.passive.WanderingTraderEntity;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.ItemScatterer;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.village.TradeOffer;
-import net.minecraft.village.TradeOfferList;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.Container;
+import net.minecraft.world.Containers;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.npc.WanderingTrader;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.trading.MerchantOffer;
+import net.minecraft.world.item.trading.MerchantOffers;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -30,8 +29,8 @@ import java.util.WeakHashMap;
  * rabais et offre rare des villageois le jour du marché, marchands de passage.
  */
 public final class VillageMarketExtras {
-    private static final Map<VillagerEntity, TradeOffer> RARE = new WeakHashMap<>();
-    private static final Map<VillagerEntity, Map<TradeOffer, int[]>> DISCOUNTS = new WeakHashMap<>();
+    private static final Map<Villager, MerchantOffer> RARE = new WeakHashMap<>();
+    private static final Map<Villager, Map<MerchantOffer, int[]>> DISCOUNTS = new WeakHashMap<>();
 
     private VillageMarketExtras() {
     }
@@ -44,7 +43,7 @@ public final class VillageMarketExtras {
 
     // --- Marchands de passage ---
 
-    public static boolean spawnMerchants(Village village, ServerWorld world) {
+    public static boolean spawnMerchants(Village village, ServerLevel world) {
         List<BlockPos> stalls = stalls(village);
         VillageConfig config = VillageConfig.get();
         if (stalls.isEmpty() || config.marketMerchants <= 0) {
@@ -52,30 +51,30 @@ public final class VillageMarketExtras {
         }
         int spawned = 0;
         for (int i = 0; i < config.marketMerchants; i++) {
-            BlockPos pos = stalls.get(world.random.nextInt(stalls.size())).up();
-            if (!world.isChunkLoaded(pos)) {
+            BlockPos pos = stalls.get(world.random.nextInt(stalls.size())).above();
+            if (!world.hasChunkAt(pos)) {
                 continue;
             }
-            WanderingTraderEntity trader = EntityType.WANDERING_TRADER.create(world);
+            WanderingTrader trader = EntityType.WANDERING_TRADER.create(world);
             if (trader == null) {
                 continue;
             }
-            trader.refreshPositionAndAngles(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, world.random.nextFloat() * 360, 0);
+            trader.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, world.random.nextFloat() * 360, 0);
             trader.setDespawnDelay(config.marketMerchantTicks);
             trader.setWanderTarget(pos);
-            if (world.spawnEntity(trader)) {
+            if (world.addFreshEntity(trader)) {
                 spawned++;
             }
         }
         if (spawned > 0) {
-            VillageServer.notify(world, village, Text.translatable("msg.mca_vie.market.merchants", village.getName(), spawned).formatted(Formatting.GOLD));
+            VillageServer.notify(world, village, Component.translatable("msg.mca_vie.market.merchants", village.getName(), spawned).withStyle(ChatFormatting.GOLD));
         }
         return spawned > 0;
     }
 
     // --- Étals des joueurs ---
 
-    public static void sellStalls(Village village, ServerWorld world, VillageState state) {
+    public static void sellStalls(Village village, ServerLevel world, VillageState state) {
         VillageConfig config = VillageConfig.get();
         double budget = village.getPopulation() * config.marketSpendPerResident;
         double taxRate = Math.max(0, Math.min(100, VillageEconomy.appliedRate(village))) / 100.0;
@@ -91,13 +90,13 @@ public final class VillageMarketExtras {
             if (key == null || !seen.add(key)) {
                 continue;
             }
-            Inventory inventory = VillageNature.openContainer(world, pos);
+            Container inventory = VillageNature.openContainer(world, pos);
             if (inventory == null) {
                 continue;
             }
             double earned = 0;
-            for (int slot = 0; slot < inventory.size() && spent + 1e-9 < budget; slot++) {
-                ItemStack stack = inventory.getStack(slot);
+            for (int slot = 0; slot < inventory.getContainerSize() && spent + 1e-9 < budget; slot++) {
+                ItemStack stack = inventory.getItem(slot);
                 int units = VillageNature.unitsPerEmerald(stack);
                 if (units == 0) {
                     continue;
@@ -106,7 +105,7 @@ public final class VillageMarketExtras {
                 if (sold <= 0) {
                     break;
                 }
-                stack.decrement(sold);
+                stack.shrink(sold);
                 double value = sold * config.marketSalePrice / units;
                 spent += value;
                 earned += value;
@@ -118,7 +117,7 @@ public final class VillageMarketExtras {
                 toSellers += gross - tax;
                 give(world, pos, inventory, gross - tax);
             }
-            inventory.markDirty();
+            inventory.setChanged();
         }
         state.treasury += toTreasury;
         state.lastMarketSales = toSellers;
@@ -126,27 +125,27 @@ public final class VillageMarketExtras {
         if (spent > 0) {
             village.getResidentsUUIDs().toList().forEach(uuid -> Wellbeing.addHappiness(world, uuid, config.marketHappiness));
         }
-        VillageServer.notify(world, village, Text.translatable("msg.mca_vie.market.stalls", village.getName(), toSellers, toTreasury)
-                .formatted(Formatting.GOLD));
+        VillageServer.notify(world, village, Component.translatable("msg.mca_vie.market.stalls", village.getName(), toSellers, toTreasury)
+                .withStyle(ChatFormatting.GOLD));
     }
 
-    private static void give(ServerWorld world, BlockPos pos, Inventory inventory, long amount) {
+    private static void give(ServerLevel world, BlockPos pos, Container inventory, long amount) {
         long left = amount;
-        for (int slot = 0; slot < inventory.size() && left > 0; slot++) {
-            ItemStack stack = inventory.getStack(slot);
+        for (int slot = 0; slot < inventory.getContainerSize() && left > 0; slot++) {
+            ItemStack stack = inventory.getItem(slot);
             if (stack.isEmpty()) {
                 int n = (int) Math.min(64, left);
-                inventory.setStack(slot, new ItemStack(Items.EMERALD, n));
+                inventory.setItem(slot, new ItemStack(Items.EMERALD, n));
                 left -= n;
-            } else if (stack.isOf(Items.EMERALD) && !stack.hasNbt() && stack.getCount() < stack.getMaxCount()) {
-                int n = (int) Math.min(stack.getMaxCount() - stack.getCount(), left);
-                stack.increment(n);
+            } else if (stack.is(Items.EMERALD) && !stack.hasTag() && stack.getCount() < stack.getMaxStackSize()) {
+                int n = (int) Math.min(stack.getMaxStackSize() - stack.getCount(), left);
+                stack.grow(n);
                 left -= n;
             }
         }
         while (left > 0) {
             int n = (int) Math.min(64, left);
-            ItemScatterer.spawn(world, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, new ItemStack(Items.EMERALD, n));
+            Containers.dropItemStack(world, pos.getX() + 0.5, pos.getY() + 1.0, pos.getZ() + 0.5, new ItemStack(Items.EMERALD, n));
             left -= n;
         }
     }
@@ -158,10 +157,10 @@ public final class VillageMarketExtras {
             {Items.EXPERIENCE_BOTTLE, 4, 4}, {Items.ENDER_PEARL, 2, 4}, {Items.NAUTILUS_SHELL, 1, 8}, {Items.AMETHYST_SHARD, 4, 3}};
 
     public static void prepareOffers(VillagerEntityMCA villager) {
-        if (!(villager.getWorld() instanceof ServerWorld world)) {
+        if (!(villager.level() instanceof ServerLevel world)) {
             return;
         }
-        TradeOfferList offers = villager.getOffers();
+        MerchantOffers offers = villager.getOffers();
         clearRare(villager);
         clearDiscounts(villager);
         if (offers.isEmpty() || !VillageMarket.isMarketDayFor(villager, world)) {
@@ -169,38 +168,38 @@ public final class VillageMarketExtras {
         }
         int percent = VillageConfig.get().marketDiscountPercent;
         if (percent > 0) {
-            Map<TradeOffer, int[]> applied = new IdentityHashMap<>();
-            for (TradeOffer offer : offers) {
-                int base = offer.getOriginalFirstBuyItem().getCount();
+            Map<MerchantOffer, int[]> applied = new IdentityHashMap<>();
+            for (MerchantOffer offer : offers) {
+                int base = offer.getBaseCostA().getCount();
                 int cut = Math.max(1, base * percent / 100);
-                offer.increaseSpecialPrice(-cut);
-                applied.put(offer, new int[]{cut, offer.getSpecialPrice()});
+                offer.addToSpecialPriceDiff(-cut);
+                applied.put(offer, new int[]{cut, offer.getSpecialPriceDiff()});
             }
             DISCOUNTS.put(villager, applied);
         }
-        Object[] good = RARE_GOODS[Math.floorMod(villager.getUuid().hashCode() + (int) VillageMarket.marketWeek(world), RARE_GOODS.length)];
-        TradeOffer rare = new TradeOffer(new ItemStack(Items.EMERALD, (Integer) good[2]),
-                new ItemStack((net.minecraft.item.Item) good[0], (Integer) good[1]), 1, 5, 0.05F);
+        Object[] good = RARE_GOODS[Math.floorMod(villager.getUUID().hashCode() + (int) VillageMarket.marketWeek(world), RARE_GOODS.length)];
+        MerchantOffer rare = new MerchantOffer(new ItemStack(Items.EMERALD, (Integer) good[2]),
+                new ItemStack((net.minecraft.world.item.Item) good[0], (Integer) good[1]), 1, 5, 0.05F);
         offers.add(rare);
         RARE.put(villager, rare);
     }
 
-    public static void clearRare(VillagerEntity villager) {
-        TradeOffer old = RARE.remove(villager);
+    public static void clearRare(Villager villager) {
+        MerchantOffer old = RARE.remove(villager);
         if (old != null) {
             villager.getOffers().remove(old);
         }
         clearDiscounts(villager);
     }
 
-    public static void clearDiscounts(VillagerEntity villager) {
-        Map<TradeOffer, int[]> applied = DISCOUNTS.remove(villager);
+    public static void clearDiscounts(Villager villager) {
+        Map<MerchantOffer, int[]> applied = DISCOUNTS.remove(villager);
         if (applied == null) {
             return;
         }
         applied.forEach((offer, d) -> {
-            if (offer.getSpecialPrice() == d[1]) {
-                offer.increaseSpecialPrice(d[0]);
+            if (offer.getSpecialPriceDiff() == d[1]) {
+                offer.addToSpecialPriceDiff(d[0]);
             }
         });
     }

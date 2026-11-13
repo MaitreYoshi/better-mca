@@ -1,16 +1,16 @@
 package com.maitreyoshi.mcavie.life;
 
 import net.mca.server.world.data.VillageManager;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -42,7 +42,7 @@ public class MemorialBlockEntity extends BlockEntity {
 
     public void setVillage(int village) {
         this.village = village;
-        markDirty();
+        setChanged();
     }
 
     @Nullable
@@ -58,7 +58,7 @@ public class MemorialBlockEntity extends BlockEntity {
     public void setTexts(@Nullable String title, @Nullable String dates) {
         this.title = title;
         this.dates = dates;
-        markDirty();
+        setChanged();
     }
 
     @Nullable
@@ -68,7 +68,7 @@ public class MemorialBlockEntity extends BlockEntity {
 
     public void setOwner(UUID owner) {
         this.owner = owner;
-        markDirty();
+        setChanged();
     }
 
     public String villageName() {
@@ -84,8 +84,8 @@ public class MemorialBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void writeNbt(NbtCompound nbt) {
-        super.writeNbt(nbt);
+    protected void saveAdditional(CompoundTag nbt) {
+        super.saveAdditional(nbt);
         nbt.putInt("village", village);
         if (title != null) {
             nbt.putString("title", title);
@@ -94,25 +94,25 @@ public class MemorialBlockEntity extends BlockEntity {
             nbt.putString("dates", dates);
         }
         if (owner != null) {
-            nbt.putUuid("owner", owner);
+            nbt.putUUID("owner", owner);
         }
     }
 
     @Override
-    public void readNbt(NbtCompound nbt) {
-        super.readNbt(nbt);
+    public void load(CompoundTag nbt) {
+        super.load(nbt);
         village = nbt.contains("village") ? nbt.getInt("village") : -1;
         title = nbt.contains("title") ? nbt.getString("title") : null;
         dates = nbt.contains("dates") ? nbt.getString("dates") : null;
-        owner = nbt.containsUuid("owner") ? nbt.getUuid("owner") : null;
+        owner = nbt.hasUUID("owner") ? nbt.getUUID("owner") : null;
         first = nbt.getInt("first");
         if (nbt.contains("village_name")) {
             villageName = nbt.getString("village_name");
         }
         if (nbt.contains("fallen")) {
             fallen.clear();
-            for (NbtElement element : nbt.getList("fallen", NbtElement.COMPOUND_TYPE)) {
-                MemorialRegistry.Fallen entry = MemorialRegistry.Fallen.read((NbtCompound) element);
+            for (Tag element : nbt.getList("fallen", Tag.TAG_COMPOUND)) {
+                MemorialRegistry.Fallen entry = MemorialRegistry.Fallen.read((CompoundTag) element);
                 if (entry != null) {
                     fallen.add(entry);
                 }
@@ -121,14 +121,14 @@ public class MemorialBlockEntity extends BlockEntity {
     }
 
     @Override
-    public NbtCompound toInitialChunkDataNbt() {
-        NbtCompound nbt = createNbt();
-        if (world instanceof ServerWorld server && village >= 0) {
+    public CompoundTag getUpdateTag() {
+        CompoundTag nbt = saveWithoutMetadata();
+        if (level instanceof ServerLevel server && village >= 0) {
             VillageManager.get(server).getOrEmpty(village).ifPresent(v -> nbt.putString("village_name", v.getName()));
             MemorialRegistry registry = MemorialRegistry.get(server.getServer());
-            List<MemorialRegistry.Fallen> all = registry.fallen(village, server, pos, PER_MONUMENT);
+            List<MemorialRegistry.Fallen> all = registry.fallen(village, server, worldPosition, PER_MONUMENT);
             int start = Math.max(0, all.size() - MAX_SYNCED);
-            NbtList list = new NbtList();
+            ListTag list = new ListTag();
             for (int i = start; i < all.size(); i++) {
                 list.add(all.get(i).write());
             }
@@ -140,7 +140,7 @@ public class MemorialBlockEntity extends BlockEntity {
 
     @Nullable
     @Override
-    public Packet<ClientPlayPacketListener> toUpdatePacket() {
-        return BlockEntityUpdateS2CPacket.create(this);
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
     }
 }

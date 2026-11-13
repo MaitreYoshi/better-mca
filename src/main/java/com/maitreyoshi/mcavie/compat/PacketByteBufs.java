@@ -1,17 +1,17 @@
 package com.maitreyoshi.mcavie.compat;
 
 import io.netty.buffer.Unpooled;
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
 
 public final class PacketByteBufs {
     private PacketByteBufs() {
     }
 
-    public static PacketByteBuf create() {
-        return new PacketByteBuf(Unpooled.buffer());
+    public static FriendlyByteBuf create() {
+        return new FriendlyByteBuf(Unpooled.buffer());
     }
 
-    public static PacketByteBuf empty() {
-        return new PacketByteBuf(Unpooled.EMPTY_BUFFER);
+    public static FriendlyByteBuf empty() {
+        return new FriendlyByteBuf(Unpooled.EMPTY_BUFFER);
     }
 }

@@ -1,19 +1,20 @@
 package com.maitreyoshi.mcavie.work.block;
 
+import net.minecraft.world.level.block.state.BlockBehaviour;
 import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.compat.Registration;
 import dev.architectury.registry.CreativeTabRegistry;
-import net.minecraft.block.Block;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemGroups;
-import net.minecraft.registry.RegistryKeys;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumMap;
 import java.util.Map;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.entity.BlockEntityType;
 
 public final class WorkBlocks {
     private static final Map<Job, WorkstationBlock> BY_JOB = new EnumMap<>(Job.class);
@@ -24,11 +25,11 @@ public final class WorkBlocks {
     }
 
     private static void register(String name, Job job, Block base, int light, double[][] shape) {
-        Registration.register(RegistryKeys.BLOCK, name, () -> {
-            Block.Settings settings = Block.Settings.copy(base).strength(2.5F).nonOpaque().luminance(state -> light);
+        Registration.register(Registries.BLOCK, name, () -> {
+            BlockBehaviour.Properties settings = BlockBehaviour.Properties.copy(base).strength(2.5F).noOcclusion().lightLevel(state -> light);
             return new WorkstationBlock(settings, job, shape);
         }, block -> BY_JOB.put(job, block));
-        Registration.register(RegistryKeys.ITEM, name, () -> new BlockItem(BY_JOB.get(job), new Item.Settings()), item -> {
+        Registration.register(Registries.ITEM, name, () -> new BlockItem(BY_JOB.get(job), new Item.Properties()), item -> {
         });
     }
 
@@ -52,10 +53,10 @@ public final class WorkBlocks {
         register("miner_cart", Job.MINER, Blocks.OAK_PLANKS, 0, Shapes.MINER_CART);
         register("cooking_pot", Job.COOK, Blocks.BRICKS, 9, Shapes.COOKING_POT);
         register("school_desk", Job.TEACHER, Blocks.OAK_PLANKS, 0, Shapes.SCHOOL_DESK);
-        Registration.register(RegistryKeys.BLOCK_ENTITY_TYPE, "workstation",
-                () -> BlockEntityType.Builder.create(WorkstationBlockEntity::new, BY_JOB.values().toArray(new Block[0])).build(null),
+        Registration.register(Registries.BLOCK_ENTITY_TYPE, "workstation",
+                () -> BlockEntityType.Builder.of(WorkstationBlockEntity::new, BY_JOB.values().toArray(new Block[0])).build(null),
                 type -> WORKSTATION_ENTITY = type);
-        CreativeTabRegistry.modify(CreativeTabRegistry.defer(ItemGroups.FUNCTIONAL), (flags, entries, operator) -> BY_JOB.values().forEach(entries::add));
+        CreativeTabRegistry.modify(CreativeTabRegistry.defer(CreativeModeTabs.FUNCTIONAL_BLOCKS), (flags, entries, operator) -> BY_JOB.values().forEach(entries::accept));
     }
 
     private static final class Shapes {

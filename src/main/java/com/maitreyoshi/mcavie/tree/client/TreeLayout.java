@@ -1,13 +1,13 @@
 package com.maitreyoshi.mcavie.tree.client;
 
 import com.maitreyoshi.mcavie.tree.FamilyPerson;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.ToIntFunction;
+import net.minecraft.client.gui.Font;
+import net.minecraft.network.chat.Component;
 
 public final class TreeLayout {
     public static final int PADDING = 5;
@@ -126,7 +126,7 @@ public final class TreeLayout {
     public record Mark(int x, int y, String icon) {
     }
 
-    public static Card card(FamilyPerson person, TextRenderer font, long today) {
+    public static Card card(FamilyPerson person, Font font, long today) {
         List<String> lines = new ArrayList<>();
         List<Integer> colors = new ArrayList<>();
         int icon = person.deceased() ? ICON_SPACE : 0;
@@ -134,7 +134,7 @@ public final class TreeLayout {
         lines.add(TreeTexts.trim(font, TreeTexts.name(person), MAX_TEXT_WIDTH - icon));
         colors.add(TreeTexts.nameColor(person.gender()));
 
-        Text years = TreeTexts.yearsLine(person, today);
+        Component years = TreeTexts.yearsLine(person, today);
         if (years != null) {
             lines.add(TreeTexts.trim(font, years.getString(), MAX_TEXT_WIDTH));
             colors.add(0xDDDDDD);
@@ -149,7 +149,7 @@ public final class TreeLayout {
             colors.add(0xFFFF55);
         }
 
-        return card(person, lines, colors, font::getWidth);
+        return card(person, lines, colors, font::width);
     }
 
     static Card card(FamilyPerson person, List<String> lines, List<Integer> colors, ToIntFunction<String> measure) {
@@ -167,7 +167,7 @@ public final class TreeLayout {
         return new Card(person, lines, colors, width, height);
     }
 
-    public static TreeLayout family(List<FamilyPerson> persons, UUID rootId, TextRenderer font, long today, int maxUp, int maxDown) {
+    public static TreeLayout family(List<FamilyPerson> persons, UUID rootId, Font font, long today, int maxUp, int maxDown) {
         return family(persons, rootId, person -> card(person, font, today), maxUp, maxDown);
     }
 
@@ -2228,7 +2228,7 @@ public final class TreeLayout {
     private static final int SAME = 0;
     private static final int DOWN = 1;
 
-    public static TreeLayout path(List<FamilyPerson> persons, List<UUID> path, TextRenderer font, long today) {
+    public static TreeLayout path(List<FamilyPerson> persons, List<UUID> path, Font font, long today) {
         TreeLayout layout = new TreeLayout();
         Map<UUID, FamilyPerson> byId = new HashMap<>();
         persons.forEach(p -> byId.putIfAbsent(p.id(), p));

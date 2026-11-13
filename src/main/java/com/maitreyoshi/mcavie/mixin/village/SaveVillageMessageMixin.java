@@ -4,7 +4,7 @@ import com.maitreyoshi.mcavie.village.VillageRights;
 import net.mca.network.c2s.SaveVillageMessage;
 import net.mca.resources.Rank;
 import net.mca.server.world.data.VillageManager;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -28,9 +28,9 @@ public abstract class SaveVillageMessageMixin {
     private float marriageThreshold;
 
     @Inject(method = "receive", at = @At("HEAD"), cancellable = true)
-    private void mcavie$checkRights(ServerPlayerEntity player, CallbackInfo ci) {
+    private void mcavie$checkRights(ServerPlayer player, CallbackInfo ci) {
         ci.cancel();
-        VillageManager.get(player.getServerWorld()).getOrEmpty(id).ifPresent(village -> {
+        VillageManager.get(player.serverLevel()).getOrEmpty(id).ifPresent(village -> {
             Rank rank = VillageRights.personalRank(village, player);
             if (rank.isAtLeast(VillageRights.SET_TAXES)) {
                 village.setTaxes(VillageRights.clampTaxes(village, taxes));

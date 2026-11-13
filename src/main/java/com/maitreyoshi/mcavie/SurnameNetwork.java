@@ -9,33 +9,32 @@ import net.mca.entity.VillagerEntityMCA;
 import net.mca.item.BabyItem;
 import net.mca.entity.ai.relationship.Gender;
 import net.mca.server.world.data.PlayerSaveData;
-import net.minecraft.entity.Entity;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.item.ItemStack;
 import com.maitreyoshi.mcavie.compat.ServerPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
-
 import java.util.UUID;
 
 public final class SurnameNetwork {
-    public static final Identifier SET_SURNAME = MCAVie.id("set_surname");
-    public static final Identifier RANDOM_SURNAME = MCAVie.id("random_surname");
-    public static final Identifier OWN_SURNAME = MCAVie.id("own_surname");
-    public static final Identifier RANDOM_SURNAME_RESULT = MCAVie.id("random_surname_result");
-    public static final Identifier BABY_SURNAME = MCAVie.id("baby_surname");
-    public static final Identifier BIRTH_DAY_REQUEST = MCAVie.id("birth_day_request");
-    public static final Identifier BIRTH_DAY_RESULT = MCAVie.id("birth_day_result");
-    public static final Identifier HAPPINESS = MCAVie.id("happiness");
+    public static final ResourceLocation SET_SURNAME = MCAVie.id("set_surname");
+    public static final ResourceLocation RANDOM_SURNAME = MCAVie.id("random_surname");
+    public static final ResourceLocation OWN_SURNAME = MCAVie.id("own_surname");
+    public static final ResourceLocation RANDOM_SURNAME_RESULT = MCAVie.id("random_surname_result");
+    public static final ResourceLocation BABY_SURNAME = MCAVie.id("baby_surname");
+    public static final ResourceLocation BIRTH_DAY_REQUEST = MCAVie.id("birth_day_request");
+    public static final ResourceLocation BIRTH_DAY_RESULT = MCAVie.id("birth_day_result");
+    public static final ResourceLocation HAPPINESS = MCAVie.id("happiness");
 
     private SurnameNetwork() {
     }
 
     public static void registerServer() {
         ServerPlayNetworking.registerGlobalReceiver(SET_SURNAME, (server, player, handler, buf, responseSender) -> {
-            String surname = SurnameText.sanitize(buf.readString(64));
+            String surname = SurnameText.sanitize(buf.readUtf(64));
             server.execute(() -> {
                 if (!surname.isEmpty()) {
                     Surnames.setPlayerSurname(player, surname, false);
@@ -45,39 +44,39 @@ public final class SurnameNetwork {
 
         ServerPlayNetworking.registerGlobalReceiver(RANDOM_SURNAME, (server, player, handler, buf, responseSender) ->
                 server.execute(() -> {
-                    PacketByteBuf out = PacketByteBufs.create();
+                    FriendlyByteBuf out = PacketByteBufs.create();
                     PlayerSaveData data = PlayerSaveData.get(player);
                     Gender gender = data.getEntityData() != null ? data.getGender() : Gender.MALE;
-                    out.writeString(SurnameText.display(Surnames.randomSurnameFor(player), gender));
+                    out.writeUtf(SurnameText.display(Surnames.randomSurnameFor(player), gender));
                     ServerPlayNetworking.send(player, RANDOM_SURNAME_RESULT, out);
                 }));
 
         ServerPlayNetworking.registerGlobalReceiver(BABY_SURNAME, (server, player, handler, buf, responseSender) -> {
             int slot = buf.readVarInt();
             server.execute(() -> {
-                ItemStack stack = slot >= 0 && slot < player.getInventory().size() ? player.getInventory().getStack(slot) : ItemStack.EMPTY;
+                ItemStack stack = slot >= 0 && slot < player.getInventory().getContainerSize() ? player.getInventory().getItem(slot) : ItemStack.EMPTY;
                 if (!(stack.getItem() instanceof BabyItem baby)) {
                     return;
                 }
-                NbtCompound nbt = BabyItem.getBabyNbt(stack);
-                String surname = Surnames.babySurname(player.getServerWorld(), player,
-                        nbt.containsUuid("father") ? nbt.getUuid("father") : null,
-                        nbt.containsUuid("mother") ? nbt.getUuid("mother") : null);
+                CompoundTag nbt = BabyItem.getBabyNbt(stack);
+                String surname = Surnames.babySurname(player.serverLevel(), player,
+                        nbt.hasUUID("father") ? nbt.getUUID("father") : null,
+                        nbt.hasUUID("mother") ? nbt.getUUID("mother") : null);
                 if (surname != null) {
-                    PacketByteBuf out = PacketByteBufs.create();
-                    out.writeString(SurnameText.display(surname, baby.getGender()));
+                    FriendlyByteBuf out = PacketByteBufs.create();
+                    out.writeUtf(SurnameText.display(surname, baby.getGender()));
                     ServerPlayNetworking.send(player, RANDOM_SURNAME_RESULT, out);
                 }
             });
         });
 
         ServerPlayNetworking.registerGlobalReceiver(BIRTH_DAY_REQUEST, (server, player, handler, buf, responseSender) -> {
-            UUID villager = buf.readUuid();
+            UUID villager = buf.readUUID();
             server.execute(() -> {
                 Long birth = LifeRegistry.get(server).getBirthDay(villager);
                 if (birth != null) {
-                    PacketByteBuf out = PacketByteBufs.create();
-                    out.writeUuid(villager);
+                    FriendlyByteBuf out = PacketByteBufs.create();
+                    out.writeUUID(villager);
                     out.writeLong(birth);
                     ServerPlayNetworking.send(player, BIRTH_DAY_RESULT, out);
                 }
@@ -91,34 +90,34 @@ public final class SurnameNetwork {
         });
 
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            String surname = SurnameRegistry.get(server).get(handler.player.getUuid());
+            String surname = SurnameRegistry.get(server).get(handler.player.getUUID());
             sendOwnSurname(handler.player, surname == null ? "" : surname);
             if (surname != null) {
                 Surnames.uppercasePlayer(handler.player);
             }
             if (surname == null && net.mca.server.world.data.PlayerSaveData.get(handler.player).isEntityDataSet()) {
-                handler.player.sendMessage(net.minecraft.text.Text.translatable("command.mca_vie.none"), false);
+                handler.player.displayClientMessage(net.minecraft.network.chat.Component.translatable("command.mca_vie.none"), false);
             }
         });
     }
 
     public static void sendHappiness(Entity villager, int happiness, boolean sick) {
-        for (ServerPlayerEntity player : PlayerLookup.tracking(villager)) {
+        for (ServerPlayer player : PlayerLookup.tracking(villager)) {
             sendHappinessTo(player, villager, happiness, sick);
         }
     }
 
-    public static void sendHappinessTo(ServerPlayerEntity player, Entity villager, int happiness, boolean sick) {
-        PacketByteBuf buf = PacketByteBufs.create();
+    public static void sendHappinessTo(ServerPlayer player, Entity villager, int happiness, boolean sick) {
+        FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeVarInt(villager.getId());
         buf.writeByte(happiness);
         buf.writeBoolean(sick);
         ServerPlayNetworking.send(player, HAPPINESS, buf);
     }
 
-    public static void sendOwnSurname(ServerPlayerEntity player, String surname) {
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeString(surname);
+    public static void sendOwnSurname(ServerPlayer player, String surname) {
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUtf(surname);
         ServerPlayNetworking.send(player, OWN_SURNAME, buf);
     }
 }

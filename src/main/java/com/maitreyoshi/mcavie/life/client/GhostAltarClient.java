@@ -6,30 +6,30 @@ import com.maitreyoshi.mcavie.life.GhostAltarBlockEntity;
 import com.maitreyoshi.mcavie.life.Ghosts;
 import com.maitreyoshi.mcavie.life.TombstoneBlocks;
 import com.maitreyoshi.mcavie.phone.client.PhonePhotos;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import dev.architectury.registry.client.level.entity.EntityRendererRegistry;
 import dev.architectury.registry.client.rendering.BlockEntityRendererRegistry;
 import dev.architectury.registry.client.rendering.RenderTypeRegistry;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.block.entity.BlockEntityRenderer;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.screen.ScreenTexts;
-import net.minecraft.state.property.Properties;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.RotationAxis;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 public final class GhostAltarClient {
     // cadre de la photo dans le modèle (pixels), face avant au nord
@@ -39,17 +39,17 @@ public final class GhostAltarClient {
     }
 
     public static void register() {
-        RenderTypeRegistry.register(RenderLayer.getCutout(), TombstoneBlocks.GHOST_ALTAR);
+        RenderTypeRegistry.register(RenderType.cutout(), TombstoneBlocks.GHOST_ALTAR);
         BlockEntityRendererRegistry.register(TombstoneBlocks.GHOST_ALTAR_ENTITY, context -> new Renderer());
         EntityRendererRegistry.register(() -> TombstoneBlocks.GHOST, GhostRenderer::new);
         ClientPlayNetworking.registerGlobalReceiver(Ghosts.OPEN, (client, handler, buf, responseSender) -> {
             BlockPos pos = buf.readBlockPos();
             boolean house = buf.readBoolean();
-            UUID current = buf.readBoolean() ? buf.readUuid() : null;
+            UUID current = buf.readBoolean() ? buf.readUUID() : null;
             int count = buf.readVarInt();
             List<Entry> entries = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
-                entries.add(new Entry(buf.readUuid(), buf.readString(), buf.readBoolean()));
+                entries.add(new Entry(buf.readUUID(), buf.readUtf(), buf.readBoolean()));
             }
             client.execute(() -> client.setScreen(new ChooseScreen(pos, house, current, entries)));
         });
@@ -57,36 +57,36 @@ public final class GhostAltarClient {
 
     private static final class Renderer implements BlockEntityRenderer<GhostAltarBlockEntity> {
         @Override
-        public void render(GhostAltarBlockEntity altar, float tickDelta, MatrixStack matrices, VertexConsumerProvider consumers, int light, int overlay) {
+        public void render(GhostAltarBlockEntity altar, float tickDelta, PoseStack matrices, MultiBufferSource consumers, int light, int overlay) {
             UUID person = altar.person();
             UUID image = person == null ? null : TombstoneClient.portrait(person);
             PhonePhotos.Picture picture = image == null ? null : PhonePhotos.portrait(image);
             if (picture == null) {
                 return;
             }
-            Direction facing = altar.getCachedState().get(Properties.HORIZONTAL_FACING);
-            matrices.push();
+            Direction facing = altar.getBlockState().getValue(BlockStateProperties.HORIZONTAL_FACING);
+            matrices.pushPose();
             matrices.translate(0.5, 0, 0.5);
-            matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(180 - facing.asRotation()));
+            matrices.mulPose(Axis.YP.rotationDegrees(180 - facing.toYRot()));
             matrices.translate(-0.5, 0, -0.5);
             float target = (X1 - X0) / (Y1 - Y0);
             float ratio = picture.width() / (float) Math.max(1, picture.height());
             float du = target < ratio ? target / ratio : 1;
             float dv = target < ratio ? 1 : ratio / target;
             float u0 = 0.5f - du / 2, u1 = 0.5f + du / 2, v0 = 0.5f - dv / 2, v1 = 0.5f + dv / 2;
-            Matrix4f m = matrices.peek().getPositionMatrix();
-            VertexConsumer buffer = consumers.getBuffer(RenderLayer.getText(picture.texture()));
+            Matrix4f m = matrices.last().pose();
+            VertexConsumer buffer = consumers.getBuffer(RenderType.text(picture.texture()));
             float z = Z / 16;
             // vu depuis le nord, la gauche de l'image est du côté x+
             vertex(buffer, m, X1 / 16, Y1 / 16, z, u0, v0, light);
             vertex(buffer, m, X1 / 16, Y0 / 16, z, u0, v1, light);
             vertex(buffer, m, X0 / 16, Y0 / 16, z, u1, v1, light);
             vertex(buffer, m, X0 / 16, Y1 / 16, z, u1, v0, light);
-            matrices.pop();
+            matrices.popPose();
         }
 
         private static void vertex(VertexConsumer buffer, Matrix4f m, float x, float y, float z, float u, float v, int light) {
-            buffer.vertex(m, x, y, z).color(235, 225, 205, 255).texture(u, v).light(light).next();
+            buffer.vertex(m, x, y, z).color(235, 225, 205, 255).uv(u, v).uv2(light).endVertex();
         }
     }
 
@@ -107,7 +107,7 @@ public final class GhostAltarClient {
         private double scroll;
 
         private ChooseScreen(BlockPos pos, boolean house, @Nullable UUID current, List<Entry> entries) {
-            super(Text.translatable("gui.mca_vie.ghost_altar.title"));
+            super(Component.translatable("gui.mca_vie.ghost_altar.title"));
             this.pos = pos;
             this.house = house;
             this.current = current;
@@ -115,7 +115,7 @@ public final class GhostAltarClient {
         }
 
         @Override
-        public boolean shouldPause() {
+        public boolean isPauseScreen() {
             return false;
         }
 
@@ -123,23 +123,23 @@ public final class GhostAltarClient {
         protected void init() {
             int y = height - BOTTOM + 7;
             if (current != null) {
-                addDrawableChild(ButtonWidget.builder(Text.translatable("gui.mca_vie.ghost_altar.clear"), b -> send(null))
-                        .dimensions(width / 2 - 104, y, 100, 20).build());
-                addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, b -> close()).dimensions(width / 2 + 4, y, 100, 20).build());
+                addRenderableWidget(Button.builder(Component.translatable("gui.mca_vie.ghost_altar.clear"), b -> send(null))
+                        .bounds(width / 2 - 104, y, 100, 20).build());
+                addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> onClose()).bounds(width / 2 + 4, y, 100, 20).build());
             } else {
-                addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, b -> close()).dimensions(width / 2 - 50, y, 100, 20).build());
+                addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> onClose()).bounds(width / 2 - 50, y, 100, 20).build());
             }
         }
 
         private void send(@Nullable UUID person) {
-            PacketByteBuf buf = PacketByteBufs.create();
+            FriendlyByteBuf buf = PacketByteBufs.create();
             buf.writeBlockPos(pos);
             buf.writeBoolean(person != null);
             if (person != null) {
-                buf.writeUuid(person);
+                buf.writeUUID(person);
             }
             ClientPlayNetworking.send(Ghosts.CHOOSE, buf);
-            close();
+            onClose();
         }
 
         private int left() {
@@ -155,11 +155,11 @@ public final class GhostAltarClient {
         }
 
         @Override
-        public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
             renderBackground(context);
-            context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 10, 0xFFFFFF);
-            Text hint = Text.translatable(!house ? "gui.mca_vie.ghost_altar.no_house" : entries.isEmpty() ? "gui.mca_vie.ghost_altar.empty" : "gui.mca_vie.ghost_altar.hint");
-            context.drawCenteredTextWithShadow(textRenderer, hint, width / 2, 21, 0xA0A0A0);
+            context.drawCenteredString(font, title, width / 2, 10, 0xFFFFFF);
+            Component hint = Component.translatable(!house ? "gui.mca_vie.ghost_altar.no_house" : entries.isEmpty() ? "gui.mca_vie.ghost_altar.empty" : "gui.mca_vie.ghost_altar.hint");
+            context.drawCenteredString(font, hint, width / 2, 21, 0xA0A0A0);
             int hovered = indexAt(mouseX, mouseY);
             context.enableScissor(0, TOP, width, height - BOTTOM);
             for (int i = 0; i < entries.size(); i++) {
@@ -173,10 +173,10 @@ public final class GhostAltarClient {
                     context.fill(left(), y, left() + ROW_W, y + ROW_H, selected ? 0x6050A0C0 : 0x40FFFFFF);
                 }
                 int color = selected ? 0xB0E0FF : entry.look() ? 0xFFFFFF : 0x808080;
-                context.drawTextWithShadow(textRenderer, entry.name(), left() + 4, y + 3, color);
+                context.drawString(font, entry.name(), left() + 4, y + 3, color);
                 if (!entry.look()) {
-                    Text tag = Text.translatable("gui.mca_vie.ghost_altar.no_look");
-                    context.drawTextWithShadow(textRenderer, tag, left() + ROW_W - 4 - textRenderer.getWidth(tag), y + 3, 0x808080);
+                    Component tag = Component.translatable("gui.mca_vie.ghost_altar.no_look");
+                    context.drawString(font, tag, left() + ROW_W - 4 - font.width(tag), y + 3, 0x808080);
                 }
             }
             context.disableScissor();

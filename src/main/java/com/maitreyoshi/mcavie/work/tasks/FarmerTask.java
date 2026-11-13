@@ -4,22 +4,20 @@ import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
-import net.minecraft.block.AttachedStemBlock;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.block.CropBlock;
-import net.minecraft.block.GourdBlock;
-import net.minecraft.block.NetherWartBlock;
-import net.minecraft.inventory.SimpleInventory;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.AttachedStemBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.CropBlock;
+import net.minecraft.world.level.block.NetherWartBlock;
+import net.minecraft.world.level.block.StemGrownBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -53,33 +51,33 @@ public class FarmerTask extends AbstractJobTask {
     }
 
     @Override
-    protected boolean canWork(ServerWorld world, VillagerEntityMCA villager) {
-        if (world.getTime() < nextTry) {
+    protected boolean canWork(ServerLevel world, VillagerEntityMCA villager) {
+        if (world.getGameTime() < nextTry) {
             return false;
         }
         refreshScan(world, villager);
         if (findTarget(world, villager) != null) {
             return true;
         }
-        nextTry = world.getTime() + RETRY_TICKS;
+        nextTry = world.getGameTime() + RETRY_TICKS;
         return false;
     }
 
     @Override
-    protected boolean keepWorking(ServerWorld world, VillagerEntityMCA villager) {
+    protected boolean keepWorking(ServerLevel world, VillagerEntityMCA villager) {
         return target != null;
     }
 
     @Override
-    protected void run(ServerWorld world, VillagerEntityMCA villager, long time) {
-        super.run(world, villager, time);
+    protected void start(ServerLevel world, VillagerEntityMCA villager, long time) {
+        super.start(world, villager, time);
         holdTool(villager);
         selectTarget(world, villager);
     }
 
     @Override
-    protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
-        super.finishRunning(world, villager, time);
+    protected void stop(ServerLevel world, VillagerEntityMCA villager, long time) {
+        super.stop(world, villager, time);
         clearBreaking(world, villager, target);
         target = null;
         targetKind = null;
@@ -98,7 +96,7 @@ public class FarmerTask extends AbstractJobTask {
     }
 
     @Override
-    protected void keepRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+    protected void tick(ServerLevel world, VillagerEntityMCA villager, long time) {
         if (target == null) {
             return;
         }
@@ -110,7 +108,7 @@ public class FarmerTask extends AbstractJobTask {
         holdTool(villager);
 
         BlockPos walkPos = walkPos(target, kind);
-        double distance = villager.squaredDistanceTo(Vec3d.ofCenter(walkPos));
+        double distance = villager.distanceToSqr(Vec3.atCenterOf(walkPos));
         if (distance > WORK_DISTANCE_SQ) {
             walkTo(villager, walkPos);
             if (reach.giveUp(world, target)) {
@@ -132,13 +130,13 @@ public class FarmerTask extends AbstractJobTask {
         if (kind == Kind.HARVEST) {
             harvest(world, villager, done);
         } else {
-            plantOnFarmland(world, villager, done.up());
+            plantOnFarmland(world, villager, done.above());
         }
         candidates.remove(done);
         selectTarget(world, villager);
     }
 
-    private void selectTarget(ServerWorld world, VillagerEntityMCA villager) {
+    private void selectTarget(ServerLevel world, VillagerEntityMCA villager) {
         clearBreaking(world, villager, target);
         BlockPos next = findTarget(world, villager);
         target = next;
@@ -147,14 +145,14 @@ public class FarmerTask extends AbstractJobTask {
         workTicks = 0;
     }
 
-    private BlockPos findTarget(ServerWorld world, VillagerEntityMCA villager) {
+    private BlockPos findTarget(ServerLevel world, VillagerEntityMCA villager) {
         reach.prune(world);
         WorkManager.Zone zone = zone(villager);
         boolean hasSeed = bestSeed(villager.getInventory()) != null;
 
         BlockPos best = null;
         double bestDistance = Double.MAX_VALUE;
-        BlockPos from = villager.getBlockPos();
+        BlockPos from = villager.blockPosition();
 
         Iterator<BlockPos> it = candidates.iterator();
         while (it.hasNext()) {
@@ -170,7 +168,7 @@ public class FarmerTask extends AbstractJobTask {
             if (kind == Kind.PLANT && !hasSeed) {
                 continue;
             }
-            double distance = from.getSquaredDistance(pos);
+            double distance = from.distSqr(pos);
             if (distance < bestDistance) {
                 bestDistance = distance;
                 best = pos;
@@ -179,8 +177,8 @@ public class FarmerTask extends AbstractJobTask {
         return best;
     }
 
-    private void refreshScan(ServerWorld world, VillagerEntityMCA villager) {
-        long now = world.getTime();
+    private void refreshScan(ServerLevel world, VillagerEntityMCA villager) {
+        long now = world.getGameTime();
         if (!scan.running()) {
             if (nextScan < 0 || now - nextScan > SCAN_INTERVAL) {
                 nextScan = now + world.random.nextInt(SCAN_JITTER);
@@ -197,36 +195,36 @@ public class FarmerTask extends AbstractJobTask {
         }
     }
 
-    private Kind classify(ServerWorld world, BlockPos pos) {
+    private Kind classify(ServerLevel world, BlockPos pos) {
         if (!isLoaded(world, pos)) {
             return null;
         }
         BlockState state = world.getBlockState(pos);
         Block block = state.getBlock();
         if (block instanceof CropBlock crop) {
-            return crop.isMature(state) ? Kind.HARVEST : null;
+            return crop.isMaxAge(state) ? Kind.HARVEST : null;
         }
         if (block instanceof NetherWartBlock) {
-            return state.get(NetherWartBlock.AGE) >= 3 ? Kind.HARVEST : null;
+            return state.getValue(NetherWartBlock.AGE) >= 3 ? Kind.HARVEST : null;
         }
-        if (block instanceof GourdBlock) {
+        if (block instanceof StemGrownBlock) {
             return hasAttachedStem(world, pos) ? Kind.HARVEST : null;
         }
-        if (state.isOf(Blocks.FARMLAND) && world.getBlockState(pos.up()).isAir()) {
+        if (state.is(Blocks.FARMLAND) && world.getBlockState(pos.above()).isAir()) {
             return Kind.PLANT;
         }
         return null;
     }
 
-    private boolean hasAttachedStem(ServerWorld world, BlockPos pos) {
-        for (Direction direction : Direction.Type.HORIZONTAL) {
-            BlockPos side = pos.offset(direction);
+    private boolean hasAttachedStem(ServerLevel world, BlockPos pos) {
+        for (Direction direction : Direction.Plane.HORIZONTAL) {
+            BlockPos side = pos.relative(direction);
             if (!isLoaded(world, side)) {
                 continue;
             }
             BlockState neighbor = world.getBlockState(side);
             if (neighbor.getBlock() instanceof AttachedStemBlock
-                    && neighbor.get(AttachedStemBlock.FACING) == direction.getOpposite()) {
+                    && neighbor.getValue(AttachedStemBlock.FACING) == direction.getOpposite()) {
                 return true;
             }
         }
@@ -234,21 +232,21 @@ public class FarmerTask extends AbstractJobTask {
     }
 
     private BlockPos walkPos(BlockPos pos, Kind kind) {
-        return kind == Kind.PLANT ? pos.up() : pos;
+        return kind == Kind.PLANT ? pos.above() : pos;
     }
 
-    private void harvest(ServerWorld world, VillagerEntityMCA villager, BlockPos pos) {
+    private void harvest(ServerLevel world, VillagerEntityMCA villager, BlockPos pos) {
         BlockState state = world.getBlockState(pos);
         Block block = state.getBlock();
         if (classify(world, pos) != Kind.HARVEST) {
             return;
         }
-        boolean replant = !(block instanceof GourdBlock);
+        boolean replant = !(block instanceof StemGrownBlock);
         if (!mayAlter(world, pos)) {
             return;
         }
 
-        if (!world.breakBlock(pos, false, villager)) {
+        if (!world.destroyBlock(pos, false, villager)) {
             return;
         }
         for (ItemStack drop : blockDrops(world, villager, pos, state)) {
@@ -261,11 +259,11 @@ public class FarmerTask extends AbstractJobTask {
         }
     }
 
-    private void replant(ServerWorld world, VillagerEntityMCA villager, BlockPos pos, Block block) {
-        SimpleInventory inventory = villager.getInventory();
+    private void replant(ServerLevel world, VillagerEntityMCA villager, BlockPos pos, Block block) {
+        SimpleContainer inventory = villager.getInventory();
         ItemStack seed = null;
-        for (int i = 0; i < inventory.size(); i++) {
-            ItemStack stack = inventory.getStack(i);
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
             if (!stack.isEmpty() && stack.getItem() instanceof BlockItem item && item.getBlock() == block) {
                 seed = stack;
                 break;
@@ -279,30 +277,30 @@ public class FarmerTask extends AbstractJobTask {
         }
     }
 
-    private void plantOnFarmland(ServerWorld world, VillagerEntityMCA villager, BlockPos pos) {
+    private void plantOnFarmland(ServerLevel world, VillagerEntityMCA villager, BlockPos pos) {
         ItemStack seed = bestSeed(villager.getInventory());
         if (seed != null && place(world, pos, seed)) {
             gainExperience(villager, 1);
         }
     }
 
-    private boolean place(ServerWorld world, BlockPos pos, ItemStack seed) {
+    private boolean place(ServerLevel world, BlockPos pos, ItemStack seed) {
         if (!(seed.getItem() instanceof BlockItem item)) {
             return false;
         }
-        BlockState plant = item.getBlock().getDefaultState();
-        if (!world.getBlockState(pos).isAir() || !plant.canPlaceAt(world, pos) || !mayAlter(world, pos)) {
+        BlockState plant = item.getBlock().defaultBlockState();
+        if (!world.getBlockState(pos).isAir() || !plant.canSurvive(world, pos) || !mayAlter(world, pos)) {
             return false;
         }
-        world.setBlockState(pos, plant, Block.NOTIFY_ALL);
-        seed.decrement(1);
+        world.setBlock(pos, plant, Block.UPDATE_ALL);
+        seed.shrink(1);
         return true;
     }
 
-    private ItemStack bestSeed(SimpleInventory inventory) {
+    private ItemStack bestSeed(SimpleContainer inventory) {
         ItemStack best = null;
-        for (int i = 0; i < inventory.size(); i++) {
-            ItemStack stack = inventory.getStack(i);
+        for (int i = 0; i < inventory.getContainerSize(); i++) {
+            ItemStack stack = inventory.getItem(i);
             if (stack.isEmpty() || !(stack.getItem() instanceof BlockItem item)
                     || !(item.getBlock() instanceof CropBlock)) {
                 continue;

@@ -8,28 +8,27 @@ import com.maitreyoshi.mcavie.compat.ServerLifecycleEvents;
 import com.maitreyoshi.mcavie.compat.ServerPlayConnectionEvents;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.ai.MemoryModuleTypeMCA;
-import net.minecraft.block.BedBlock;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.enums.BedPart;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.ai.brain.MemoryModuleType;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtList;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.GlobalPos;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.world.PersistentState;
-import net.minecraft.world.World;
-import net.minecraft.world.poi.PointOfInterestStorage;
-import net.minecraft.world.poi.PointOfInterestTypes;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.ai.memory.MemoryModuleType;
+import net.minecraft.world.entity.ai.village.poi.PoiManager;
+import net.minecraft.world.entity.ai.village.poi.PoiTypes;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BedPart;
+import net.minecraft.world.level.saveddata.SavedData;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -57,58 +56,58 @@ public final class BedClaims {
     public static void register() {
         ServerTickEvents.END_WORLD_TICK.register(BedClaims::tick);
         InteractionEvent.RIGHT_CLICK_BLOCK.register((player, hand, pos, face) -> {
-            if (player.getWorld().isClient || !(player instanceof ServerPlayerEntity serverPlayer)) {
+            if (player.level().isClientSide || !(player instanceof ServerPlayer serverPlayer)) {
                 return EventResult.pass();
             }
             return onBedClick(serverPlayer, pos);
         });
         EntityEvent.LIVING_DEATH.register((entity, source) -> {
             if (entity instanceof VillagerEntityMCA villager && entity.getServer() != null) {
-                Registry.get(entity.getServer()).release(villager.getUuid());
+                Registry.get(entity.getServer()).release(villager.getUUID());
             }
             return EventResult.pass();
         });
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> server.execute(() -> PENDING.remove(handler.player.getUuid())));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> server.execute(() -> PENDING.remove(handler.player.getUUID())));
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> PENDING.clear());
     }
 
     /** Remplace Residency.setHome de MCA : attend le clic sur le lit. */
-    public static void setHome(VillagerEntityMCA villager, ServerPlayerEntity player) {
+    public static void setHome(VillagerEntityMCA villager, ServerPlayer player) {
         if (!villager.requiresHome()) {
             villager.sendChatMessage(player, "interaction.sethome.temporary");
             return;
         }
-        PENDING.put(player.getUuid(), new Pending(villager.getUuid(), player.getWorld().getTime() + PICK_TICKS));
-        player.sendMessage(Text.translatable("bed.mca_vie.pick", villager.getName()).formatted(Formatting.YELLOW), false);
+        PENDING.put(player.getUUID(), new Pending(villager.getUUID(), player.level().getGameTime() + PICK_TICKS));
+        player.displayClientMessage(Component.translatable("bed.mca_vie.pick", villager.getName()).withStyle(ChatFormatting.YELLOW), false);
     }
 
-    private static EventResult onBedClick(ServerPlayerEntity player, BlockPos pos) {
-        ServerWorld world = player.getServerWorld();
+    private static EventResult onBedClick(ServerPlayer player, BlockPos pos) {
+        ServerLevel world = player.serverLevel();
         BlockState state = world.getBlockState(pos);
         boolean bed = state.getBlock() instanceof BedBlock;
-        Pending pending = PENDING.remove(player.getUuid());
-        if (pending != null && bed && world.getTime() <= pending.expiresAt()) {
+        Pending pending = PENDING.remove(player.getUUID());
+        if (pending != null && bed && world.getGameTime() <= pending.expiresAt()) {
             if (world.getEntity(pending.villager()) instanceof VillagerEntityMCA villager) {
                 assign(world, villager, player, head(pos, state));
             }
             return EventResult.interruptTrue();
         }
-        if (bed && !player.isSneaking()) {
-            Claim claim = Registry.get(world.getServer()).at(GlobalPos.create(world.getRegistryKey(), head(pos, state)));
+        if (bed && !player.isShiftKeyDown()) {
+            Claim claim = Registry.get(world.getServer()).at(GlobalPos.of(world.dimension(), head(pos, state)));
             if (claim != null) {
-                player.sendMessage(Text.translatable("bed.mca_vie.owned", claim.name()).formatted(Formatting.GOLD), true);
+                player.displayClientMessage(Component.translatable("bed.mca_vie.owned", claim.name()).withStyle(ChatFormatting.GOLD), true);
                 return EventResult.interruptTrue();
             }
         }
         return EventResult.pass();
     }
 
-    private static void assign(ServerWorld world, VillagerEntityMCA villager, ServerPlayerEntity player, BlockPos head) {
-        GlobalPos target = GlobalPos.create(world.getRegistryKey(), head);
+    private static void assign(ServerLevel world, VillagerEntityMCA villager, ServerPlayer player, BlockPos head) {
+        GlobalPos target = GlobalPos.of(world.dimension(), head);
         Registry registry = Registry.get(world.getServer());
         Claim claim = registry.at(target);
-        if (claim != null && !claim.villager().equals(villager.getUuid())) {
-            player.sendMessage(Text.translatable("bed.mca_vie.taken", claim.name()).formatted(Formatting.RED), false);
+        if (claim != null && !claim.villager().equals(villager.getUUID())) {
+            player.displayClientMessage(Component.translatable("bed.mca_vie.taken", claim.name()).withStyle(ChatFormatting.RED), false);
             return;
         }
         if (!isBed(world, head)) {
@@ -116,65 +115,65 @@ public final class BedClaims {
             return;
         }
         // ancien lit rendu, lit visé repris aux PNJ qui l'avaient en mémoire (leur réservation passe au nouveau propriétaire)
-        GlobalPos current = villager.getBrain().getOptionalMemory(MemoryModuleType.HOME).orElse(null);
+        GlobalPos current = villager.getBrain().getMemoryInternal(MemoryModuleType.HOME).orElse(null);
         if (current != null && !current.equals(target)) {
-            villager.releaseTicketFor(MemoryModuleType.HOME);
-            villager.getBrain().forget(MemoryModuleType.HOME);
+            villager.releasePoi(MemoryModuleType.HOME);
+            villager.getBrain().eraseMemory(MemoryModuleType.HOME);
         }
         List<VillagerEntityMCA> others = rememberers(world, target, villager);
         others.forEach(BedClaims::evict);
-        if (others.isEmpty() && !target.equals(current) && hasSpace(world.getPointOfInterestStorage(), head)) {
+        if (others.isEmpty() && !target.equals(current) && hasSpace(world.getPoiManager(), head)) {
             reserve(world, head);
         }
-        villager.getBrain().remember(MemoryModuleType.HOME, target);
-        villager.getBrain().remember(MemoryModuleTypeMCA.FORCED_HOME.get(), true);
-        registry.claim(target, villager.getUuid(), villager.getName().getString());
+        villager.getBrain().setMemory(MemoryModuleType.HOME, target);
+        villager.getBrain().setMemory(MemoryModuleTypeMCA.FORCED_HOME.get(), true);
+        registry.claim(target, villager.getUUID(), villager.getName().getString());
         villager.getResidency().seekHome();
         villager.sendChatMessage(player, "interaction.sethome.success");
     }
 
     /** Lits cassés oubliés, propriétaires rétablis, un lit = un PNJ, réservations maintenues. */
-    private static void tick(ServerWorld world) {
-        if (world.getTime() % CHECK_INTERVAL != 0) {
+    private static void tick(ServerLevel world) {
+        if (world.getGameTime() % CHECK_INTERVAL != 0) {
             return;
         }
         Registry registry = Registry.get(world.getServer());
-        PointOfInterestStorage poi = world.getPointOfInterestStorage();
+        PoiManager poi = world.getPoiManager();
         Map<UUID, VillagerEntityMCA> loaded = new HashMap<>();
         Map<GlobalPos, List<VillagerEntityMCA>> byBed = new HashMap<>();
-        for (Entity entity : world.iterateEntities()) {
+        for (Entity entity : world.getAllEntities()) {
             if (entity instanceof VillagerEntityMCA villager && villager.isAlive()) {
-                loaded.put(villager.getUuid(), villager);
-                villager.getBrain().getOptionalMemory(MemoryModuleType.HOME)
-                        .filter(h -> h.getDimension() == world.getRegistryKey())
+                loaded.put(villager.getUUID(), villager);
+                villager.getBrain().getMemoryInternal(MemoryModuleType.HOME)
+                        .filter(h -> h.dimension() == world.dimension())
                         .ifPresent(h -> byBed.computeIfAbsent(h, k -> new ArrayList<>()).add(villager));
             }
         }
 
         for (Map.Entry<GlobalPos, Claim> entry : new ArrayList<>(registry.claims.entrySet())) {
             GlobalPos bed = entry.getKey();
-            if (bed.getDimension() != world.getRegistryKey() || !world.isChunkLoaded(bed.getPos())) {
+            if (bed.dimension() != world.dimension() || !world.hasChunkAt(bed.pos())) {
                 continue;
             }
             VillagerEntityMCA owner = loaded.get(entry.getValue().villager());
-            if (!isBed(world, bed.getPos())) {
+            if (!isBed(world, bed.pos())) {
                 registry.release(entry.getValue().villager());
-                if (owner != null && owner.getBrain().getOptionalMemory(MemoryModuleType.HOME).filter(bed::equals).isPresent()) {
+                if (owner != null && owner.getBrain().getMemoryInternal(MemoryModuleType.HOME).filter(bed::equals).isPresent()) {
                     evict(owner);
                 }
                 continue;
             }
-            if (owner != null && owner.getBrain().getOptionalMemory(MemoryModuleType.HOME).filter(bed::equals).isEmpty()) {
+            if (owner != null && owner.getBrain().getMemoryInternal(MemoryModuleType.HOME).filter(bed::equals).isEmpty()) {
                 // MCA lui a fait oublier son lit : on le lui rend
-                owner.getBrain().remember(MemoryModuleType.HOME, bed);
-                owner.getBrain().remember(MemoryModuleTypeMCA.FORCED_HOME.get(), true);
+                owner.getBrain().setMemory(MemoryModuleType.HOME, bed);
+                owner.getBrain().setMemory(MemoryModuleTypeMCA.FORCED_HOME.get(), true);
                 byBed.computeIfAbsent(bed, k -> new ArrayList<>()).add(owner);
             }
             List<VillagerEntityMCA> rememberers = byBed.getOrDefault(bed, List.of());
-            rememberers.stream().filter(v -> !v.getUuid().equals(entry.getValue().villager())).forEach(BedClaims::evict);
+            rememberers.stream().filter(v -> !v.getUUID().equals(entry.getValue().villager())).forEach(BedClaims::evict);
             byBed.remove(bed);
-            if (hasSpace(poi, bed.getPos())) {
-                reserve(world, bed.getPos());
+            if (hasSpace(poi, bed.pos())) {
+                reserve(world, bed.pos());
             }
         }
 
@@ -183,30 +182,30 @@ public final class BedClaims {
                 VillagerEntityMCA keeper = villagers.stream().filter(BedClaims::forced).findFirst().orElse(villagers.get(0));
                 villagers.stream().filter(v -> v != keeper).forEach(BedClaims::evict);
             }
-            BlockPos pos = bed.getPos();
-            if (world.isChunkLoaded(pos) && hasSpace(poi, pos)) {
+            BlockPos pos = bed.pos();
+            if (world.hasChunkAt(pos) && hasSpace(poi, pos)) {
                 reserve(world, pos);
             }
         });
     }
 
     private static boolean forced(VillagerEntityMCA villager) {
-        Optional<Boolean> forced = villager.getBrain().getOptionalMemory(MemoryModuleTypeMCA.FORCED_HOME.get());
+        Optional<Boolean> forced = villager.getBrain().getMemoryInternal(MemoryModuleTypeMCA.FORCED_HOME.get());
         //noinspection OptionalAssignedToNull
         return forced != null && forced.isPresent();
     }
 
     /** Oublie le lit sans rendre sa réservation (elle appartient au PNJ qui le garde). */
     private static void evict(VillagerEntityMCA villager) {
-        villager.getBrain().forget(MemoryModuleType.HOME);
-        villager.getBrain().forget(MemoryModuleTypeMCA.FORCED_HOME.get());
+        villager.getBrain().eraseMemory(MemoryModuleType.HOME);
+        villager.getBrain().eraseMemory(MemoryModuleTypeMCA.FORCED_HOME.get());
     }
 
-    private static List<VillagerEntityMCA> rememberers(ServerWorld world, GlobalPos bed, VillagerEntityMCA except) {
+    private static List<VillagerEntityMCA> rememberers(ServerLevel world, GlobalPos bed, VillagerEntityMCA except) {
         List<VillagerEntityMCA> list = new ArrayList<>();
-        for (Entity entity : world.iterateEntities()) {
+        for (Entity entity : world.getAllEntities()) {
             if (entity instanceof VillagerEntityMCA other && other != except
-                    && other.getBrain().getOptionalMemory(MemoryModuleType.HOME).filter(bed::equals).isPresent()) {
+                    && other.getBrain().getMemoryInternal(MemoryModuleType.HOME).filter(bed::equals).isPresent()) {
                 list.add(other);
             }
         }
@@ -214,33 +213,33 @@ public final class BedClaims {
     }
 
     private static BlockPos head(BlockPos pos, BlockState state) {
-        return state.get(BedBlock.PART) == BedPart.HEAD ? pos.toImmutable() : pos.offset(state.get(BedBlock.FACING)).toImmutable();
+        return state.getValue(BedBlock.PART) == BedPart.HEAD ? pos.immutable() : pos.relative(state.getValue(BedBlock.FACING)).immutable();
     }
 
-    private static boolean isBed(ServerWorld world, BlockPos head) {
+    private static boolean isBed(ServerLevel world, BlockPos head) {
         BlockState state = world.getBlockState(head);
-        return state.getBlock() instanceof BedBlock && state.get(BedBlock.PART) == BedPart.HEAD;
+        return state.getBlock() instanceof BedBlock && state.getValue(BedBlock.PART) == BedPart.HEAD;
     }
 
-    private static boolean hasSpace(PointOfInterestStorage poi, BlockPos pos) {
-        return poi.getPositions(e -> e.matchesKey(PointOfInterestTypes.HOME), pos::equals, pos, 1,
-                PointOfInterestStorage.OccupationStatus.HAS_SPACE).findAny().isPresent();
+    private static boolean hasSpace(PoiManager poi, BlockPos pos) {
+        return poi.findAll(e -> e.is(PoiTypes.HOME), pos::equals, pos, 1,
+                PoiManager.Occupancy.HAS_SPACE).findAny().isPresent();
     }
 
-    private static void reserve(ServerWorld world, BlockPos pos) {
-        world.getPointOfInterestStorage().getPosition(e -> e.matchesKey(PointOfInterestTypes.HOME), (e, p) -> p.equals(pos), pos, 1);
+    private static void reserve(ServerLevel world, BlockPos pos) {
+        world.getPoiManager().take(e -> e.is(PoiTypes.HOME), (e, p) -> p.equals(pos), pos, 1);
     }
 
     private record Claim(UUID villager, String name) {
     }
 
     /** Lits attribués, sauvegardés avec le monde. */
-    private static final class Registry extends PersistentState {
+    private static final class Registry extends SavedData {
         private static final String DATA_ID = "mca_vie_beds";
         private final Map<GlobalPos, Claim> claims = new HashMap<>();
 
         static Registry get(MinecraftServer server) {
-            return server.getOverworld().getPersistentStateManager().getOrCreate(Registry::fromNbt, Registry::new, DATA_ID);
+            return server.overworld().getDataStorage().computeIfAbsent(Registry::fromNbt, Registry::new, DATA_ID);
         }
 
         Claim at(GlobalPos bed) {
@@ -250,35 +249,35 @@ public final class BedClaims {
         void claim(GlobalPos bed, UUID villager, String name) {
             claims.values().removeIf(c -> c.villager().equals(villager));
             claims.put(bed, new Claim(villager, name));
-            markDirty();
+            setDirty();
         }
 
         void release(UUID villager) {
             if (claims.values().removeIf(c -> c.villager().equals(villager))) {
-                markDirty();
+                setDirty();
             }
         }
 
-        private static Registry fromNbt(NbtCompound nbt) {
+        private static Registry fromNbt(CompoundTag nbt) {
             Registry registry = new Registry();
-            NbtList list = nbt.getList("beds", 10);
+            ListTag list = nbt.getList("beds", 10);
             for (int i = 0; i < list.size(); i++) {
-                NbtCompound c = list.getCompound(i);
-                RegistryKey<World> dimension = RegistryKey.of(RegistryKeys.WORLD, new Identifier(c.getString("dim")));
-                BlockPos pos = BlockPos.fromLong(c.getLong("pos"));
-                registry.claims.put(GlobalPos.create(dimension, pos), new Claim(c.getUuid("villager"), c.getString("name")));
+                CompoundTag c = list.getCompound(i);
+                ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(c.getString("dim")));
+                BlockPos pos = BlockPos.of(c.getLong("pos"));
+                registry.claims.put(GlobalPos.of(dimension, pos), new Claim(c.getUUID("villager"), c.getString("name")));
             }
             return registry;
         }
 
         @Override
-        public NbtCompound writeNbt(NbtCompound nbt) {
-            NbtList list = new NbtList();
+        public CompoundTag save(CompoundTag nbt) {
+            ListTag list = new ListTag();
             claims.forEach((bed, claim) -> {
-                NbtCompound c = new NbtCompound();
-                c.putString("dim", bed.getDimension().getValue().toString());
-                c.putLong("pos", bed.getPos().asLong());
-                c.putUuid("villager", claim.villager());
+                CompoundTag c = new CompoundTag();
+                c.putString("dim", bed.dimension().location().toString());
+                c.putLong("pos", bed.pos().asLong());
+                c.putUUID("villager", claim.villager());
                 c.putString("name", claim.name());
                 list.add(c);
             });

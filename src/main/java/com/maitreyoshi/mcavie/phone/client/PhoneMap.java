@@ -1,35 +1,34 @@
 package com.maitreyoshi.mcavie.phone.client;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.MapColor;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.ChunkPos;
-import net.minecraft.world.Heightmap;
-import net.minecraft.world.chunk.Chunk;
-import net.minecraft.world.chunk.ChunkStatus;
-import net.minecraft.world.chunk.WorldChunk;
-
+import com.mojang.blaze3d.platform.NativeImage;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.core.BlockPos;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.material.MapColor;
 
 public final class PhoneMap {
-    public static final Identifier TEXTURE = new Identifier("mca_vie", "phone_map");
+    public static final ResourceLocation TEXTURE = new ResourceLocation("mca_vie", "phone_map");
     private static final int MAX_RADIUS = 12;
     private static final int NEW_PER_FRAME = 24;
     private static final int REFRESH_PER_FRAME = 4;
 
     private static final Map<Long, int[]> CACHE = new HashMap<>();
-    private static ClientWorld world;
-    private static NativeImageBackedTexture texture;
+    private static ClientLevel world;
+    private static DynamicTexture texture;
     private static int radius = -1;
     private static int centerX = Integer.MIN_VALUE;
     private static int centerZ = Integer.MIN_VALUE;
@@ -62,26 +61,26 @@ public final class PhoneMap {
     }
 
     /** Met à jour la carte autour du joueur. Retourne false si rien n'est affichable. */
-    public static boolean update(MinecraftClient client) {
-        if (client.world == null || client.player == null) {
+    public static boolean update(Minecraft client) {
+        if (client.level == null || client.player == null) {
             return false;
         }
-        if (client.world != world) {
-            world = client.world;
+        if (client.level != world) {
+            world = client.level;
             CACHE.clear();
             centerX = Integer.MIN_VALUE;
         }
-        int wanted = Math.max(2, Math.min(MAX_RADIUS, client.options.getClampedViewDistance()));
+        int wanted = Math.max(2, Math.min(MAX_RADIUS, client.options.getEffectiveRenderDistance()));
         if (wanted != radius || texture == null) {
             radius = wanted;
             if (texture != null) {
                 texture.close();
             }
-            texture = new NativeImageBackedTexture(new NativeImage(size(), size(), true));
-            client.getTextureManager().registerTexture(TEXTURE, texture);
+            texture = new DynamicTexture(new NativeImage(size(), size(), true));
+            client.getTextureManager().register(TEXTURE, texture);
             centerX = Integer.MIN_VALUE;
         }
-        ChunkPos center = client.player.getChunkPos();
+        ChunkPos center = client.player.chunkPosition();
         if (center.x != centerX || center.z != centerZ) {
             recenter(center);
         }
@@ -112,8 +111,8 @@ public final class PhoneMap {
     private static void recenter(ChunkPos center) {
         centerX = center.x;
         centerZ = center.z;
-        CACHE.keySet().removeIf(key -> Math.abs(ChunkPos.getPackedX(key) - centerX) > radius + 2
-                || Math.abs(ChunkPos.getPackedZ(key) - centerZ) > radius + 2);
+        CACHE.keySet().removeIf(key -> Math.abs(ChunkPos.getX(key) - centerX) > radius + 2
+                || Math.abs(ChunkPos.getZ(key) - centerZ) > radius + 2);
         List<ChunkPos> list = new ArrayList<>();
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
@@ -123,7 +122,7 @@ public final class PhoneMap {
         list.sort(Comparator.comparingInt(p -> Math.max(Math.abs(p.x - centerX), Math.abs(p.z - centerZ))));
         order = list;
         refreshIndex = 0;
-        NativeImage image = texture.getImage();
+        NativeImage image = texture.getPixels();
         if (image == null) {
             return;
         }
@@ -137,20 +136,20 @@ public final class PhoneMap {
         dirty = true;
     }
 
-    private static WorldChunk loaded(int cx, int cz) {
-        Chunk chunk = world.getChunk(cx, cz, ChunkStatus.FULL, false);
-        return chunk instanceof WorldChunk worldChunk && !worldChunk.isEmpty() ? worldChunk : null;
+    private static LevelChunk loaded(int cx, int cz) {
+        ChunkAccess chunk = world.getChunk(cx, cz, ChunkStatus.FULL, false);
+        return chunk instanceof LevelChunk worldChunk && !worldChunk.isEmpty() ? worldChunk : null;
     }
 
     private static boolean compute(ChunkPos pos) {
-        WorldChunk chunk = loaded(pos.x, pos.z);
+        LevelChunk chunk = loaded(pos.x, pos.z);
         if (chunk == null) {
             return false;
         }
-        WorldChunk north = loaded(pos.x, pos.z - 1);
+        LevelChunk north = loaded(pos.x, pos.z - 1);
         int[] colors = new int[256];
         int[] column = new int[3];
-        BlockPos.Mutable mutable = new BlockPos.Mutable();
+        BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
         for (int x = 0; x < 16; x++) {
             int previous;
             if (north != null) {
@@ -163,14 +162,14 @@ public final class PhoneMap {
                 surface(chunk, x, z, mutable, column);
                 int height = column[0];
                 int depth = column[1];
-                MapColor color = MapColor.get(column[2]);
+                MapColor color = MapColor.byId(column[2]);
                 if (previous == Integer.MIN_VALUE) {
                     previous = height;
                 }
                 MapColor.Brightness brightness;
-                int worldX = pos.getStartX() + x;
-                int worldZ = pos.getStartZ() + z;
-                if (color == MapColor.WATER_BLUE) {
+                int worldX = pos.getMinBlockX() + x;
+                int worldZ = pos.getMinBlockZ() + z;
+                if (color == MapColor.WATER) {
                     double d = depth * 0.1 + ((worldX + worldZ) & 1) * 0.2;
                     brightness = d < 0.5 ? MapColor.Brightness.HIGH : d > 0.9 ? MapColor.Brightness.LOW : MapColor.Brightness.NORMAL;
                 } else {
@@ -178,7 +177,7 @@ public final class PhoneMap {
                     brightness = d > 0.6 ? MapColor.Brightness.HIGH : d < -0.6 ? MapColor.Brightness.LOW : MapColor.Brightness.NORMAL;
                 }
                 previous = height;
-                colors[z * 16 + x] = color == MapColor.CLEAR ? 0 : color.getRenderColor(brightness);
+                colors[z * 16 + x] = color == MapColor.NONE ? 0 : color.calculateRGBColor(brightness);
             }
         }
         int[] old = CACHE.put(pos.toLong(), colors);
@@ -190,20 +189,20 @@ public final class PhoneMap {
     }
 
     /** Remplit column = {hauteur, profondeur d'eau, id couleur} comme une carte vanilla. */
-    private static void surface(WorldChunk chunk, int x, int z, BlockPos.Mutable mutable, int[] column) {
-        int bottom = world.getBottomY();
-        int y = chunk.sampleHeightmap(Heightmap.Type.WORLD_SURFACE, x, z) + 1;
-        int startX = chunk.getPos().getStartX() + x;
-        int startZ = chunk.getPos().getStartZ() + z;
+    private static void surface(LevelChunk chunk, int x, int z, BlockPos.MutableBlockPos mutable, int[] column) {
+        int bottom = world.getMinBuildHeight();
+        int y = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, x, z) + 1;
+        int startX = chunk.getPos().getMinBlockX() + x;
+        int startZ = chunk.getPos().getMinBlockZ() + z;
         BlockState state = null;
-        MapColor color = MapColor.CLEAR;
+        MapColor color = MapColor.NONE;
         if (y > bottom + 1) {
             do {
                 y--;
                 mutable.set(startX, y, startZ);
                 state = chunk.getBlockState(mutable);
                 color = state.getMapColor(world, mutable);
-            } while (color == MapColor.CLEAR && y > bottom);
+            } while (color == MapColor.NONE && y > bottom);
         }
         int depth = 0;
         if (state != null && y > bottom && !state.getFluidState().isEmpty()) {
@@ -221,7 +220,7 @@ public final class PhoneMap {
     }
 
     private static void blit(ChunkPos pos, int[] colors) {
-        NativeImage image = texture.getImage();
+        NativeImage image = texture.getPixels();
         if (image == null) {
             return;
         }
@@ -232,7 +231,7 @@ public final class PhoneMap {
         }
         for (int z = 0; z < 16; z++) {
             for (int x = 0; x < 16; x++) {
-                image.setColor(baseX + x, baseZ + z, colors[z * 16 + x]);
+                image.setPixelRGBA(baseX + x, baseZ + z, colors[z * 16 + x]);
             }
         }
     }

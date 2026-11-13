@@ -28,26 +28,25 @@ import net.mca.resources.data.BuildingType;
 import net.mca.resources.data.tasks.Task;
 import net.mca.server.world.data.Building;
 import net.mca.server.world.data.Village;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.Drawable;
-import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.gui.widget.TexturedButtonWidget;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.registry.Registries;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Language;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3i;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.ImageButton;
+import net.minecraft.client.gui.components.Renderable;
+import net.minecraft.client.gui.components.Tooltip;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Vec3i;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.locale.Language;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.util.FormattedCharSequence;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +54,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public class PlanScreen extends BlueprintScreen {
-    private static final Identifier ICONS = new Identifier("mca", "textures/buildings.png");
+    private static final ResourceLocation ICONS = new ResourceLocation("mca", "textures/buildings.png");
 
     private static final int WHITE = 0xffffffff;
     private static final int LABEL = 0xffcccccc;
@@ -83,8 +82,8 @@ public class PlanScreen extends BlueprintScreen {
             this.group = group;
         }
 
-        Text label() {
-            return Text.translatable("gui.mca_vie.plan.page." + name().toLowerCase(java.util.Locale.ROOT));
+        Component label() {
+            return Component.translatable("gui.mca_vie.plan.page." + name().toLowerCase(java.util.Locale.ROOT));
         }
     }
 
@@ -102,14 +101,14 @@ public class PlanScreen extends BlueprintScreen {
     private Page page = Page.MAP;
     private boolean renaming;
     private String renameText;
-    private TextFieldWidget renameField;
+    private EditBox renameField;
     private int scroll;
     private int scrollMax;
 
     private BuildingType selectedBuilding;
-    private final Map<BuildingType, ButtonWidget> catalogButtons = new java.util.HashMap<>();
+    private final Map<BuildingType, Button> catalogButtons = new java.util.HashMap<>();
     private int registryFilter = -1;
-    private final ButtonWidget[] registryButtons = new ButtonWidget[4];
+    private final Button[] registryButtons = new Button[4];
     private int marketPage;
     private int justicePage;
     private UUID hoveredVillager;
@@ -126,7 +125,7 @@ public class PlanScreen extends BlueprintScreen {
     public void setVillage(Village village) {
         this.village = village;
         this.loaded = true;
-        if (client != null) {
+        if (minecraft != null) {
             rebuild();
         }
     }
@@ -138,7 +137,7 @@ public class PlanScreen extends BlueprintScreen {
         this.isVillage = isVillage;
         this.completedTasks = completedTasks;
         this.tasks = tasks;
-        if (client != null) {
+        if (minecraft != null) {
             rebuild();
         }
     }
@@ -156,23 +155,23 @@ public class PlanScreen extends BlueprintScreen {
         return rank != null && rank.isAtLeast(required);
     }
 
-    private static Text locked(Rank required) {
-        return Text.translatable("gui.mca_vie.plan.locked", Text.translatable(required.getTranslationKey()));
+    private static Component locked(Rank required) {
+        return Component.translatable("gui.mca_vie.plan.locked", Component.translatable(required.getTranslationKey()));
     }
 
     private long today() {
-        return client != null && client.world != null ? WorldCalendar.now(client.world).dayIndex() : 0;
+        return minecraft != null && minecraft.level != null ? WorldCalendar.now(minecraft.level).dayIndex() : 0;
     }
 
     private void refreshVillage() {
         NetworkHandler.sendToServer(new GetVillageRequest());
     }
 
-    private void send(Identifier channel, int value) {
+    private void send(ResourceLocation channel, int value) {
         if (village == null) {
             return;
         }
-        PacketByteBuf buf = PacketByteBufs.create();
+        FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeInt(village.getId());
         buf.writeInt(value);
         ClientPlayNetworking.send(channel, buf);
@@ -181,9 +180,9 @@ public class PlanScreen extends BlueprintScreen {
 
     private void rebuild() {
         if (renameField != null) {
-            renameText = renameField.getText();
+            renameText = renameField.getValue();
         }
-        clearChildren();
+        clearWidgets();
         renameField = null;
         catalogButtons.clear();
         java.util.Arrays.fill(registryButtons, null);
@@ -205,19 +204,19 @@ public class PlanScreen extends BlueprintScreen {
             return;
         }
 
-        int nameWidth = textRenderer.getWidth(villageName());
-        ButtonWidget rename = addDrawableChild(ButtonWidget.builder(Text.literal("✎"), b -> {
+        int nameWidth = font.width(villageName());
+        Button rename = addRenderableWidget(Button.builder(Component.literal("✎"), b -> {
             renaming = true;
             renameText = village.getName();
             rebuild();
-        }).dimensions(fx + PAD + nameWidth + 4, fy + 3, 14, 14).tooltip(Tooltip.of(allowed(VillageRights.RENAME)
-                ? Text.translatable("gui.blueprint.renameVillage") : locked(VillageRights.RENAME))).build());
+        }).bounds(fx + PAD + nameWidth + 4, fy + 3, 14, 14).tooltip(Tooltip.create(allowed(VillageRights.RENAME)
+                ? Component.translatable("gui.blueprint.renameVillage") : locked(VillageRights.RENAME))).build());
         rename.active = allowed(VillageRights.RENAME);
         rename.visible = isVillage;
-        addDrawableChild(ButtonWidget.builder(Text.literal("⟳"), b -> {
+        addRenderableWidget(Button.builder(Component.literal("⟳"), b -> {
             NetworkHandler.sendToServer(new ReportBuildingMessage(ReportBuildingMessage.Action.FULL_SCAN));
             refreshVillage();
-        }).dimensions(fx + fw - 20, fy + 3, 16, 14).tooltip(Tooltip.of(Text.translatable("gui.mca_vie.plan.refresh"))).build());
+        }).bounds(fx + fw - 20, fy + 3, 16, 14).tooltip(Tooltip.create(Component.translatable("gui.mca_vie.plan.refresh"))).build());
 
         if (renaming) {
             buildRename();
@@ -237,14 +236,14 @@ public class PlanScreen extends BlueprintScreen {
         }
     }
 
-    private ButtonWidget button(Text label, ButtonWidget.PressAction action, int x, int y, int w, int h, Rank required, Text tooltip) {
+    private Button button(Component label, Button.OnPress action, int x, int y, int w, int h, Rank required, Component tooltip) {
         boolean ok = required == null || allowed(required);
-        ButtonWidget.Builder builder = ButtonWidget.builder(label, action).dimensions(x, y, w, h);
-        Text tip = ok ? tooltip : locked(required);
+        Button.Builder builder = Button.builder(label, action).bounds(x, y, w, h);
+        Component tip = ok ? tooltip : locked(required);
         if (tip != null) {
-            builder.tooltip(Tooltip.of(tip));
+            builder.tooltip(Tooltip.create(tip));
         }
-        ButtonWidget button = addDrawableChild(builder.build());
+        Button button = addRenderableWidget(builder.build());
         button.active = ok;
         return button;
     }
@@ -252,36 +251,36 @@ public class PlanScreen extends BlueprintScreen {
     private void buildEmpty() {
         int x = fx + fw / 2;
         int y = fy + fh / 2 + 4;
-        addDrawableChild(ButtonWidget.builder(Text.translatable("gui.blueprint.addRoom"), b -> {
+        addRenderableWidget(Button.builder(Component.translatable("gui.blueprint.addRoom"), b -> {
             NetworkHandler.sendToServer(new ReportBuildingMessage(ReportBuildingMessage.Action.ADD_ROOM));
             refreshVillage();
-            close();
-        }).dimensions(x - 102, y, 100, 20).tooltip(Tooltip.of(Text.translatable("gui.blueprint.addRoom.tooltip"))).build());
-        addDrawableChild(ButtonWidget.builder(Text.translatable("gui.blueprint.addBuilding"), b -> {
+            onClose();
+        }).bounds(x - 102, y, 100, 20).tooltip(Tooltip.create(Component.translatable("gui.blueprint.addRoom.tooltip"))).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.blueprint.addBuilding"), b -> {
             NetworkHandler.sendToServer(new ReportBuildingMessage(ReportBuildingMessage.Action.ADD));
             refreshVillage();
-            close();
-        }).dimensions(x + 2, y, 100, 20).tooltip(Tooltip.of(Text.translatable("gui.blueprint.addBuilding.tooltip"))).build());
+            onClose();
+        }).bounds(x + 2, y, 100, 20).tooltip(Tooltip.create(Component.translatable("gui.blueprint.addBuilding.tooltip"))).build());
     }
 
     private void buildRename() {
         int w = Math.min(200, cw);
-        renameField = addDrawableChild(new TextFieldWidget(textRenderer, cx, cy + 14, w, 18, Text.translatable("gui.blueprint.renameVillage")));
+        renameField = addRenderableWidget(new EditBox(font, cx, cy + 14, w, 18, Component.translatable("gui.blueprint.renameVillage")));
         renameField.setMaxLength(32);
-        renameField.setText(renameText == null ? village.getName() : renameText);
+        renameField.setValue(renameText == null ? village.getName() : renameText);
         setInitialFocus(renameField);
-        addDrawableChild(ButtonWidget.builder(Text.translatable("gui.blueprint.cancel"), b -> {
+        addRenderableWidget(Button.builder(Component.translatable("gui.blueprint.cancel"), b -> {
             renaming = false;
             renameText = null;
             rebuild();
-        }).dimensions(cx, cy + 38, w / 2 - 2, 18).build());
-        addDrawableChild(ButtonWidget.builder(Text.translatable("gui.blueprint.rename"), b -> {
-            NetworkHandler.sendToServer(new RenameVillageMessage(village.getId(), renameField.getText()));
+        }).bounds(cx, cy + 38, w / 2 - 2, 18).build());
+        addRenderableWidget(Button.builder(Component.translatable("gui.blueprint.rename"), b -> {
+            NetworkHandler.sendToServer(new RenameVillageMessage(village.getId(), renameField.getValue()));
             renaming = false;
             renameText = null;
             refreshVillage();
             rebuild();
-        }).dimensions(cx + w / 2 + 2, cy + 38, w / 2 - 2, 18).build());
+        }).bounds(cx + w / 2 + 2, cy + 38, w / 2 - 2, 18).build());
     }
 
     private int mapSize() {
@@ -292,18 +291,18 @@ public class PlanScreen extends BlueprintScreen {
         int x = cx + mapSize() + 8;
         int w = cx + cw - x;
         int y = cy;
-        button(Text.translatable("gui.blueprint.addRoom"), b -> report(ReportBuildingMessage.Action.ADD_ROOM), x, y, w, 18, null,
-                Text.translatable("gui.blueprint.addRoom.tooltip"));
-        button(Text.translatable("gui.blueprint.addBuilding"), b -> report(ReportBuildingMessage.Action.ADD), x, y + 20, w, 18, null,
-                Text.translatable("gui.blueprint.addBuilding.tooltip"));
-        button(Text.translatable("gui.blueprint.removeBuilding"), b -> report(ReportBuildingMessage.Action.REMOVE), x, y + 40, w, 18, null,
-                Text.translatable("gui.mca_vie.plan.remove.tooltip"));
-        button(Text.translatable(village.isAutoScan() ? "gui.mca_vie.plan.autoscan.on" : "gui.mca_vie.plan.autoscan.off"),
-                b -> report(ReportBuildingMessage.Action.AUTO_SCAN), x, y + 60, w, 18, null, Text.translatable("gui.blueprint.autoScan.tooltip"));
-        button(Text.translatable("gui.blueprint.restrictAccess"), b -> {
+        button(Component.translatable("gui.blueprint.addRoom"), b -> report(ReportBuildingMessage.Action.ADD_ROOM), x, y, w, 18, null,
+                Component.translatable("gui.blueprint.addRoom.tooltip"));
+        button(Component.translatable("gui.blueprint.addBuilding"), b -> report(ReportBuildingMessage.Action.ADD), x, y + 20, w, 18, null,
+                Component.translatable("gui.blueprint.addBuilding.tooltip"));
+        button(Component.translatable("gui.blueprint.removeBuilding"), b -> report(ReportBuildingMessage.Action.REMOVE), x, y + 40, w, 18, null,
+                Component.translatable("gui.mca_vie.plan.remove.tooltip"));
+        button(Component.translatable(village.isAutoScan() ? "gui.mca_vie.plan.autoscan.on" : "gui.mca_vie.plan.autoscan.off"),
+                b -> report(ReportBuildingMessage.Action.AUTO_SCAN), x, y + 60, w, 18, null, Component.translatable("gui.blueprint.autoScan.tooltip"));
+        button(Component.translatable("gui.blueprint.restrictAccess"), b -> {
             NetworkHandler.sendToServer(new ReportBuildingMessage(ReportBuildingMessage.Action.FORCE_TYPE, "blocked"));
             refreshVillage();
-        }, x, y + 80, w, 18, null, Text.translatable("gui.blueprint.restrictAccess.tooltip"));
+        }, x, y + 80, w, 18, null, Component.translatable("gui.blueprint.restrictAccess.tooltip"));
     }
 
     private void report(ReportBuildingMessage.Action action) {
@@ -322,12 +321,12 @@ public class PlanScreen extends BlueprintScreen {
             if (y + 20 > cy + ch) {
                 break;
             }
-            TexturedButtonWidget widget = new TexturedButtonWidget(x, y, 20, 20, bt.iconU(), bt.iconV() + 20, 20, ICONS, 256, 256, b -> {
+            ImageButton widget = new ImageButton(x, y, 20, 20, bt.iconU(), bt.iconV() + 20, 20, ICONS, 256, 256, b -> {
                 selectedBuilding = bt;
                 scroll = 0;
-            }, Text.translatable("buildingType." + bt.name()));
-            widget.setTooltip(Tooltip.of(Text.translatable("buildingType." + bt.name())));
-            catalogButtons.put(bt, addDrawableChild(widget));
+            }, Component.translatable("buildingType." + bt.name()));
+            widget.setTooltip(Tooltip.create(Component.translatable("buildingType." + bt.name())));
+            catalogButtons.put(bt, addRenderableWidget(widget));
             i++;
         }
     }
@@ -338,9 +337,9 @@ public class PlanScreen extends BlueprintScreen {
         for (int i = 0; i < 3; i++) {
             int y = cy + i * rulesRow() - 4;
             int row = i;
-            Text tip = row < 3 ? Text.translatable("gui.mca_vie.plan.rules.step") : null;
-            button(Text.literal("-"), b -> changeRule(row, -1), right - 76, y, 18, 16, required[i], tip);
-            button(Text.literal("+"), b -> changeRule(row, 1), right - 18, y, 18, 16, required[i], tip);
+            Component tip = row < 3 ? Component.translatable("gui.mca_vie.plan.rules.step") : null;
+            button(Component.literal("-"), b -> changeRule(row, -1), right - 76, y, 18, 16, required[i], tip);
+            button(Component.literal("+"), b -> changeRule(row, 1), right - 18, y, 18, 16, required[i], tip);
         }
     }
 
@@ -389,26 +388,26 @@ public class PlanScreen extends BlueprintScreen {
         int y = cy + ch - 38;
         int x = cx + labelW;
         boolean nothing = VillageEconomy.availableShare(VillageState.of(village)) <= 0;
-        Text empty = nothing ? withdrawNone() : null;
-        ButtonWidget[] withdraws = {
-                button(Text.literal("1"), b -> withdraw(1), x, y, 30, 18, VillageRights.WITHDRAW, empty),
-                button(Text.literal("10"), b -> withdraw(10), x + 32, y, 30, 18, VillageRights.WITHDRAW, empty),
-                button(Text.translatable("gui.mca_vie.treasury.all"), b -> withdraw((int) Math.min(Integer.MAX_VALUE,
+        Component empty = nothing ? withdrawNone() : null;
+        Button[] withdraws = {
+                button(Component.literal("1"), b -> withdraw(1), x, y, 30, 18, VillageRights.WITHDRAW, empty),
+                button(Component.literal("10"), b -> withdraw(10), x + 32, y, 30, 18, VillageRights.WITHDRAW, empty),
+                button(Component.translatable("gui.mca_vie.treasury.all"), b -> withdraw((int) Math.min(Integer.MAX_VALUE,
                         VillageEconomy.availableShare(VillageState.of(village)))), x + 64, y, 44, 18, VillageRights.WITHDRAW, empty)};
         if (nothing) {
-            for (ButtonWidget w : withdraws) {
+            for (Button w : withdraws) {
                 w.active = false;
             }
         }
         y += 20;
-        button(Text.literal("1"), b -> send(VillageNetwork.DEPOSIT, 1), x, y, 30, 18, VillageRights.DEPOSIT, null);
-        button(Text.literal("10"), b -> send(VillageNetwork.DEPOSIT, 10), x + 32, y, 30, 18, VillageRights.DEPOSIT, null);
-        button(Text.translatable("gui.mca_vie.treasury.all"), b -> send(VillageNetwork.DEPOSIT, 64 * 36), x + 64, y, 44, 18, VillageRights.DEPOSIT,
-                Text.translatable("gui.mca_vie.plan.deposit_all"));
+        button(Component.literal("1"), b -> send(VillageNetwork.DEPOSIT, 1), x, y, 30, 18, VillageRights.DEPOSIT, null);
+        button(Component.literal("10"), b -> send(VillageNetwork.DEPOSIT, 10), x + 32, y, 30, 18, VillageRights.DEPOSIT, null);
+        button(Component.translatable("gui.mca_vie.treasury.all"), b -> send(VillageNetwork.DEPOSIT, 64 * 36), x + 64, y, 44, 18, VillageRights.DEPOSIT,
+                Component.translatable("gui.mca_vie.plan.deposit_all"));
     }
 
-    private static Text withdrawNone() {
-        return Text.translatable("gui.mca_vie.plan.withdraw_none", com.maitreyoshi.mcavie.village.VillageConfig.get().playerSharePercent);
+    private static Component withdrawNone() {
+        return Component.translatable("gui.mca_vie.plan.withdraw_none", com.maitreyoshi.mcavie.village.VillageConfig.get().playerSharePercent);
     }
 
     private void withdraw(int amount) {
@@ -426,10 +425,10 @@ public class PlanScreen extends BlueprintScreen {
         VillageState state = VillageState.of(village);
         int y = cy;
         for (Decree decree : Decree.values()) {
-            MutableText reason = VillageDecrees.unavailable(village, decree, today);
+            MutableComponent reason = VillageDecrees.unavailable(village, decree, today);
             boolean active = state.activeDecrees.contains(decree);
-            Text label = decree.kind == Decree.Kind.TOGGLE && active ? Text.translatable("gui.mca_vie.decree.stop", decree.getName()) : decree.getName();
-            ButtonWidget b = button(label, w -> launch(decree), cx, y, decreeButtonWidth(), 19, VillageRights.DECREES, decree.getDescription());
+            Component label = decree.kind == Decree.Kind.TOGGLE && active ? Component.translatable("gui.mca_vie.decree.stop", decree.getName()) : decree.getName();
+            Button b = button(label, w -> launch(decree), cx, y, decreeButtonWidth(), 19, VillageRights.DECREES, decree.getDescription());
             if (reason != null) {
                 b.active = false;
             }
@@ -438,7 +437,7 @@ public class PlanScreen extends BlueprintScreen {
     }
 
     private void launch(Decree decree) {
-        PacketByteBuf buf = PacketByteBufs.create();
+        FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeInt(village.getId());
         buf.writeInt(decree.ordinal());
         ClientPlayNetworking.send(VillageNetwork.DECREE, buf);
@@ -461,7 +460,7 @@ public class PlanScreen extends BlueprintScreen {
         int pages = Math.max(1, (products.size() + perPage - 1) / perPage);
         marketPage = Math.max(0, Math.min(pages - 1, marketPage));
         int colW = (cw - 4) / 2;
-        Text inactive = marketInactiveReason(state);
+        Component inactive = marketInactiveReason(state);
         for (int i = 0; i < perPage; i++) {
             int index = marketPage * perPage + i;
             if (index >= products.size()) {
@@ -470,34 +469,34 @@ public class PlanScreen extends BlueprintScreen {
             String item = products.get(index);
             int x = cx + (i % 2) * (colW + 4);
             int y = cy + 36 + (i / 2) * 20;
-            ButtonWidget b = addDrawableChild(ButtonWidget.builder(BlueprintPanels.productLabel(item), w -> order(item))
-                    .dimensions(x, y, colW, 18)
-                    .tooltip(Tooltip.of(state.marketActive ? BlueprintPanels.productTooltip(state, item) : inactive)).build());
+            Button b = addRenderableWidget(Button.builder(BlueprintPanels.productLabel(item), w -> order(item))
+                    .bounds(x, y, colW, 18)
+                    .tooltip(Tooltip.create(state.marketActive ? BlueprintPanels.productTooltip(state, item) : inactive)).build());
             b.active = state.marketActive;
         }
         int y = cy + ch - 18;
-        ButtonWidget prev = addDrawableChild(ButtonWidget.builder(Text.literal("<"), b -> {
+        Button prev = addRenderableWidget(Button.builder(Component.literal("<"), b -> {
             marketPage--;
             rebuild();
-        }).dimensions(cx, y, 18, 18).build());
+        }).bounds(cx, y, 18, 18).build());
         prev.active = marketPage > 0;
-        ButtonWidget next = addDrawableChild(ButtonWidget.builder(Text.literal(">"), b -> {
+        Button next = addRenderableWidget(Button.builder(Component.literal(">"), b -> {
             marketPage++;
             rebuild();
-        }).dimensions(cx + 52, y, 18, 18).build());
+        }).bounds(cx + 52, y, 18, 18).build());
         next.active = marketPage < pages - 1;
         collectButton(state);
     }
 
     private void collectButton(VillageState state) {
         int y = cy + ch - 18;
-        ButtonWidget collect = addDrawableChild(ButtonWidget.builder(Text.translatable("gui.mca_vie.market.collect"), b -> {
-            PacketByteBuf buf = PacketByteBufs.create();
+        Button collect = addRenderableWidget(Button.builder(Component.translatable("gui.mca_vie.market.collect"), b -> {
+            FriendlyByteBuf buf = PacketByteBufs.create();
             buf.writeInt(village.getId());
             ClientPlayNetworking.send(VillageNetwork.COLLECT, buf);
-        }).dimensions(cx + cw - 80, y, 80, 18).tooltip(Tooltip.of(Text.translatable("gui.mca_vie.plan.collect.tooltip"))).build());
-        collect.active = client != null && client.player != null
-                && state.orders.stream().anyMatch(o -> o.ready && o.player.equals(client.player.getUuid()));
+        }).bounds(cx + cw - 80, y, 80, 18).tooltip(Tooltip.create(Component.translatable("gui.mca_vie.plan.collect.tooltip"))).build());
+        collect.active = minecraft != null && minecraft.player != null
+                && state.orders.stream().anyMatch(o -> o.ready && o.player.equals(minecraft.player.getUUID()));
     }
 
     private int marketPages() {
@@ -505,9 +504,9 @@ public class PlanScreen extends BlueprintScreen {
     }
 
     private void order(String item) {
-        PacketByteBuf buf = PacketByteBufs.create();
+        FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeInt(village.getId());
-        buf.writeString(item, 128);
+        buf.writeUtf(item, 128);
         buf.writeInt(hasShiftDown() ? 5 : 1);
         ClientPlayNetworking.send(VillageNetwork.ORDER, buf);
     }
@@ -516,11 +515,11 @@ public class PlanScreen extends BlueprintScreen {
         int w = (cw - 6) / 4;
         for (int i = -1; i < 3; i++) {
             int filter = i;
-            ButtonWidget b = addDrawableChild(ButtonWidget.builder(Text.translatable("gui.mca_vie.registry.filter." + (filter + 1)), w2 -> {
+            Button b = addRenderableWidget(Button.builder(Component.translatable("gui.mca_vie.registry.filter." + (filter + 1)), w2 -> {
                 registryFilter = filter;
                 scroll = 0;
                 rebuild();
-            }).dimensions(cx + (i + 1) * (w + 2), cy, w, 16).build());
+            }).bounds(cx + (i + 1) * (w + 2), cy, w, 16).build());
             registryButtons[i + 1] = b;
         }
     }
@@ -535,76 +534,76 @@ public class PlanScreen extends BlueprintScreen {
         int pages = Math.max(1, (state.cases.size() + rows - 1) / rows);
         justicePage = Math.max(0, Math.min(pages - 1, justicePage));
         int y = cy + 36;
-        Text noPrison = Text.translatable("gui.mca_vie.plan.justice.no_prison");
+        Component noPrison = Component.translatable("gui.mca_vie.plan.justice.no_prison");
         for (int i = 0; i < rows; i++) {
             int index = justicePage * rows + i;
             if (index >= state.cases.size()) {
                 break;
             }
             UUID suspect = state.cases.get(index).suspect;
-            ButtonWidget prison = button(Text.translatable("gui.mca_vie.justice.prison"), b -> judge(suspect, 0), cx + cw - 92, y, 45, 18,
+            Button prison = button(Component.translatable("gui.mca_vie.justice.prison"), b -> judge(suspect, 0), cx + cw - 92, y, 45, 18,
                     VillageRights.JUSTICE, state.prisonActive ? null : noPrison);
             if (!state.prisonActive) {
                 prison.active = false;
             }
-            button(Text.translatable("gui.mca_vie.justice.pardon"), b -> judge(suspect, 1), cx + cw - 45, y, 45, 18, VillageRights.JUSTICE, null);
+            button(Component.translatable("gui.mca_vie.justice.pardon"), b -> judge(suspect, 1), cx + cw - 45, y, 45, 18, VillageRights.JUSTICE, null);
             y += 22;
         }
         if (pages > 1) {
             int py = cy + 22;
-            ButtonWidget prev = addDrawableChild(ButtonWidget.builder(Text.literal("<"), b -> {
+            Button prev = addRenderableWidget(Button.builder(Component.literal("<"), b -> {
                 justicePage--;
                 rebuild();
-            }).dimensions(cx + cw - 38, py, 18, 12).build());
+            }).bounds(cx + cw - 38, py, 18, 12).build());
             prev.active = justicePage > 0;
-            ButtonWidget next = addDrawableChild(ButtonWidget.builder(Text.literal(">"), b -> {
+            Button next = addRenderableWidget(Button.builder(Component.literal(">"), b -> {
                 justicePage++;
                 rebuild();
-            }).dimensions(cx + cw - 18, py, 18, 12).build());
+            }).bounds(cx + cw - 18, py, 18, 12).build());
             next.active = justicePage < pages - 1;
         }
     }
 
     private void judge(UUID suspect, int verdict) {
-        PacketByteBuf buf = PacketByteBufs.create();
+        FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeInt(village.getId());
-        buf.writeUuid(suspect);
+        buf.writeUUID(suspect);
         buf.writeInt(verdict);
         ClientPlayNetworking.send(VillageNetwork.JUDGE, buf);
     }
 
 
-    private Text villageName() {
+    private Component villageName() {
         if (village == null) {
-            return Text.empty();
+            return Component.empty();
         }
-        return isVillage ? Text.literal(village.getName()) : Text.translatable("gui.blueprint.settlement");
+        return isVillage ? Component.literal(village.getName()) : Component.translatable("gui.blueprint.settlement");
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
         context.fill(fx, fy, fx + fw, fy + fh, 0xe0101014);
-        context.drawBorder(fx, fy, fw, fh, 0x60ffffff);
+        context.renderOutline(fx, fy, fw, fh, 0x60ffffff);
 
-        Text footer = null;
+        Component footer = null;
         if (!loaded) {
-            context.drawCenteredTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.plan.waiting"), fx + fw / 2, fy + fh / 2 - 4, GRAY);
+            context.drawCenteredString(font, Component.translatable("gui.mca_vie.plan.waiting"), fx + fw / 2, fy + fh / 2 - 4, GRAY);
         } else if (village == null) {
-            BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.blueprint.empty"), fx + 20, fy + fh / 2 - 26, fw - 40, WHITE);
+            BlueprintPanels.wrapped(context, font, Component.translatable("gui.blueprint.empty"), fx + 20, fy + fh / 2 - 26, fw - 40, WHITE);
         } else {
             renderHeader(context);
             renderSidebar(context, mouseX, mouseY);
             hoveredVillager = null;
             if (renaming) {
-                context.drawTextWithShadow(textRenderer, Text.translatable("gui.blueprint.renameVillage"), cx, cy, WHITE);
+                context.drawString(font, Component.translatable("gui.blueprint.renameVillage"), cx, cy, WHITE);
             } else {
                 footer = renderPage(context, mouseX, mouseY);
             }
         }
 
-        for (Element child : children()) {
-            if (child instanceof Drawable drawable) {
+        for (GuiEventListener child : children()) {
+            if (child instanceof Renderable drawable) {
                 drawable.render(context, mouseX, mouseY, delta);
             }
         }
@@ -616,22 +615,22 @@ public class PlanScreen extends BlueprintScreen {
         }
     }
 
-    private void renderHeader(DrawContext context) {
+    private void renderHeader(GuiGraphics context) {
         context.fill(fx + 1, fy + 1, fx + fw - 1, fy + HEADER, 0x40ffffff);
-        Text name = villageName();
-        context.drawTextWithShadow(textRenderer, name, fx + PAD, fy + 6, WHITE);
+        Component name = villageName();
+        context.drawString(font, name, fx + PAD, fy + 6, WHITE);
         VillageState state = VillageState.of(village);
-        Text title = rank == null ? Text.literal("?") : Text.translatable(rank.getTranslationKey());
-        Text info = Text.translatable("gui.mca_vie.plan.header",
-                state.rank.getName().copy().formatted(Formatting.GOLD),
-                title.copy().formatted(Formatting.GOLD),
-                Text.literal(String.valueOf(reputation)).formatted(Formatting.GOLD)).formatted(Formatting.GRAY);
-        int left = fx + PAD + textRenderer.getWidth(name) + (isVillage ? 24 : 8);
+        Component title = rank == null ? Component.literal("?") : Component.translatable(rank.getTranslationKey());
+        Component info = Component.translatable("gui.mca_vie.plan.header",
+                state.rank.getName().copy().withStyle(ChatFormatting.GOLD),
+                title.copy().withStyle(ChatFormatting.GOLD),
+                Component.literal(String.valueOf(reputation)).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.GRAY);
+        int left = fx + PAD + font.width(name) + (isVillage ? 24 : 8);
         int right = fx + fw - 26;
         int available = right - left;
         if (available > 20) {
-            OrderedText line = Language.getInstance().reorder(textRenderer.trimToWidth(info, available));
-            context.drawTextWithShadow(textRenderer, line, right - textRenderer.getWidth(line), fy + 6, GRAY);
+            FormattedCharSequence line = Language.getInstance().getVisualOrder(font.substrByWidth(info, available));
+            context.drawString(font, line, right - font.width(line), fy + 6, GRAY);
         }
     }
 
@@ -655,7 +654,7 @@ public class PlanScreen extends BlueprintScreen {
         return p == Page.TREASURY && !allowed(VillageRights.VIEW_TREASURY);
     }
 
-    private void renderSidebar(DrawContext context, int mouseX, int mouseY) {
+    private void renderSidebar(GuiGraphics context, int mouseX, int mouseY) {
         context.fill(fx + 1, fy + HEADER, fx + SIDEBAR, fy + fh - 1, 0x30000000);
         context.fill(fx + SIDEBAR, fy + HEADER, fx + SIDEBAR + 1, fy + fh - 1, 0x40ffffff);
         int group = -1;
@@ -663,7 +662,7 @@ public class PlanScreen extends BlueprintScreen {
             int y = tabY(p);
             if (p.group != group) {
                 group = p.group;
-                context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.plan.group." + GROUPS[group]), fx + 5, y - 10, DIM);
+                context.drawString(font, Component.translatable("gui.mca_vie.plan.group." + GROUPS[group]), fx + 5, y - 10, DIM);
             }
             boolean selected = p == page && !renaming;
             boolean hover = mouseX >= fx + 2 && mouseX < fx + SIDEBAR - 1 && mouseY >= y - 2 && mouseY < y + 10;
@@ -674,7 +673,7 @@ public class PlanScreen extends BlueprintScreen {
                 context.fill(fx + 2, y - 2, fx + SIDEBAR - 1, y + 10, 0x30ffffff);
             }
             int color = selected ? WHITE : tabLocked(p) ? DIM : LABEL;
-            context.drawTextWithShadow(textRenderer, Language.getInstance().reorder(textRenderer.trimToWidth(p.label(), SIDEBAR - 16)), fx + 10, y, color);
+            context.drawString(font, Language.getInstance().getVisualOrder(font.substrByWidth(p.label(), SIDEBAR - 16)), fx + 10, y, color);
         }
     }
 
@@ -691,23 +690,23 @@ public class PlanScreen extends BlueprintScreen {
         return null;
     }
 
-    private void renderFooter(DrawContext context, Text footer, int mouseX, int mouseY) {
+    private void renderFooter(GuiGraphics context, Component footer, int mouseX, int mouseY) {
         int color = GRAY;
         int y = fy + fh - FOOTER + 1;
         context.fill(cx - 2, y - 3, cx + cw + 2, y - 2, 0x30ffffff);
-        boolean trimmed = textRenderer.getWidth(footer) > cw;
-        context.drawTextWithShadow(textRenderer, Language.getInstance().reorder(textRenderer.trimToWidth(footer, cw)), cx, y, color);
+        boolean trimmed = font.width(footer) > cw;
+        context.drawString(font, Language.getInstance().getVisualOrder(font.substrByWidth(footer, cw)), cx, y, color);
         if (trimmed && mouseX >= cx && mouseX < cx + cw && mouseY >= y - 1 && mouseY < y + 10) {
-            context.drawOrderedTooltip(textRenderer, textRenderer.wrapLines(footer, 220), mouseX, mouseY);
+            context.renderTooltip(font, font.split(footer, 220), mouseX, mouseY);
         }
     }
 
-    private int beginScroll(DrawContext context, int top) {
+    private int beginScroll(GuiGraphics context, int top) {
         context.enableScissor(cx - 1, top, cx + cw + 1, cy + ch);
         return top - scroll;
     }
 
-    private void endScroll(DrawContext context, int top, int startY, int endY) {
+    private void endScroll(GuiGraphics context, int top, int startY, int endY) {
         context.disableScissor();
         int area = cy + ch - top;
         int content = endY - startY;
@@ -721,14 +720,14 @@ public class PlanScreen extends BlueprintScreen {
         }
     }
 
-    private Text renderPage(DrawContext context, int mouseX, int mouseY) {
+    private Component renderPage(GuiGraphics context, int mouseX, int mouseY) {
         return switch (page) {
             case MAP -> renderMap(context, mouseX, mouseY);
             case PRESTIGE -> {
                 int y = beginScroll(context, cy);
-                int end = BlueprintPanels.renderRank(context, textRenderer, village, cx, y, cw - 6);
+                int end = BlueprintPanels.renderRank(context, font, village, cx, y, cw - 6);
                 endScroll(context, cy, y, end);
-                yield scrollMax > 0 ? Text.translatable("gui.mca_vie.plan.hint.scroll") : Text.translatable("gui.mca_vie.plan.hint.prestige");
+                yield scrollMax > 0 ? Component.translatable("gui.mca_vie.plan.hint.scroll") : Component.translatable("gui.mca_vie.plan.hint.prestige");
             }
             case CATALOG -> renderCatalog(context);
             case VILLAGERS -> renderVillagers(context, mouseX, mouseY);
@@ -740,25 +739,25 @@ public class PlanScreen extends BlueprintScreen {
             case JUSTICE -> renderJustice(context);
             case TITLE -> {
                 int y = beginScroll(context, cy);
-                int end = BlueprintPanels.renderPersonal(context, textRenderer, rank, reputation,
+                int end = BlueprintPanels.renderPersonal(context, font, rank, reputation,
                         tasks == null || rank == null ? null : tasks.get(rank.promote()), completedTasks, cx, y, cw - 6);
                 endScroll(context, cy, y, end);
-                yield Text.translatable("gui.mca_vie.plan.hint.title");
+                yield Component.translatable("gui.mca_vie.plan.hint.title");
             }
         };
     }
 
-    private void renderOverlays(DrawContext context, int mouseX, int mouseY) {
+    private void renderOverlays(GuiGraphics context, int mouseX, int mouseY) {
         if (page == Page.CATALOG && selectedBuilding != null) {
-            ButtonWidget b = catalogButtons.get(selectedBuilding);
+            Button b = catalogButtons.get(selectedBuilding);
             if (b != null) {
-                context.drawBorder(b.getX() - 1, b.getY() - 1, b.getWidth() + 2, b.getHeight() + 2, GOLD);
+                context.renderOutline(b.getX() - 1, b.getY() - 1, b.getWidth() + 2, b.getHeight() + 2, GOLD);
             }
         }
         if (page == Page.REGISTRY) {
-            ButtonWidget b = registryButtons[registryFilter + 1];
+            Button b = registryButtons[registryFilter + 1];
             if (b != null) {
-                context.drawBorder(b.getX() - 1, b.getY() - 1, b.getWidth() + 2, b.getHeight() + 2, GOLD);
+                context.renderOutline(b.getX() - 1, b.getY() - 1, b.getWidth() + 2, b.getHeight() + 2, GOLD);
             }
         }
         if (page == Page.MAP) {
@@ -767,20 +766,20 @@ public class PlanScreen extends BlueprintScreen {
     }
 
 
-    private Text renderMap(DrawContext context, int mouseX, int mouseY) {
+    private Component renderMap(GuiGraphics context, int mouseX, int mouseY) {
         int size = mapSize();
         WidgetUtils.drawRectangle(context, cx, cy, cx + size, cy + size, 0x60ffffff);
         context.enableScissor(cx, cy, cx + size, cy + size);
         int half = size / 2;
         float sc = Math.min((float) half / (village.getBox().getMaxBlockCount() + 3) * 2, 2.0f);
-        var matrices = context.getMatrices();
-        matrices.push();
+        var matrices = context.pose();
+        matrices.pushPose();
         matrices.translate(cx + half, cy + half, 0);
         matrices.scale(sc, sc, 1.0f);
         matrices.translate(-village.getCenter().getX(), -village.getCenter().getZ(), 0);
-        if (client != null && client.player != null) {
-            int px = (int) client.player.getX();
-            int pz = (int) client.player.getZ();
+        if (minecraft != null && minecraft.player != null) {
+            int px = (int) minecraft.player.getX();
+            int pz = (int) minecraft.player.getZ();
             WidgetUtils.drawRectangle(context, px - 1, pz - 1, px + 1, pz + 1, 0xffff00ff);
         }
         for (Building building : village.getBuildings().values()) {
@@ -798,7 +797,7 @@ public class PlanScreen extends BlueprintScreen {
                 drawBuildingIcon(context, ICONS, c.getX(), c.getZ(), bt.iconU(), bt.iconV());
             }
         }
-        matrices.pop();
+        matrices.popPose();
         context.disableScissor();
 
         int x = cx + size + 8;
@@ -806,18 +805,18 @@ public class PlanScreen extends BlueprintScreen {
         int y = cy + 104;
         VillageState state = VillageState.of(village);
         Prestige.Result result = Prestige.evaluateCached(village, state.rank);
-        y = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.plan.map.rank", state.rank.getName()), x, y, w, GOLD);
-        y = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.plan.map.prestige", BlueprintPanels.format(result.prestige())), x, y, w, WHITE);
-        y = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.plan.map.buildings", village.getBuildings().size()), x, y, w, WHITE);
-        BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.plan.map.population", village.getPopulation(), village.getMaxPopulation()), x, y, w, WHITE);
+        y = BlueprintPanels.wrapped(context, font, Component.translatable("gui.mca_vie.plan.map.rank", state.rank.getName()), x, y, w, GOLD);
+        y = BlueprintPanels.wrapped(context, font, Component.translatable("gui.mca_vie.plan.map.prestige", BlueprintPanels.format(result.prestige())), x, y, w, WHITE);
+        y = BlueprintPanels.wrapped(context, font, Component.translatable("gui.mca_vie.plan.map.buildings", village.getBuildings().size()), x, y, w, WHITE);
+        BlueprintPanels.wrapped(context, font, Component.translatable("gui.mca_vie.plan.map.population", village.getPopulation(), village.getMaxPopulation()), x, y, w, WHITE);
 
         if (!village.isAutoScan() && village.getBuildings().size() <= 1) {
-            return Text.translatable("gui.mca_vie.plan.hint.autoscan");
+            return Component.translatable("gui.mca_vie.plan.hint.autoscan");
         }
-        return Text.translatable("gui.mca_vie.plan.hint.map");
+        return Component.translatable("gui.mca_vie.plan.hint.map");
     }
 
-    private void renderMapTooltips(DrawContext context, int mouseX, int mouseY) {
+    private void renderMapTooltips(GuiGraphics context, int mouseX, int mouseY) {
         int size = mapSize();
         if (mouseX < cx || mouseX >= cx + size || mouseY < cy || mouseY >= cy + size) {
             return;
@@ -834,7 +833,7 @@ public class PlanScreen extends BlueprintScreen {
             BuildingType bt = building.getBuildingType();
             if (bt.isIcon()) {
                 BlockPos c = building.getCenter();
-                if (c.getSquaredDistance(new Vec3i(localX, c.getY(), localZ)) < 36) {
+                if (c.distSqr(new Vec3i(localX, c.getY(), localZ)) < 36) {
                     hover.add(building);
                 }
             } else {
@@ -849,60 +848,60 @@ public class PlanScreen extends BlueprintScreen {
             return;
         }
         hover.sort((a, b) -> b.getCenter().getY() - a.getCenter().getY());
-        List<Text> lines = new ArrayList<>();
+        List<Component> lines = new ArrayList<>();
         for (Building b : hover) {
             if (!lines.isEmpty()) {
-                lines.add(Text.empty());
+                lines.add(Component.empty());
             }
             lines.addAll(buildingTooltip(b));
         }
-        context.drawTooltip(textRenderer, lines, mouseX, mouseY);
+        context.renderComponentTooltip(font, lines, mouseX, mouseY);
     }
 
-    private List<Text> buildingTooltip(Building building) {
-        List<Text> lines = new ArrayList<>();
+    private List<Component> buildingTooltip(Building building) {
+        List<Component> lines = new ArrayList<>();
         BuildingType bt = BuildingTypes.getInstance().getBuildingType(building.getType());
-        lines.add(Text.translatable("buildingType." + bt.name()).formatted(Formatting.WHITE));
+        lines.add(Component.translatable("buildingType." + bt.name()).withStyle(ChatFormatting.WHITE));
         for (String name : village.getResidents(building.getId())) {
-            lines.add(Text.literal(name).formatted(Formatting.AQUA));
+            lines.add(Component.literal(name).withStyle(ChatFormatting.AQUA));
         }
         BlueprintPanels.appendTooltip(lines, village, building);
-        for (Map.Entry<Identifier, List<BlockPos>> block : building.getBlocks().entrySet()) {
-            lines.add(Text.literal(block.getValue().size() + " x ").append(blockName(block.getKey())).formatted(Formatting.DARK_GRAY));
+        for (Map.Entry<ResourceLocation, List<BlockPos>> block : building.getBlocks().entrySet()) {
+            lines.add(Component.literal(block.getValue().size() + " x ").append(blockName(block.getKey())).withStyle(ChatFormatting.DARK_GRAY));
         }
         return lines;
     }
 
-    private static Text blockName(Identifier id) {
-        if (Registries.BLOCK.containsId(id)) {
-            return Text.translatable(Registries.BLOCK.get(id).getTranslationKey());
+    private static Component blockName(ResourceLocation id) {
+        if (BuiltInRegistries.BLOCK.containsKey(id)) {
+            return Component.translatable(BuiltInRegistries.BLOCK.get(id).getDescriptionId());
         }
-        return Text.translatable("tag." + id);
+        return Component.translatable("tag." + id);
     }
 
 
-    private Text renderCatalog(DrawContext context) {
+    private Component renderCatalog(GuiGraphics context) {
         int x = cx + 112;
         int w = cx + cw - x - 6;
         int y = beginScroll(context, cy);
         int start = y;
         if (selectedBuilding == null) {
-            y = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.blueprint.buildingTypes"), x, y, w, GRAY);
+            y = BlueprintPanels.wrapped(context, font, Component.translatable("gui.blueprint.buildingTypes"), x, y, w, GRAY);
         } else {
-            y = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("buildingType." + selectedBuilding.name()), x, y, w, selectedBuilding.getColor() | 0xff000000);
-            y = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("buildingType." + selectedBuilding.name() + ".description").formatted(Formatting.ITALIC), x, y, w, GRAY);
+            y = BlueprintPanels.wrapped(context, font, Component.translatable("buildingType." + selectedBuilding.name()), x, y, w, selectedBuilding.getColor() | 0xff000000);
+            y = BlueprintPanels.wrapped(context, font, Component.translatable("buildingType." + selectedBuilding.name() + ".description").withStyle(ChatFormatting.ITALIC), x, y, w, GRAY);
             y += 4;
-            y = BlueprintPanels.renderCatalogInfo(context, textRenderer, selectedBuilding, x, y, w);
+            y = BlueprintPanels.renderCatalogInfo(context, font, selectedBuilding, x, y, w);
             if (!selectedBuilding.getGroups().isEmpty()) {
                 y += 4;
-                y = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.plan.blocks"), x, y, w, LABEL);
-                for (Map.Entry<Identifier, Integer> b : selectedBuilding.getGroups().entrySet()) {
-                    y = BlueprintPanels.wrapped(context, textRenderer, Text.literal(b.getValue() + " x ").append(blockName(b.getKey())), x + 4, y, w - 4, WHITE);
+                y = BlueprintPanels.wrapped(context, font, Component.translatable("gui.mca_vie.plan.blocks"), x, y, w, LABEL);
+                for (Map.Entry<ResourceLocation, Integer> b : selectedBuilding.getGroups().entrySet()) {
+                    y = BlueprintPanels.wrapped(context, font, Component.literal(b.getValue() + " x ").append(blockName(b.getKey())), x + 4, y, w - 4, WHITE);
                 }
             }
         }
         endScroll(context, cy, start, y);
-        return Text.translatable("gui.blueprint.catalogHint");
+        return Component.translatable("gui.blueprint.catalogHint");
     }
 
 
@@ -910,9 +909,9 @@ public class PlanScreen extends BlueprintScreen {
         return village.getResidentNames().entrySet().stream().sorted(Map.Entry.comparingByValue()).toList();
     }
 
-    private Text renderVillagers(DrawContext context, int mouseX, int mouseY) {
+    private Component renderVillagers(GuiGraphics context, int mouseX, int mouseY) {
         VillageState state = VillageState.of(village);
-        context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.plan.villagers.count", village.getPopulation(), village.getMaxPopulation()), cx, cy, LABEL);
+        context.drawString(font, Component.translatable("gui.mca_vie.plan.villagers.count", village.getPopulation(), village.getMaxPopulation()), cx, cy, LABEL);
         int top = cy + 14;
         int y = beginScroll(context, top);
         int start = y;
@@ -923,68 +922,68 @@ public class PlanScreen extends BlueprintScreen {
                 hoveredVillager = resident.getKey();
             }
             boolean dead = state.deadResidents.contains(resident.getKey());
-            int nameWidth = textRenderer.getWidth(resident.getValue());
-            context.drawTextWithShadow(textRenderer, resident.getValue(), cx + 2, y, hover ? GOLD : dead ? GRAY : WHITE);
+            int nameWidth = font.width(resident.getValue());
+            context.drawString(font, resident.getValue(), cx + 2, y, hover ? GOLD : dead ? GRAY : WHITE);
             if (dead) {
-                context.drawTextWithShadow(textRenderer, "☠", cx + 5 + nameWidth, y, GRAY);
+                context.drawString(font, "☠", cx + 5 + nameWidth, y, GRAY);
             }
             VillageState.TaxEntry entry = state.taxRoll.get(resident.getKey());
             if (entry != null) {
                 Job job = Job.values()[Math.max(0, Math.min(Job.values().length - 1, entry.job()))];
-                Text line = Text.translatable("gui.mca_vie.villagers.tax", job.getName(),
-                        Text.translatable("job.mca_vie.level." + entry.level()), BlueprintPanels.format(Math.round(entry.amount() * 10) / 10.0));
+                Component line = Component.translatable("gui.mca_vie.villagers.tax", job.getName(),
+                        Component.translatable("job.mca_vie.level." + entry.level()), BlueprintPanels.format(Math.round(entry.amount() * 10) / 10.0));
                 int room = cw - 12 - nameWidth - (dead ? 18 : 8);
                 if (room > 20) {
-                    OrderedText trimmed = Language.getInstance().reorder(textRenderer.trimToWidth(line, room));
-                    context.drawTextWithShadow(textRenderer, trimmed, cx + cw - 6 - textRenderer.getWidth(trimmed), y, GRAY);
+                    FormattedCharSequence trimmed = Language.getInstance().getVisualOrder(font.substrByWidth(line, room));
+                    context.drawString(font, trimmed, cx + cw - 6 - font.width(trimmed), y, GRAY);
                 }
             }
             y += LINE;
         }
         endScroll(context, top, start, y);
-        return Text.translatable("gui.mca_vie.plan.hint.villagers");
+        return Component.translatable("gui.mca_vie.plan.hint.villagers");
     }
 
 
-    private Text renderRules(DrawContext context) {
+    private Component renderRules(GuiGraphics context) {
         VillageState state = VillageState.of(village);
         int[] values = ruleValues();
         Rank[] required = rulesRequired();
         int max = Math.round(VillageRights.maxTaxes(state.rank) * 100);
         int equilibrium = VillageEconomy.equilibrium(village, Prestige.evaluateCached(village, state.rank), values[0]);
         boolean storage = Prestige.hasActive(Prestige.evaluateCached(village, state.rank), village, "storage");
-        Text[] labels = {Text.translatable("gui.blueprint.taxes"), Text.translatable("gui.blueprint.birth"),
-                Text.translatable("gui.blueprint.marriage"), Text.translatable("gui.mca_vie.rules.nature")};
-        Text[] hints = {Text.translatable("gui.mca_vie.rules.tax_line", max, state.rank.getName(), equilibrium),
-                Text.translatable("gui.mca_vie.rules.birth_hint"), Text.translatable("gui.mca_vie.rules.marriage_hint"),
-                Text.translatable(storage ? "gui.mca_vie.rules.nature_hint" : "gui.mca_vie.rules.nature_storage")};
+        Component[] labels = {Component.translatable("gui.blueprint.taxes"), Component.translatable("gui.blueprint.birth"),
+                Component.translatable("gui.blueprint.marriage"), Component.translatable("gui.mca_vie.rules.nature")};
+        Component[] hints = {Component.translatable("gui.mca_vie.rules.tax_line", max, state.rank.getName(), equilibrium),
+                Component.translatable("gui.mca_vie.rules.birth_hint"), Component.translatable("gui.mca_vie.rules.marriage_hint"),
+                Component.translatable(storage ? "gui.mca_vie.rules.nature_hint" : "gui.mca_vie.rules.nature_storage")};
         int textW = cw - 84;
         int valueX = cx + cw - 38;
-        Text footer = Text.translatable("gui.mca_vie.plan.hint.rules");
+        Component footer = Component.translatable("gui.mca_vie.plan.hint.rules");
         for (int i = 0; i < 3; i++) {
             int y = cy + i * rulesRow();
             boolean ok = allowed(required[i]);
-            context.drawTextWithShadow(textRenderer, labels[i], cx, y, WHITE);
-            context.drawCenteredTextWithShadow(textRenderer, Text.literal(values[i] + " %"), valueX, y, ok ? GOLD : DIM);
-            int lineY = BlueprintPanels.wrapped(context, textRenderer, hints[i], cx, y + LINE, textW, i == 3 && !storage ? RED : GRAY);
+            context.drawString(font, labels[i], cx, y, WHITE);
+            context.drawCenteredString(font, Component.literal(values[i] + " %"), valueX, y, ok ? GOLD : DIM);
+            int lineY = BlueprintPanels.wrapped(context, font, hints[i], cx, y + LINE, textW, i == 3 && !storage ? RED : GRAY);
             if (!ok) {
-                context.drawTextWithShadow(textRenderer, locked(required[i]), cx, lineY, RED);
+                context.drawString(font, locked(required[i]), cx, lineY, RED);
             }
         }
         return footer;
     }
 
 
-    private Text renderTreasury(DrawContext context) {
+    private Component renderTreasury(GuiGraphics context) {
         if (!allowed(VillageRights.VIEW_TREASURY)) {
-            BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.plan.locked_page", Text.translatable(VillageRights.VIEW_TREASURY.getTranslationKey())), cx, cy, cw, RED);
+            BlueprintPanels.wrapped(context, font, Component.translatable("gui.mca_vie.plan.locked_page", Component.translatable(VillageRights.VIEW_TREASURY.getTranslationKey())), cx, cy, cw, RED);
             return null;
         }
         boolean actions = treasuryActions();
         int bottom = actions ? cy + ch - 42 : cy + ch;
         context.enableScissor(cx - 1, cy, cx + cw + 1, bottom);
         int y = cy - scroll;
-        int end = BlueprintPanels.renderTreasury(context, textRenderer, village, cx, y, cw - 6);
+        int end = BlueprintPanels.renderTreasury(context, font, village, cx, y, cw - 6);
         context.disableScissor();
         int area = bottom - cy;
         scrollMax = Math.max(0, end - y - area);
@@ -992,140 +991,140 @@ public class PlanScreen extends BlueprintScreen {
         if (actions) {
             int by = cy + ch - 38;
             context.fill(cx - 2, by - 4, cx + cw + 2, by - 3, 0x30ffffff);
-            context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.treasury.withdraw"), cx, by + 5, allowed(VillageRights.WITHDRAW) ? WHITE : DIM);
-            context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.treasury.deposit"), cx, by + 25, allowed(VillageRights.DEPOSIT) ? WHITE : DIM);
+            context.drawString(font, Component.translatable("gui.mca_vie.treasury.withdraw"), cx, by + 5, allowed(VillageRights.WITHDRAW) ? WHITE : DIM);
+            context.drawString(font, Component.translatable("gui.mca_vie.treasury.deposit"), cx, by + 25, allowed(VillageRights.DEPOSIT) ? WHITE : DIM);
             int x = cx + 50 + 112;
             if (!allowed(VillageRights.WITHDRAW)) {
-                Text why = locked(VillageRights.WITHDRAW);
-                context.drawTextWithShadow(textRenderer, Language.getInstance().reorder(textRenderer.trimToWidth(why, cx + cw - x)), x, by + 5, RED);
+                Component why = locked(VillageRights.WITHDRAW);
+                context.drawString(font, Language.getInstance().getVisualOrder(font.substrByWidth(why, cx + cw - x)), x, by + 5, RED);
             } else if (VillageEconomy.availableShare(VillageState.of(village)) <= 0) {
-                context.drawTextWithShadow(textRenderer, Language.getInstance().reorder(textRenderer.trimToWidth(
-                        Text.translatable("gui.mca_vie.plan.withdraw_empty"), cx + cw - x)), x, by + 5, GRAY);
+                context.drawString(font, Language.getInstance().getVisualOrder(font.substrByWidth(
+                        Component.translatable("gui.mca_vie.plan.withdraw_empty"), cx + cw - x)), x, by + 5, GRAY);
             }
         }
-        return scrollMax > 0 ? Text.translatable("gui.mca_vie.plan.hint.scroll") : Text.translatable("gui.mca_vie.plan.hint.treasury");
+        return scrollMax > 0 ? Component.translatable("gui.mca_vie.plan.hint.scroll") : Component.translatable("gui.mca_vie.plan.hint.treasury");
     }
 
 
-    private Text renderDecrees(DrawContext context) {
+    private Component renderDecrees(GuiGraphics context) {
         long today = today();
         VillageState state = VillageState.of(village);
         int x = cx + decreeButtonWidth() + 6;
         int w = cx + cw - x;
         int y = cy;
         for (Decree decree : Decree.values()) {
-            MutableText reason = VillageDecrees.unavailable(village, decree, today);
+            MutableComponent reason = VillageDecrees.unavailable(village, decree, today);
             boolean active = state.activeDecrees.contains(decree);
-            Text status;
+            Component status;
             int color;
             if (reason != null) {
                 status = reason;
                 color = GRAY;
             } else if (decree.kind == Decree.Kind.TOGGLE) {
-                status = Text.translatable(active ? "gui.mca_vie.decree.active" : "gui.mca_vie.decree.weekly");
+                status = Component.translatable(active ? "gui.mca_vie.decree.active" : "gui.mca_vie.decree.weekly");
                 color = active ? GREEN : WHITE;
             } else if (decree == Decree.RENOVATION) {
-                status = Text.translatable("gui.mca_vie.decree.renovation_cost", VillageConfig.get().renovationWeeks);
+                status = Component.translatable("gui.mca_vie.decree.renovation_cost", VillageConfig.get().renovationWeeks);
                 color = WHITE;
             } else {
-                status = Text.translatable("gui.mca_vie.decree.cost", VillageDecrees.launchCost(village, decree));
+                status = Component.translatable("gui.mca_vie.decree.cost", VillageDecrees.launchCost(village, decree));
                 color = WHITE;
             }
-            List<OrderedText> lines = textRenderer.wrapLines(status, Math.max(40, w));
+            List<FormattedCharSequence> lines = font.split(status, Math.max(40, w));
             if (lines.size() == 1) {
-                context.drawTextWithShadow(textRenderer, lines.get(0), x, y + 5, color);
+                context.drawString(font, lines.get(0), x, y + 5, color);
             } else {
-                context.drawTextWithShadow(textRenderer, lines.get(0), x, y, color);
-                context.drawTextWithShadow(textRenderer, lines.get(1), x, y + 10, color);
+                context.drawString(font, lines.get(0), x, y, color);
+                context.drawString(font, lines.get(1), x, y + 10, color);
             }
             y += 21;
         }
         if (!allowed(VillageRights.DECREES)) {
-            return Text.translatable("gui.mca_vie.decree.rank_low", Text.translatable(VillageRights.DECREES.getTranslationKey())).formatted(Formatting.RED);
+            return Component.translatable("gui.mca_vie.decree.rank_low", Component.translatable(VillageRights.DECREES.getTranslationKey())).withStyle(ChatFormatting.RED);
         }
-        return Text.translatable("gui.mca_vie.plan.hint.decrees");
+        return Component.translatable("gui.mca_vie.plan.hint.decrees");
     }
 
 
     /** Explique pourquoi le Marché est inactif : bâtiment manquant, rang, surface, délabrement… */
-    private Text marketInactiveReason(VillageState state) {
+    private Component marketInactiveReason(VillageState state) {
         if (!state.economyActive) {
-            return Text.translatable("gui.mca_vie.market.inactive.economy");
+            return Component.translatable("gui.mca_vie.market.inactive.economy");
         }
         Prestige.Result result = Prestige.evaluateCached(village, state.rank);
         for (String type : new String[]{"market"}) {
-            Text reason = buildingInactiveReason(result, type);
+            Component reason = buildingInactiveReason(result, type);
             if (reason != null) {
                 return reason;
             }
         }
-        return Text.translatable("gui.mca_vie.market.inactive");
+        return Component.translatable("gui.mca_vie.market.inactive");
     }
 
-    private Text buildingInactiveReason(Prestige.Result result, String type) {
-        Text name = Text.translatable("buildingType." + type);
+    private Component buildingInactiveReason(Prestige.Result result, String type) {
+        Component name = Component.translatable("buildingType." + type);
         List<Building> buildings = village.getBuildingsOfType(type).toList();
         if (buildings.isEmpty()) {
-            return Text.translatable("gui.mca_vie.market.inactive.missing", name);
+            return Component.translatable("gui.mca_vie.market.inactive.missing", name);
         }
         if (Prestige.hasActive(result, village, type)) {
             return null;
         }
         Prestige.Score score = result.score(buildings.get(0));
         if (score == null || score.rule() == null) {
-            return Text.translatable("gui.mca_vie.market.inactive.reason", name, Text.translatable("gui.mca_vie.building.not_rated"));
+            return Component.translatable("gui.mca_vie.market.inactive.reason", name, Component.translatable("gui.mca_vie.building.not_rated"));
         }
-        Text why = switch (score.status()) {
-            case NEXT_RANK, TOO_HIGH -> Text.translatable("gui.mca_vie.market.inactive.rank", score.rule().requiredRank().getName());
-            case TOO_SMALL -> Text.translatable("gui.mca_vie.market.inactive.small", score.surface(), score.rule().minSurface);
-            case OVER_MAX -> Text.translatable("gui.mca_vie.building.over_max");
-            case DECAYED -> Text.translatable("gui.mca_vie.building.decayed");
-            default -> Text.translatable("gui.mca_vie.building.not_rated");
+        Component why = switch (score.status()) {
+            case NEXT_RANK, TOO_HIGH -> Component.translatable("gui.mca_vie.market.inactive.rank", score.rule().requiredRank().getName());
+            case TOO_SMALL -> Component.translatable("gui.mca_vie.market.inactive.small", score.surface(), score.rule().minSurface);
+            case OVER_MAX -> Component.translatable("gui.mca_vie.building.over_max");
+            case DECAYED -> Component.translatable("gui.mca_vie.building.decayed");
+            default -> Component.translatable("gui.mca_vie.building.not_rated");
         };
-        return Text.translatable("gui.mca_vie.market.inactive.reason", name, why);
+        return Component.translatable("gui.mca_vie.market.inactive.reason", name, why);
     }
 
-    private Text renderMarket(DrawContext context) {
+    private Component renderMarket(GuiGraphics context) {
         VillageState state = VillageState.of(village);
         VillageConfig config = VillageConfig.get();
         int y = cy;
         if (!state.marketActive) {
-            y = BlueprintPanels.wrapped(context, textRenderer, marketInactiveReason(state), cx, y, cw, RED) - LINE;
+            y = BlueprintPanels.wrapped(context, font, marketInactiveReason(state), cx, y, cw, RED) - LINE;
         } else {
-            Text day = Text.translatable("calendar.mca_vie.day." + config.marketDayOfWeek);
-            context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.market.day", day, config.marketStartHour, config.marketEndHour), cx, y, GOLD);
+            Component day = Component.translatable("calendar.mca_vie.day." + config.marketDayOfWeek);
+            context.drawString(font, Component.translatable("gui.mca_vie.market.day", day, config.marketStartHour, config.marketEndHour), cx, y, GOLD);
         }
         y += LINE;
         if (!com.maitreyoshi.mcavie.village.VillageMarket.AUTOMATIC_TRADE) {
             int top = y;
             y = beginScroll(context, top);
             int startY = y;
-            y = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.market.manual"), cx, y, cw - 6, GRAY) + 4;
+            y = BlueprintPanels.wrapped(context, font, Component.translatable("gui.mca_vie.market.manual"), cx, y, cw - 6, GRAY) + 4;
             if (state.lastMarketSales > 0 || state.lastMarketOrders > 0) {
-                y = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.market.last", state.lastMarketSales, state.lastMarketOrders), cx, y, cw - 6, GOLD) + 4;
+                y = BlueprintPanels.wrapped(context, font, Component.translatable("gui.mca_vie.market.last", state.lastMarketSales, state.lastMarketOrders), cx, y, cw - 6, GOLD) + 4;
             }
-            y = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.market.pricelist"), cx, y, cw - 6, GOLD);
+            y = BlueprintPanels.wrapped(context, font, Component.translatable("gui.mca_vie.market.pricelist"), cx, y, cw - 6, GOLD);
             List<String> products = BlueprintPanels.marketProducts();
             int colW = (cw - 10) / 2;
             for (int i = 0; i < products.size(); i++) {
                 String id = products.get(i);
-                Text line = Text.translatable("gui.mca_vie.market.price", config.unitsPerEmerald(id), Registries.ITEM.get(Identifier.tryParse(id)).getName());
-                context.drawTextWithShadow(textRenderer, Language.getInstance().reorder(textRenderer.trimToWidth(line, colW)), cx + (i % 2) * (colW + 4), y + (i / 2) * LINE, GRAY);
+                Component line = Component.translatable("gui.mca_vie.market.price", config.unitsPerEmerald(id), BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(id)).getDescription());
+                context.drawString(font, Language.getInstance().getVisualOrder(font.substrByWidth(line, colW)), cx + (i % 2) * (colW + 4), y + (i / 2) * LINE, GRAY);
             }
             y += (products.size() + 1) / 2 * LINE;
             endScroll(context, top, startY, y);
             return null;
         }
         if (state.lastMarketSales > 0 || state.lastMarketOrders > 0) {
-            context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.market.last", state.lastMarketSales, state.lastMarketOrders), cx, y, GRAY);
+            context.drawString(font, Component.translatable("gui.mca_vie.market.last", state.lastMarketSales, state.lastMarketOrders), cx, y, GRAY);
         }
         y += LINE;
-        UUID me = client == null || client.player == null ? null : client.player.getUuid();
+        UUID me = minecraft == null || minecraft.player == null ? null : minecraft.player.getUUID();
         long waiting = state.orders.stream().filter(o -> o.player.equals(me) && !o.ready).count();
         long ready = state.orders.stream().filter(o -> o.player.equals(me) && o.ready).count();
-        context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.market.orders", waiting, ready), cx, y, WHITE);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal((marketPage + 1) + " / " + marketPages()), cx + 35, cy + ch - 13, GRAY);
-        return Text.translatable("gui.mca_vie.plan.hint.market");
+        context.drawString(font, Component.translatable("gui.mca_vie.market.orders", waiting, ready), cx, y, WHITE);
+        context.drawCenteredString(font, Component.literal((marketPage + 1) + " / " + marketPages()), cx + 35, cy + ch - 13, GRAY);
+        return Component.translatable("gui.mca_vie.plan.hint.market");
     }
 
 
@@ -1133,33 +1132,33 @@ public class PlanScreen extends BlueprintScreen {
         return VillageState.of(village).registry.stream().filter(e -> registryFilter < 0 || e.kind() == registryFilter).toList();
     }
 
-    private Text renderRegistry(DrawContext context, int mouseX, int mouseY) {
+    private Component renderRegistry(GuiGraphics context, int mouseX, int mouseY) {
         List<CivilRegistry.Entry> entries = registryEntries();
         int top = cy + 22;
         int y = beginScroll(context, top);
         int start = y;
-        Text hovered = null;
+        Component hovered = null;
         if (entries.isEmpty()) {
-            context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.registry.empty"), cx, y, GRAY);
+            context.drawString(font, Component.translatable("gui.mca_vie.registry.empty"), cx, y, GRAY);
             y += LINE;
         }
         int width = cw - 6;
         for (CivilRegistry.Entry e : entries) {
-            Text date = Text.empty().append(e.hasExact() ? TreeTexts.calendarDate(e.exact()) : TreeTexts.date(e.day())).append(" : ");
-            MutableText line = BlueprintPanels.registryLine(e);
-            int dateWidth = Math.min(textRenderer.getWidth(date), width / 2);
+            Component date = Component.empty().append(e.hasExact() ? TreeTexts.calendarDate(e.exact()) : TreeTexts.date(e.day())).append(" : ");
+            MutableComponent line = BlueprintPanels.registryLine(e);
+            int dateWidth = Math.min(font.width(date), width / 2);
             int rest = width - dateWidth;
-            context.drawTextWithShadow(textRenderer, Language.getInstance().reorder(textRenderer.trimToWidth(date, dateWidth)), cx, y, GRAY);
-            context.drawTextWithShadow(textRenderer, Language.getInstance().reorder(textRenderer.trimToWidth(line, rest)), cx + dateWidth, y, BlueprintPanels.registryColor(e));
-            if ((textRenderer.getWidth(line) > rest || textRenderer.getWidth(date) > dateWidth)
+            context.drawString(font, Language.getInstance().getVisualOrder(font.substrByWidth(date, dateWidth)), cx, y, GRAY);
+            context.drawString(font, Language.getInstance().getVisualOrder(font.substrByWidth(line, rest)), cx + dateWidth, y, BlueprintPanels.registryColor(e));
+            if ((font.width(line) > rest || font.width(date) > dateWidth)
                     && mouseX >= cx && mouseX < cx + width && mouseY >= Math.max(top, y - 1) && mouseY < Math.min(cy + ch, y + LINE - 1)) {
-                hovered = Text.empty().append(date).append(line);
+                hovered = Component.empty().append(date).append(line);
             }
             y += LINE;
         }
         endScroll(context, top, start, y);
         if (hovered != null) {
-            context.drawOrderedTooltip(textRenderer, textRenderer.wrapLines(hovered, 240), mouseX, mouseY);
+            context.renderTooltip(font, font.split(hovered, 240), mouseX, mouseY);
         }
         int year = WorldCalendar.displayYearOfDay(today());
         int[] counts = new int[3];
@@ -1168,25 +1167,25 @@ public class PlanScreen extends BlueprintScreen {
                 counts[e.kind()]++;
             }
         }
-        return Text.translatable("gui.mca_vie.registry.year", year, counts[0], counts[1], counts[2]);
+        return Component.translatable("gui.mca_vie.registry.year", year, counts[0], counts[1], counts[2]);
     }
 
 
-    private Text renderJustice(DrawContext context) {
+    private Component renderJustice(GuiGraphics context) {
         VillageState state = VillageState.of(village);
         VillageConfig config = VillageConfig.get();
         long today = today();
-        Text status = state.prisonActive ? Text.translatable("gui.mca_vie.justice.prison_ok", config.prisonDays)
-                : Text.translatable("gui.mca_vie.justice.no_prison", config.building("prison") == null ? "" : config.building("prison").requiredRank().getName());
-        List<OrderedText> statusLines = textRenderer.wrapLines(status, cw);
+        Component status = state.prisonActive ? Component.translatable("gui.mca_vie.justice.prison_ok", config.prisonDays)
+                : Component.translatable("gui.mca_vie.justice.no_prison", config.building("prison") == null ? "" : config.building("prison").requiredRank().getName());
+        List<FormattedCharSequence> statusLines = font.split(status, cw);
         for (int i = 0; i < Math.min(2, statusLines.size()); i++) {
-            context.drawTextWithShadow(textRenderer, statusLines.get(i), cx, cy + i * 10, state.prisonActive ? GREEN : GRAY);
+            context.drawString(font, statusLines.get(i), cx, cy + i * 10, state.prisonActive ? GREEN : GRAY);
         }
-        context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.plan.justice.cases", state.cases.size()), cx, cy + 24, LABEL);
+        context.drawString(font, Component.translatable("gui.mca_vie.plan.justice.cases", state.cases.size()), cx, cy + 24, LABEL);
         int rows = justiceRows();
         int y = cy + 36;
         if (state.cases.isEmpty()) {
-            context.drawTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.justice.no_case"), cx + 4, y + 5, GRAY);
+            context.drawString(font, Component.translatable("gui.mca_vie.justice.no_case"), cx + 4, y + 5, GRAY);
         }
         int textW = cw - 98;
         for (int i = 0; i < rows; i++) {
@@ -1196,24 +1195,24 @@ public class PlanScreen extends BlueprintScreen {
             }
             VillageState.Case c = state.cases.get(index);
             long left = Math.max(0, c.day + config.judgmentDays - today);
-            context.drawTextWithShadow(textRenderer, Language.getInstance().reorder(textRenderer.trimToWidth(Text.translatable("gui.mca_vie.justice.case", c.name, c.amount), textW)), cx + 4, y, WHITE);
-            context.drawTextWithShadow(textRenderer, Language.getInstance().reorder(textRenderer.trimToWidth(Text.translatable("gui.mca_vie.justice.case_due", left), textW)), cx + 4, y + 10, GRAY);
+            context.drawString(font, Language.getInstance().getVisualOrder(font.substrByWidth(Component.translatable("gui.mca_vie.justice.case", c.name, c.amount), textW)), cx + 4, y, WHITE);
+            context.drawString(font, Language.getInstance().getVisualOrder(font.substrByWidth(Component.translatable("gui.mca_vie.justice.case_due", left), textW)), cx + 4, y + 10, GRAY);
             y += 22;
         }
         int top = cy + 36 + rows * 22 + 4;
         context.fill(cx - 2, top - 3, cx + cw + 2, top - 2, 0x30ffffff);
         int py = beginScroll(context, top);
         int start = py;
-        py = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.justice.prisoners", state.prisoners.size()), cx, py, cw - 6, GOLD);
+        py = BlueprintPanels.wrapped(context, font, Component.translatable("gui.mca_vie.justice.prisoners", state.prisoners.size()), cx, py, cw - 6, GOLD);
         for (VillageState.Prisoner p : state.prisoners.values()) {
-            py = BlueprintPanels.wrapped(context, textRenderer, Text.translatable("gui.mca_vie.justice.prisoner", p.name, Math.max(0, p.releaseDay - today)), cx + 6, py, cw - 12, GRAY);
+            py = BlueprintPanels.wrapped(context, font, Component.translatable("gui.mca_vie.justice.prisoner", p.name, Math.max(0, p.releaseDay - today)), cx + 6, py, cw - 12, GRAY);
         }
         endScroll(context, top, start, py);
         if (!allowed(VillageRights.JUSTICE)) {
-            return Text.translatable("gui.mca_vie.justice.rank_low", Text.translatable(VillageRights.JUSTICE.getTranslationKey()),
-                    rank == null ? Text.literal("?") : Text.translatable(rank.getTranslationKey())).formatted(Formatting.RED);
+            return Component.translatable("gui.mca_vie.justice.rank_low", Component.translatable(VillageRights.JUSTICE.getTranslationKey()),
+                    rank == null ? Component.literal("?") : Component.translatable(rank.getTranslationKey())).withStyle(ChatFormatting.RED);
         }
-        return Text.translatable("gui.mca_vie.justice.hint", config.crimeHappiness);
+        return Component.translatable("gui.mca_vie.justice.hint", config.crimeHappiness);
     }
 
 
@@ -1227,17 +1226,17 @@ public class PlanScreen extends BlueprintScreen {
                     scroll = 0;
                     rebuild();
                 }
-                if (client != null) {
-                    client.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.UI_BUTTON_CLICK, 1.0F));
+                if (minecraft != null) {
+                    minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
                 }
                 return true;
             }
-            if (page == Page.VILLAGERS && hoveredVillager != null && client != null) {
-                client.setScreen(new FamilyTreeScreen(hoveredVillager));
+            if (page == Page.VILLAGERS && hoveredVillager != null && minecraft != null) {
+                minecraft.setScreen(new FamilyTreeScreen(hoveredVillager));
                 return true;
             }
         }
-        for (Element child : children()) {
+        for (GuiEventListener child : children()) {
             if (child.mouseClicked(mouseX, mouseY, button)) {
                 setFocused(child);
                 if (button == 0) {

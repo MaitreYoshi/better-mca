@@ -10,9 +10,9 @@ import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.VillagerLike;
 import net.mca.entity.ai.relationship.EntityRelationship;
 import net.mca.entity.ai.relationship.Gender;
-import net.minecraft.entity.Entity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
@@ -42,9 +42,9 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
         void mcavie$setVaultOwner(@Nullable UUID owner);
     }
 
-    public static TombstoneDetails of(Entity entity, ServerWorld world, @Nullable Long birth, long death) {
+    public static TombstoneDetails of(Entity entity, ServerLevel world, @Nullable Long birth, long death) {
         String name = entity.getName().getString();
-        String canonical = SurnameRegistry.get(world.getServer()).get(entity.getUuid());
+        String canonical = SurnameRegistry.get(world.getServer()).get(entity.getUUID());
         String surname = "";
         if (canonical != null) {
             Gender gender = EntityRelationship.of(entity).map(EntityRelationship::getGender).orElse(Gender.MALE);
@@ -56,17 +56,17 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
             surname = "";
         }
         LifeRegistry life = LifeRegistry.get(world.getServer());
-        Long exactDeath = life.getDeathDay(entity.getUuid()) != null ? life.exactDeath(entity.getUuid()) : null;
-        return new TombstoneDetails(entity.getUuid(), first, surname, jobOf(entity, world), birth, death, tierOf(entity, world),
-                life.pastLives(entity.getUuid()), birth == null ? null : life.exactBirth(entity.getUuid()),
+        Long exactDeath = life.getDeathDay(entity.getUUID()) != null ? life.exactDeath(entity.getUUID()) : null;
+        return new TombstoneDetails(entity.getUUID(), first, surname, jobOf(entity, world), birth, death, tierOf(entity, world),
+                life.pastLives(entity.getUUID()), birth == null ? null : life.exactBirth(entity.getUUID()),
                 exactDeath != null ? exactDeath : WorldCalendar.exactCalendarDay(world));
     }
 
-    public static int tierOf(Entity entity, ServerWorld world) {
+    public static int tierOf(Entity entity, ServerLevel world) {
         if (!(entity instanceof VillagerEntityMCA villager) || villager.isBaby()) {
             return MIDDLE;
         }
-        WorkRegistry.Record record = WorkRegistry.get(world.getServer()).get(entity.getUuid());
+        WorkRegistry.Record record = WorkRegistry.get(world.getServer()).get(entity.getUUID());
         Job job = record == null ? Job.NONE : record.job;
         String key = job == Job.RETIRED ? record.formerJob : job == Job.NONE ? null : "job.mca_vie." + job.id();
         int score;
@@ -79,7 +79,7 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
             score++;
         }
         score += villager.getResidency().getHomeVillage()
-                .filter(village -> village.hasResident(villager.getUuid()))
+                .filter(village -> village.hasResident(villager.getUUID()))
                 .map(village -> VillageState.of(village).rank.ordinal())
                 .orElse(0);
         AgingConfig config = AgingConfig.get();
@@ -87,13 +87,13 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
     }
 
     @Nullable
-    private static String jobOf(Entity entity, ServerWorld world) {
+    private static String jobOf(Entity entity, ServerLevel world) {
         if (!(entity instanceof VillagerLike<?> villager) || villager.asEntity().isBaby()) {
             return null;
         }
-        Job job = WorkRegistry.get(world.getServer()).getJob(entity.getUuid());
+        Job job = WorkRegistry.get(world.getServer()).getJob(entity.getUUID());
         if (job == Job.RETIRED) {
-            String former = WorkRegistry.get(world.getServer()).retiredKey(entity.getUuid(), true);
+            String former = WorkRegistry.get(world.getServer()).retiredKey(entity.getUUID(), true);
             return former.isEmpty() ? null : former;
         }
         if (job != Job.NONE) {
@@ -104,16 +104,16 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
     }
 
     @Nullable
-    public static TombstoneDetails read(@Nullable NbtCompound parent) {
+    public static TombstoneDetails read(@Nullable CompoundTag parent) {
         if (parent == null || !parent.contains(KEY)) {
             return null;
         }
-        NbtCompound nbt = parent.getCompound(KEY);
-        if (!nbt.containsUuid("person")) {
+        CompoundTag nbt = parent.getCompound(KEY);
+        if (!nbt.hasUUID("person")) {
             return null;
         }
         return new TombstoneDetails(
-                nbt.getUuid("person"),
+                nbt.getUUID("person"),
                 nbt.getString("first"),
                 nbt.getString("last"),
                 nbt.contains("job") ? nbt.getString("job") : null,
@@ -127,9 +127,9 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
         );
     }
 
-    public void write(NbtCompound parent) {
-        NbtCompound nbt = new NbtCompound();
-        nbt.putUuid("person", person);
+    public void write(CompoundTag parent) {
+        CompoundTag nbt = new CompoundTag();
+        nbt.putUUID("person", person);
         nbt.putString("first", firstName);
         nbt.putString("last", lastName);
         if (job != null) {

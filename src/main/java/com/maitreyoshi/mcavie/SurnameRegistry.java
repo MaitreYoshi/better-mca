@@ -1,33 +1,33 @@
 package com.maitreyoshi.mcavie;
 
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.PersistentState;
+import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class SurnameRegistry extends PersistentState {
+public class SurnameRegistry extends SavedData {
     private static final String DATA_ID = "mca_surnames";
 
     private final Map<UUID, String> surnames = new HashMap<>();
 
     public static SurnameRegistry get(MinecraftServer server) {
-        return server.getOverworld().getPersistentStateManager().getOrCreate(SurnameRegistry::fromNbt, SurnameRegistry::new, DATA_ID);
+        return server.overworld().getDataStorage().computeIfAbsent(SurnameRegistry::fromNbt, SurnameRegistry::new, DATA_ID);
     }
 
-    private static SurnameRegistry fromNbt(NbtCompound nbt) {
+    private static SurnameRegistry fromNbt(CompoundTag nbt) {
         SurnameRegistry registry = new SurnameRegistry();
-        NbtCompound entries = nbt.getCompound("surnames");
-        for (String key : entries.getKeys()) {
+        CompoundTag entries = nbt.getCompound("surnames");
+        for (String key : entries.getAllKeys()) {
             try {
                 String stored = entries.getString(key);
                 String upper = SurnameText.upper(stored);
                 registry.surnames.put(UUID.fromString(key), upper);
                 if (!upper.equals(stored)) {
-                    registry.markDirty();
+                    registry.setDirty();
                 }
             } catch (IllegalArgumentException e) {
                 MCAVie.LOGGER.warn("UUID invalide dans le registre des noms : {}", key);
@@ -37,8 +37,8 @@ public class SurnameRegistry extends PersistentState {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
-        NbtCompound entries = new NbtCompound();
+    public CompoundTag save(CompoundTag nbt) {
+        CompoundTag entries = new CompoundTag();
         surnames.forEach((uuid, surname) -> entries.putString(uuid.toString(), surname));
         nbt.put("surnames", entries);
         return nbt;
@@ -52,7 +52,7 @@ public class SurnameRegistry extends PersistentState {
     public void set(UUID uuid, String surname) {
         String upper = SurnameText.upper(surname);
         if (!upper.equals(surnames.put(uuid, upper))) {
-            markDirty();
+            setDirty();
         }
     }
 }

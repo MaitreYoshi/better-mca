@@ -7,22 +7,22 @@ import com.maitreyoshi.mcavie.work.WorkRegistry;
 import com.maitreyoshi.mcavie.work.WorkStatus;
 import com.maitreyoshi.mcavie.work.block.WorkstationBlock;
 import net.mca.entity.VillagerEntityMCA;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.tag.BlockTags;
-import net.minecraft.registry.tag.ItemTags;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.LightType;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.Container;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -45,7 +45,7 @@ public class MinerTask extends AbstractJobTask {
     private static final long BLACKLIST_TICKS = 600;
     private static final int RETRY_TICKS = 100;
     private static final long ORE_SCAN_INTERVAL = 200;
-    private static final List<TagKey<net.minecraft.block.Block>> ORES = List.of(BlockTags.COAL_ORES, BlockTags.IRON_ORES, BlockTags.COPPER_ORES,
+    private static final List<TagKey<net.minecraft.world.level.block.Block>> ORES = List.of(BlockTags.COAL_ORES, BlockTags.IRON_ORES, BlockTags.COPPER_ORES,
             BlockTags.GOLD_ORES, BlockTags.REDSTONE_ORES, BlockTags.LAPIS_ORES, BlockTags.DIAMOND_ORES, BlockTags.EMERALD_ORES);
 
     private record Segment(List<BlockPos> blocks, boolean vital) {
@@ -72,37 +72,37 @@ public class MinerTask extends AbstractJobTask {
     }
 
     @Override
-    protected boolean canWork(ServerWorld world, VillagerEntityMCA villager) {
-        if (world.getTime() < nextTry) {
+    protected boolean canWork(ServerLevel world, VillagerEntityMCA villager) {
+        if (world.getGameTime() < nextTry) {
             return false;
         }
         if (updatePlan(world, villager)) {
-            if (world.getTime() >= nextOreScan) {
-                nextOreScan = world.getTime() + ORE_SCAN_INTERVAL;
+            if (world.getGameTime() >= nextOreScan) {
+                nextOreScan = world.getGameTime() + ORE_SCAN_INTERVAL;
                 scanOres(world, villager);
             }
             if (findTarget(world, villager) != null) {
                 return true;
             }
         }
-        nextTry = world.getTime() + RETRY_TICKS;
+        nextTry = world.getGameTime() + RETRY_TICKS;
         return false;
     }
 
     @Override
-    protected boolean keepWorking(ServerWorld world, VillagerEntityMCA villager) {
+    protected boolean keepWorking(ServerLevel world, VillagerEntityMCA villager) {
         return target != null;
     }
 
     @Override
     @Nullable
-    protected WorkStatus idleStatus(ServerWorld world, VillagerEntityMCA villager) {
+    protected WorkStatus idleStatus(ServerLevel world, VillagerEntityMCA villager) {
         return depotPos(villager) != null && bestPickaxe(world, villager, null) == null ? WorkStatus.NO_TOOL : null;
     }
 
     @Override
     protected void holdTool(VillagerEntityMCA villager) {
-        ItemStack pickaxe = villager.getWorld() instanceof ServerWorld world ? bestPickaxe(world, villager, null) : null;
+        ItemStack pickaxe = villager.level() instanceof ServerLevel world ? bestPickaxe(world, villager, null) : null;
         if (pickaxe == null) {
             super.holdTool(villager);
         } else {
@@ -111,18 +111,18 @@ public class MinerTask extends AbstractJobTask {
     }
 
     @Nullable
-    private static ItemStack bestPickaxe(ServerWorld world, VillagerEntityMCA villager, @Nullable BlockState state) {
-        Inventory cart = depotInventory(world, villager);
-        BlockState reference = state == null ? Blocks.STONE.getDefaultState() : state;
+    private static ItemStack bestPickaxe(ServerLevel world, VillagerEntityMCA villager, @Nullable BlockState state) {
+        Container cart = depotInventory(world, villager);
+        BlockState reference = state == null ? Blocks.STONE.defaultBlockState() : state;
         ItemStack best = null;
         float bestSpeed = 0F;
-        for (int i = 0; cart != null && i < cart.size(); i++) {
-            ItemStack stack = cart.getStack(i);
-            if (stack.isEmpty() || !stack.isIn(ItemTags.PICKAXES)
-                    || (state != null && state.isToolRequired() && !stack.isSuitableFor(state))) {
+        for (int i = 0; cart != null && i < cart.getContainerSize(); i++) {
+            ItemStack stack = cart.getItem(i);
+            if (stack.isEmpty() || !stack.is(ItemTags.PICKAXES)
+                    || (state != null && state.requiresCorrectToolForDrops() && !stack.isCorrectToolForDrops(state))) {
                 continue;
             }
-            float speed = stack.getMiningSpeedMultiplier(reference);
+            float speed = stack.getDestroySpeed(reference);
             if (best == null || speed > bestSpeed) {
                 best = stack;
                 bestSpeed = speed;
@@ -137,14 +137,14 @@ public class MinerTask extends AbstractJobTask {
     }
 
     @Override
-    protected void run(ServerWorld world, VillagerEntityMCA villager, long time) {
+    protected void start(ServerLevel world, VillagerEntityMCA villager, long time) {
         holdTool(villager);
         selectTarget(world, villager);
     }
 
     @Override
-    protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
-        super.finishRunning(world, villager, time);
+    protected void stop(ServerLevel world, VillagerEntityMCA villager, long time) {
+        super.stop(world, villager, time);
         clearBreaking(world, villager, target);
         target = null;
         reach.reset();
@@ -152,7 +152,7 @@ public class MinerTask extends AbstractJobTask {
     }
 
     @Override
-    protected void keepRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+    protected void tick(ServerLevel world, VillagerEntityMCA villager, long time) {
         if (target == null) {
             return;
         }
@@ -187,23 +187,23 @@ public class MinerTask extends AbstractJobTask {
         mine(world, villager, done);
         ores.remove(done);
         for (Direction direction : Direction.values()) {
-            addOre(world, villager, done.offset(direction));
+            addOre(world, villager, done.relative(direction));
         }
         placeTorch(world, villager, done);
         selectTarget(world, villager);
     }
 
-    private void mine(ServerWorld world, VillagerEntityMCA villager, BlockPos pos) {
+    private void mine(ServerLevel world, VillagerEntityMCA villager, BlockPos pos) {
         BlockState state = world.getBlockState(pos);
-        if (!mayAlter(world, pos) || !world.breakBlock(pos, false, villager)) {
+        if (!mayAlter(world, pos) || !world.destroyBlock(pos, false, villager)) {
             return;
         }
-        Inventory cart = depotInventory(world, villager);
+        Container cart = depotInventory(world, villager);
         ItemStack pickaxe = bestPickaxe(world, villager, state);
         List<ItemStack> drops = pickaxe == null ? List.of() : blockDrops(world, villager, pos, state, pickaxe);
-        if (pickaxe != null && pickaxe.damage(1, world.random, null)) {
-            pickaxe.decrement(1);
-            world.playSound(null, villager.getBlockPos(), SoundEvents.ENTITY_ITEM_BREAK, SoundCategory.NEUTRAL, 0.8F, 1.0F);
+        if (pickaxe != null && pickaxe.hurt(1, world.random, null)) {
+            pickaxe.shrink(1);
+            world.playSound(null, villager.blockPosition(), SoundEvents.ITEM_BREAK, SoundSource.NEUTRAL, 0.8F, 1.0F);
         }
         for (ItemStack drop : drops) {
             if (cart == null) {
@@ -217,38 +217,38 @@ public class MinerTask extends AbstractJobTask {
             }
         }
         if (cart != null) {
-            cart.markDirty();
+            cart.setChanged();
         }
         gainExperience(villager, isOre(state) ? 2 : 1);
     }
 
-    private void placeTorch(ServerWorld world, VillagerEntityMCA villager, BlockPos pos) {
+    private void placeTorch(ServerLevel world, VillagerEntityMCA villager, BlockPos pos) {
         if (!torchSpots.contains(pos) || !world.getBlockState(pos).isAir()
-                || world.getLightLevel(LightType.BLOCK, pos) >= 8 || !Blocks.TORCH.getDefaultState().canPlaceAt(world, pos)) {
+                || world.getBrightness(LightLayer.BLOCK, pos) >= 8 || !Blocks.TORCH.defaultBlockState().canSurvive(world, pos)) {
             return;
         }
-        Inventory cart = depotInventory(world, villager);
-        for (int i = 0; cart != null && i < cart.size(); i++) {
-            ItemStack stack = cart.getStack(i);
-            if (stack.isOf(Items.TORCH)) {
-                stack.decrement(1);
-                cart.markDirty();
-                world.setBlockState(pos, Blocks.TORCH.getDefaultState());
-                world.playSound(null, pos, SoundEvents.BLOCK_WOOD_PLACE, SoundCategory.BLOCKS, 0.6F, 1.0F);
+        Container cart = depotInventory(world, villager);
+        for (int i = 0; cart != null && i < cart.getContainerSize(); i++) {
+            ItemStack stack = cart.getItem(i);
+            if (stack.is(Items.TORCH)) {
+                stack.shrink(1);
+                cart.setChanged();
+                world.setBlockAndUpdate(pos, Blocks.TORCH.defaultBlockState());
+                world.playSound(null, pos, SoundEvents.WOOD_PLACE, SoundSource.BLOCKS, 0.6F, 1.0F);
                 return;
             }
         }
     }
 
-    private int mineDuration(ServerWorld world, VillagerEntityMCA villager, BlockPos pos) {
+    private int mineDuration(ServerLevel world, VillagerEntityMCA villager, BlockPos pos) {
         WorkRegistry.Record record = WorkManager.findRecord(villager);
         int level = record == null ? 1 : record.level;
         int perBlock = TICKS_PER_BLOCK[Math.max(0, Math.min(TICKS_PER_BLOCK.length - 1, level - 1))];
         BlockState state = world.getBlockState(pos);
-        float hardness = Math.max(0.5F, state.getHardness(world, pos));
+        float hardness = Math.max(0.5F, state.getDestroySpeed(world, pos));
         ItemStack pickaxe = bestPickaxe(world, villager, state);
-        float speed = pickaxe == null ? 1F : pickaxe.getMiningSpeedMultiplier(state);
-        int efficiency = pickaxe == null ? 0 : EnchantmentHelper.getLevel(Enchantments.EFFICIENCY, pickaxe);
+        float speed = pickaxe == null ? 1F : pickaxe.getDestroySpeed(state);
+        int efficiency = pickaxe == null ? 0 : EnchantmentHelper.getItemEnchantmentLevel(Enchantments.BLOCK_EFFICIENCY, pickaxe);
         if (speed > 1F && efficiency > 0) {
             speed += efficiency * efficiency + 1;
         }
@@ -262,12 +262,12 @@ public class MinerTask extends AbstractJobTask {
         return dx * dx + dz * dz <= WORK_DISTANCE_SQ && dy >= -3 && dy <= 3;
     }
 
-    private BlockPos standPos(ServerWorld world, BlockPos goal) {
+    private BlockPos standPos(ServerLevel world, BlockPos goal) {
         BlockPos best = goal;
         double bestDistance = Double.MAX_VALUE;
         for (BlockPos pos : feet) {
-            double distance = pos.getSquaredDistance(goal);
-            if (distance < bestDistance && isLoaded(world, pos) && isPassable(world, pos) && isPassable(world, pos.up())
+            double distance = pos.distSqr(goal);
+            if (distance < bestDistance && isLoaded(world, pos) && isPassable(world, pos) && isPassable(world, pos.above())
                     && hasFloor(world, pos)) {
                 bestDistance = distance;
                 best = pos;
@@ -276,7 +276,7 @@ public class MinerTask extends AbstractJobTask {
         return best;
     }
 
-    private void selectTarget(ServerWorld world, VillagerEntityMCA villager) {
+    private void selectTarget(ServerLevel world, VillagerEntityMCA villager) {
         clearBreaking(world, villager, target);
         target = findTarget(world, villager);
         reach.reset();
@@ -284,9 +284,9 @@ public class MinerTask extends AbstractJobTask {
     }
 
     @Nullable
-    private BlockPos findTarget(ServerWorld world, VillagerEntityMCA villager) {
+    private BlockPos findTarget(ServerLevel world, VillagerEntityMCA villager) {
         reach.prune(world);
-        BlockPos from = villager.getBlockPos();
+        BlockPos from = villager.blockPosition();
         BlockPos best = null;
         double bestDistance = Double.MAX_VALUE;
         Iterator<BlockPos> it = ores.iterator();
@@ -296,7 +296,7 @@ public class MinerTask extends AbstractJobTask {
                 it.remove();
                 continue;
             }
-            double distance = from.getSquaredDistance(pos);
+            double distance = from.distSqr(pos);
             if (!reach.isBlacklisted(world, pos) && distance < bestDistance) {
                 bestDistance = distance;
                 best = pos;
@@ -306,7 +306,7 @@ public class MinerTask extends AbstractJobTask {
     }
 
     @Nullable
-    private BlockPos nextPlanned(ServerWorld world, VillagerEntityMCA villager) {
+    private BlockPos nextPlanned(ServerLevel world, VillagerEntityMCA villager) {
         for (Segment segment : plan) {
             boolean blocked = false;
             for (BlockPos pos : segment.blocks()) {
@@ -337,16 +337,16 @@ public class MinerTask extends AbstractJobTask {
         return null;
     }
 
-    private boolean updatePlan(ServerWorld world, VillagerEntityMCA villager) {
+    private boolean updatePlan(ServerLevel world, VillagerEntityMCA villager) {
         BlockPos cart = depotPos(villager);
         if (cart == null || !isLoaded(world, cart)) {
             return false;
         }
         BlockState state = world.getBlockState(cart);
-        if (!state.contains(WorkstationBlock.FACING)) {
+        if (!state.hasProperty(WorkstationBlock.FACING)) {
             return false;
         }
-        Direction direction = state.get(WorkstationBlock.FACING).getOpposite();
+        Direction direction = state.getValue(WorkstationBlock.FACING).getOpposite();
         if (cart.equals(planCart) && direction == planDirection) {
             return !plan.isEmpty();
         }
@@ -361,14 +361,14 @@ public class MinerTask extends AbstractJobTask {
     }
 
     private void buildPlan(BlockPos cart, Direction forward) {
-        Direction left = forward.rotateYCounterclockwise();
-        Direction right = forward.rotateYClockwise();
+        Direction left = forward.getCounterClockWise();
+        Direction right = forward.getClockWise();
         int y = cart.getY();
         List<BlockPos> stairs = new ArrayList<>();
         for (int i = 0; i <= DEPTH; i++) {
-            BlockPos floor = cart.offset(forward, 1 + i).withY(y - i);
+            BlockPos floor = cart.relative(forward, 1 + i).atY(y - i);
             for (int h = i == 0 ? 1 : 2; h >= 0; h--) {
-                stairs.add(floor.up(h));
+                stairs.add(floor.above(h));
             }
             feet.add(floor);
             if (i == DEPTH / 2) {
@@ -379,8 +379,8 @@ public class MinerTask extends AbstractJobTask {
         int bottom = y - DEPTH;
         List<BlockPos> main = new ArrayList<>();
         for (int j = 0; j < MAX_MAIN; j++) {
-            BlockPos floor = cart.offset(forward, DEPTH + 2 + j).withY(bottom);
-            main.add(floor.up());
+            BlockPos floor = cart.relative(forward, DEPTH + 2 + j).atY(bottom);
+            main.add(floor.above());
             main.add(floor);
             feet.add(floor);
             if (j % TORCH_EVERY == 0) {
@@ -401,8 +401,8 @@ public class MinerTask extends AbstractJobTask {
     private Segment branch(BlockPos start, Direction side) {
         List<BlockPos> blocks = new ArrayList<>();
         for (int k = 1; k <= BRANCH_LENGTH; k++) {
-            BlockPos floor = start.offset(side, k);
-            blocks.add(floor.up());
+            BlockPos floor = start.relative(side, k);
+            blocks.add(floor.above());
             blocks.add(floor);
             feet.add(floor);
             if (k == BRANCH_LENGTH / 2 + 1) {
@@ -412,40 +412,40 @@ public class MinerTask extends AbstractJobTask {
         return new Segment(blocks, false);
     }
 
-    private void scanOres(ServerWorld world, VillagerEntityMCA villager) {
+    private void scanOres(ServerLevel world, VillagerEntityMCA villager) {
         for (Segment segment : plan) {
             for (BlockPos pos : segment.blocks()) {
                 if (!isLoaded(world, pos) || !isPassable(world, pos)) {
                     continue;
                 }
                 for (Direction direction : Direction.values()) {
-                    addOre(world, villager, pos.offset(direction));
+                    addOre(world, villager, pos.relative(direction));
                 }
             }
         }
     }
 
-    private void addOre(ServerWorld world, VillagerEntityMCA villager, BlockPos pos) {
+    private void addOre(ServerLevel world, VillagerEntityMCA villager, BlockPos pos) {
         if (!ores.contains(pos) && isLoaded(world, pos) && isOre(world.getBlockState(pos)) && canDig(world, villager, pos)) {
-            ores.add(pos.toImmutable());
+            ores.add(pos.immutable());
         }
     }
 
-    private boolean canDig(ServerWorld world, VillagerEntityMCA villager, BlockPos pos) {
-        if (!isLoaded(world, pos) || !inMineZone(villager, pos) || pos.equals(villager.getBlockPos().down())
-                || pos.equals(planCart) || pos.getY() <= world.getBottomY() + 1) {
+    private boolean canDig(ServerLevel world, VillagerEntityMCA villager, BlockPos pos) {
+        if (!isLoaded(world, pos) || !inMineZone(villager, pos) || pos.equals(villager.blockPosition().below())
+                || pos.equals(planCart) || pos.getY() <= world.getMinBuildHeight() + 1) {
             return false;
         }
         BlockState state = world.getBlockState(pos);
         if (isPassable(world, pos) || state.hasBlockEntity() || !state.getFluidState().isEmpty()) {
             return false;
         }
-        float hardness = state.getHardness(world, pos);
+        float hardness = state.getDestroySpeed(world, pos);
         if (hardness < 0 || hardness > MAX_HARDNESS || bestPickaxe(world, villager, state) == null) {
             return false;
         }
         for (Direction direction : Direction.values()) {
-            BlockPos side = pos.offset(direction);
+            BlockPos side = pos.relative(direction);
             if (!isLoaded(world, side) || !world.getFluidState(side).isEmpty()) {
                 return false;
             }
@@ -461,19 +461,19 @@ public class MinerTask extends AbstractJobTask {
         return dx * dx + dz * dz <= (long) zone.radius() * zone.radius();
     }
 
-    private static boolean isPassable(ServerWorld world, BlockPos pos) {
+    private static boolean isPassable(ServerLevel world, BlockPos pos) {
         BlockState state = world.getBlockState(pos);
         return state.getFluidState().isEmpty() && state.getCollisionShape(world, pos).isEmpty();
     }
 
-    private static boolean hasFloor(ServerWorld world, BlockPos pos) {
-        BlockPos below = pos.down();
+    private static boolean hasFloor(ServerLevel world, BlockPos pos) {
+        BlockPos below = pos.below();
         return world.getFluidState(below).isEmpty() && !world.getBlockState(below).getCollisionShape(world, below).isEmpty();
     }
 
     private static boolean isOre(BlockState state) {
-        for (TagKey<net.minecraft.block.Block> tag : ORES) {
-            if (state.isIn(tag)) {
+        for (TagKey<net.minecraft.world.level.block.Block> tag : ORES) {
+            if (state.is(tag)) {
                 return true;
             }
         }

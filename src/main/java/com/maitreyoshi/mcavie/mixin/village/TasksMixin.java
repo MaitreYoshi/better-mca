@@ -6,7 +6,7 @@ import net.mca.resources.data.tasks.AdvancementTask;
 import net.mca.resources.data.tasks.BuildingTask;
 import net.mca.resources.data.tasks.PopulationTask;
 import net.mca.server.world.data.Village;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -19,15 +19,15 @@ public abstract class TasksMixin {
     private static Object mcavie$filtered;
 
     @Inject(method = "getRank", at = @At("HEAD"), cancellable = true)
-    private static void mcavie$forcedTitle(Village village, ServerPlayerEntity player, CallbackInfoReturnable<Rank> cir) {
-        Rank forced = com.maitreyoshi.mcavie.village.VillageState.of(village).forcedTitles.get(player.getUuid());
+    private static void mcavie$forcedTitle(Village village, ServerPlayer player, CallbackInfoReturnable<Rank> cir) {
+        Rank forced = com.maitreyoshi.mcavie.village.VillageState.of(village).forcedTitles.get(player.getUUID());
         if (forced != null) {
             cir.setReturnValue(forced);
         }
     }
 
     @Inject(method = "getRank", at = @At("HEAD"))
-    private static void mcavie$reputationOnly(Village village, ServerPlayerEntity player, CallbackInfoReturnable<Rank> cir) {
+    private static void mcavie$reputationOnly(Village village, ServerPlayer player, CallbackInfoReturnable<Rank> cir) {
         Tasks tasks = Tasks.getInstance();
         if (tasks == null) {
             return;
@@ -42,7 +42,7 @@ public abstract class TasksMixin {
 
     /** MCA ne marque pas les tâches de succès comme requises : un titre (monarque) exige aussi ses succès (Faucheuse tuée). */
     @Inject(method = "getRank", at = @At("RETURN"), cancellable = true)
-    private static void mcavie$requireAdvancements(Village village, ServerPlayerEntity player, CallbackInfoReturnable<Rank> cir) {
+    private static void mcavie$requireAdvancements(Village village, ServerPlayer player, CallbackInfoReturnable<Rank> cir) {
         Tasks tasks = Tasks.getInstance();
         if (tasks == null) {
             return;
@@ -57,7 +57,7 @@ public abstract class TasksMixin {
     }
 
     @Unique
-    private static boolean mcavie$advancementsDone(Tasks tasks, Rank rank, Village village, ServerPlayerEntity player) {
+    private static boolean mcavie$advancementsDone(Tasks tasks, Rank rank, Village village, ServerPlayer player) {
         for (var task : tasks.tasks.getOrDefault(rank, java.util.List.of())) {
             if (task instanceof AdvancementTask) {
                 try {

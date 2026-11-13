@@ -1,15 +1,15 @@
 package com.maitreyoshi.mcavie.phone.client;
 
 import com.maitreyoshi.mcavie.phone.PhoneNetwork;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 public class PhotoViewerScreen extends Screen {
     private static final int BAR = 32;
@@ -26,7 +26,7 @@ public class PhotoViewerScreen extends Screen {
     private final boolean canSave;
 
     public PhotoViewerScreen(@Nullable PhoneScreen parent, int number, UUID id, boolean canSend, boolean canDelete, boolean canSave) {
-        super(Text.translatable("gui.mca_vie.phone.photo"));
+        super(Component.translatable("gui.mca_vie.phone.photo"));
         this.parent = parent;
         this.number = number;
         this.id = id;
@@ -42,31 +42,31 @@ public class PhotoViewerScreen extends Screen {
     @Override
     protected void init() {
         List<Action> actions = new ArrayList<>();
-        actions.add(new Action("gui.mca_vie.phone.back", this::close));
+        actions.add(new Action("gui.mca_vie.phone.back", this::onClose));
         if (parent != null) {
-            actions.add(new Action("gui.mca_vie.phone.print", () -> PhoneClient.send(number, PhoneNetwork.OP_PRINT_PHOTO, buf -> buf.writeUuid(id))));
+            actions.add(new Action("gui.mca_vie.phone.print", () -> PhoneClient.send(number, PhoneNetwork.OP_PRINT_PHOTO, buf -> buf.writeUUID(id))));
             if (canSave) {
                 actions.add(new Action("gui.mca_vie.phone.save_photo", () -> {
-                    PhoneClient.send(number, PhoneNetwork.OP_SAVE_PHOTO, buf -> buf.writeUuid(id));
-                    close();
+                    PhoneClient.send(number, PhoneNetwork.OP_SAVE_PHOTO, buf -> buf.writeUUID(id));
+                    onClose();
                 }));
             }
             if (canSend) {
                 actions.add(new Action("gui.mca_vie.phone.send_photo", () -> {
                     parent.pickContact(id);
-                    close();
+                    onClose();
                 }));
             }
             if (canDelete && parent.state().owner()) {
                 actions.add(new Action("gui.mca_vie.phone.set_wallpaper", () -> {
                     parent.startCrop(id);
-                    close();
+                    onClose();
                 }));
             }
             if (canDelete) {
                 actions.add(new Action("gui.mca_vie.phone.delete_photo", () -> {
                     parent.deletePhoto(id);
-                    close();
+                    onClose();
                 }));
             }
         }
@@ -75,34 +75,34 @@ public class PhotoViewerScreen extends Screen {
         int x = (width - actions.size() * w - (actions.size() - 1) * gap) / 2;
         int y = height - BAR + 6;
         for (Action action : actions) {
-            addDrawableChild(ButtonWidget.builder(Text.translatable(action.key()), b -> action.run().run()).dimensions(x, y, w, 20).build());
+            addRenderableWidget(Button.builder(Component.translatable(action.key()), b -> action.run().run()).bounds(x, y, w, 20).build());
             x += w + gap;
         }
     }
 
     @Override
-    public void close() {
-        if (client == null) {
+    public void onClose() {
+        if (minecraft == null) {
             return;
         }
-        client.setScreen(parent);
+        minecraft.setScreen(parent);
         if (parent != null) {
             parent.refresh();
         }
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, width, height, 0xF0000000);
         PhonePhotos.Picture picture = parent == null ? PhonePhotos.print(id, true) : PhonePhotos.get(number, id, true);
         int margin = 8;
         if (picture == null) {
-            context.drawCenteredTextWithShadow(textRenderer, "…", width / 2, (height - BAR) / 2, 0xAAAAAA);
+            context.drawCenteredString(font, "…", width / 2, (height - BAR) / 2, 0xAAAAAA);
         } else {
             PhoneScreen.drawFitted(context, picture, margin, margin, width - 2 * margin, height - BAR - 2 * margin);
         }

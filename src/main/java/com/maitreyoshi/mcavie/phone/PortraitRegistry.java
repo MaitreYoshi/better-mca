@@ -1,9 +1,9 @@
 package com.maitreyoshi.mcavie.phone;
 
 import com.maitreyoshi.mcavie.MCAVie;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.PersistentState;
+import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -12,20 +12,20 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public class PortraitRegistry extends PersistentState {
+public class PortraitRegistry extends SavedData {
     private static final String DATA_ID = "mca_vie_portraits";
 
     private final Map<UUID, UUID> portraits = new HashMap<>();
     private final Set<UUID> images = new HashSet<>();
 
     public static PortraitRegistry get(MinecraftServer server) {
-        return server.getOverworld().getPersistentStateManager().getOrCreate(PortraitRegistry::fromNbt, PortraitRegistry::new, DATA_ID);
+        return server.overworld().getDataStorage().computeIfAbsent(PortraitRegistry::fromNbt, PortraitRegistry::new, DATA_ID);
     }
 
-    private static PortraitRegistry fromNbt(NbtCompound nbt) {
+    private static PortraitRegistry fromNbt(CompoundTag nbt) {
         PortraitRegistry registry = new PortraitRegistry();
-        NbtCompound entries = nbt.getCompound("portraits");
-        for (String key : entries.getKeys()) {
+        CompoundTag entries = nbt.getCompound("portraits");
+        for (String key : entries.getAllKeys()) {
             try {
                 UUID image = UUID.fromString(entries.getString(key));
                 registry.portraits.put(UUID.fromString(key), image);
@@ -38,8 +38,8 @@ public class PortraitRegistry extends PersistentState {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
-        NbtCompound entries = new NbtCompound();
+    public CompoundTag save(CompoundTag nbt) {
+        CompoundTag entries = new CompoundTag();
         portraits.forEach((person, image) -> entries.putString(person.toString(), image.toString()));
         nbt.put("portraits", entries);
         return nbt;
@@ -63,7 +63,7 @@ public class PortraitRegistry extends PersistentState {
         if (image != null) {
             images.add(image);
         }
-        markDirty();
+        setDirty();
         return old;
     }
 }

@@ -3,16 +3,16 @@ package com.maitreyoshi.mcavie.mixin.client;
 import com.maitreyoshi.mcavie.life.TombstoneBlocks;
 import com.maitreyoshi.mcavie.life.TombstoneDetails;
 import com.maitreyoshi.mcavie.life.client.TombstoneClient;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
 import net.mca.block.TombstoneBlock;
 import net.mca.client.render.TombstoneBlockEntityRenderer;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.state.property.Properties;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.RotationAxis;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -24,14 +24,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public abstract class TombstoneRendererMixin {
     @Shadow(remap = false)
     @Final
-    private TextRenderer text;
+    private Font text;
 
-    @Inject(method = "render(Lnet/mca/block/TombstoneBlock$Data;FLnet/minecraft/client/util/math/MatrixStack;Lnet/minecraft/client/render/VertexConsumerProvider;II)V",
+    @Inject(method = "render(Lnet/mca/block/TombstoneBlock$Data;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V",
             at = @At("HEAD"), cancellable = true)
-    private void mcavie$renderDetails(TombstoneBlock.Data entity, float tickDelta, MatrixStack matrices, VertexConsumerProvider consumers,
+    private void mcavie$renderDetails(TombstoneBlock.Data entity, float tickDelta, PoseStack matrices, MultiBufferSource consumers,
                                       int light, int overlay, CallbackInfo ci) {
         TombstoneDetails details = ((TombstoneDetails.Holder) entity).mcavie$details();
-        BlockState state = entity.getCachedState();
+        BlockState state = entity.getBlockState();
         if (state.getBlock() instanceof com.maitreyoshi.mcavie.life.VaultBlock) {
             ci.cancel();
             com.maitreyoshi.mcavie.life.client.VaultClient.render(entity, entity.hasEntity() ? details : null, state, text, matrices, consumers, light);
@@ -47,18 +47,18 @@ public abstract class TombstoneRendererMixin {
             return;
         }
 
-        matrices.push();
+        matrices.pushPose();
         matrices.translate(0.5, 0.5, 0.5);
-        Direction facing = state.get(Properties.HORIZONTAL_FACING).getOpposite();
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-facing.asRotation()));
+        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite();
+        matrices.mulPose(Axis.YP.rotationDegrees(-facing.toYRot()));
         matrices.scale(0.010416667F, 0.010416667F, 0.010416667F);
-        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(180));
-        matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(block.getRotation()));
-        Vec3d offset = block.getNameplateOffset();
-        matrices.translate(offset.getX(), offset.getY(), offset.getZ());
+        matrices.mulPose(Axis.ZP.rotationDegrees(180));
+        matrices.mulPose(Axis.XP.rotationDegrees(block.getRotation()));
+        Vec3 offset = block.getNameplateOffset();
+        matrices.translate(offset.x(), offset.y(), offset.z());
 
         TombstoneClient.render(details, block, text, matrices, consumers, light);
 
-        matrices.pop();
+        matrices.popPose();
     }
 }

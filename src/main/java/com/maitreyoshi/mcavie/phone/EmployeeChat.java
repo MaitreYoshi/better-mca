@@ -18,21 +18,21 @@ import net.mca.entity.ai.relationship.RelationshipState;
 import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
 import net.mca.server.world.data.Village;
-import net.minecraft.item.Item;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtString;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.registry.Registries;
+import net.minecraft.Util;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.contents.TranslatableContents;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableTextContent;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.Item;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -46,9 +46,9 @@ import java.util.regex.Pattern;
 
 // Messagerie de l'appli Employés : réponses par mots-clés (EmployeeDialogues), ordres par texte, conséquences sur les cœurs.
 public final class EmployeeChat {
-    public static final Identifier REQUEST = MCAVie.id("employee_chat_request");
-    public static final Identifier SEND = MCAVie.id("employee_chat_send");
-    public static final Identifier LOG = MCAVie.id("employee_chat_log");
+    public static final ResourceLocation REQUEST = MCAVie.id("employee_chat_request");
+    public static final ResourceLocation SEND = MCAVie.id("employee_chat_send");
+    public static final ResourceLocation LOG = MCAVie.id("employee_chat_log");
     public static final int MAX_TEXT = 200;
     private static final int MAX_LOG = 30;
     private static final long SPAM_TICKS = 30;
@@ -69,7 +69,7 @@ public final class EmployeeChat {
 
     static void register() {
         ServerPlayNetworking.registerGlobalReceiver(REQUEST, (server, player, handler, buf, responseSender) -> {
-            UUID uuid = buf.readUuid();
+            UUID uuid = buf.readUUID();
             server.execute(() -> {
                 if (PhoneEmployees.allowed(player)) {
                     sendLog(player, uuid);
@@ -77,9 +77,9 @@ public final class EmployeeChat {
             });
         });
         ServerPlayNetworking.registerGlobalReceiver(SEND, (server, player, handler, buf, responseSender) -> {
-            UUID uuid = buf.readUuid();
-            String text = buf.readString(MAX_TEXT);
-            String lang = buf.readString(16);
+            UUID uuid = buf.readUUID();
+            String text = buf.readUtf(MAX_TEXT);
+            String lang = buf.readUtf(16);
             server.execute(() -> {
                 if (!PhoneEmployees.allowed(player)) {
                     return;
@@ -100,51 +100,51 @@ public final class EmployeeChat {
         }
     }
 
-    private static NbtCompound chat(WorkRegistry.Record record) {
+    private static CompoundTag chat(WorkRegistry.Record record) {
         if (record.chat == null) {
-            record.chat = new NbtCompound();
+            record.chat = new CompoundTag();
         }
         return record.chat;
     }
 
-    private static void sendLog(ServerPlayerEntity player, UUID uuid) {
+    private static void sendLog(ServerPlayer player, UUID uuid) {
         WorkRegistry.Record record = WorkRegistry.get(player.getServer()).get(uuid);
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeUuid(uuid);
-        NbtList log = record != null && player.getUuid().equals(record.employer) && record.chat != null
-                ? record.chat.getList("log", NbtElement.COMPOUND_TYPE) : new NbtList();
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUUID(uuid);
+        ListTag log = record != null && player.getUUID().equals(record.employer) && record.chat != null
+                ? record.chat.getList("log", Tag.TAG_COMPOUND) : new ListTag();
         buf.writeVarInt(log.size());
         for (int i = 0; i < log.size(); i++) {
-            NbtCompound line = log.getCompound(i);
+            CompoundTag line = log.getCompound(i);
             buf.writeBoolean(line.getBoolean("o"));
-            buf.writeString(line.getString("t"));
+            buf.writeUtf(line.getString("t"));
         }
         ServerPlayNetworking.send(player, LOG, buf);
     }
 
-    public static List<Line> readLog(PacketByteBuf buf) {
+    public static List<Line> readLog(FriendlyByteBuf buf) {
         int size = buf.readVarInt();
         List<Line> lines = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
             boolean outgoing = buf.readBoolean();
-            String text = buf.readString();
+            String text = buf.readUtf();
             lines.add(new Line(outgoing, outgoing ? text : localize(text)));
         }
         return lines;
     }
 
     // le serveur dédié n'a pas les traductions : les noms traduisibles partent en jetons, résolus par le client
-    private static String token(Text text) {
-        return text.getContent() instanceof TranslatableTextContent content ? "{t:" + content.getKey() + "}" : text.getString();
+    private static String token(Component text) {
+        return text.getContents() instanceof TranslatableContents content ? "{t:" + content.getKey() + "}" : text.getString();
     }
 
     private static String localize(String text) {
-        return TOKEN.matcher(text).replaceAll(m -> Matcher.quoteReplacement(Text.translatable(m.group(1)).getString()));
+        return TOKEN.matcher(text).replaceAll(m -> Matcher.quoteReplacement(Component.translatable(m.group(1)).getString()));
     }
 
-    private static void log(NbtCompound chat, boolean outgoing, String text) {
-        NbtList log = chat.getList("log", NbtElement.COMPOUND_TYPE);
-        NbtCompound line = new NbtCompound();
+    private static void log(CompoundTag chat, boolean outgoing, String text) {
+        ListTag log = chat.getList("log", Tag.TAG_COMPOUND);
+        CompoundTag line = new CompoundTag();
         line.putBoolean("o", outgoing);
         line.putString("t", text);
         log.add(line);
@@ -154,20 +154,20 @@ public final class EmployeeChat {
         chat.put("log", log);
     }
 
-    private static void receive(ServerPlayerEntity player, UUID uuid, String raw, String lang) {
+    private static void receive(ServerPlayer player, UUID uuid, String raw, String lang) {
         MinecraftServer server = player.getServer();
         WorkRegistry registry = WorkRegistry.get(server);
         WorkRegistry.Record record = registry.get(uuid);
-        if (record == null || !player.getUuid().equals(record.employer) || record.job == Job.NONE
+        if (record == null || !player.getUUID().equals(record.employer) || record.job == Job.NONE
                 || PhoneEmployees.isDead(server, uuid)) {
             return;
         }
         String text = raw.trim();
-        NbtCompound chat = chat(record);
+        CompoundTag chat = chat(record);
         EmployeeDialogues dialogues = EmployeeDialogues.get(lang);
-        long now = server.getOverworld().getTime();
+        long now = server.overworld().getGameTime();
         log(chat, true, text);
-        registry.markDirty();
+        registry.setDirty();
         if (dialogues == null) {
             return;
         }
@@ -222,7 +222,7 @@ public final class EmployeeChat {
             if ("yes".equals(effect)) {
                 say(chat, dialogues, "fire_done", context);
                 String name = PhoneEmployees.dismiss(server, uuid, record);
-                player.sendMessage(Text.translatable("job.mca_vie.fired", name), true);
+                player.displayClientMessage(Component.translatable("job.mca_vie.fired", name), true);
                 return;
             }
             if ("no".equals(effect)) {
@@ -272,7 +272,7 @@ public final class EmployeeChat {
                     chat.putInt("tension", 0);
                     chat.putInt("streak", 0);
                     String name = PhoneEmployees.dismiss(server, uuid, record);
-                    player.sendMessage(Text.translatable("msg.mca_vie.employee.resigned", name), true);
+                    player.displayClientMessage(Component.translatable("msg.mca_vie.employee.resigned", name), true);
                     return;
                 }
                 if (streak >= 4 || tension >= BLOCK_TENSION) {
@@ -327,7 +327,7 @@ public final class EmployeeChat {
         say(chat, dialogues, id, context);
     }
 
-    private static void say(NbtCompound chat, EmployeeDialogues dialogues, String id, Context context) {
+    private static void say(CompoundTag chat, EmployeeDialogues dialogues, String id, Context context) {
         EmployeeLife life = EmployeeLife.get(context.lang);
         EmployeeLife.State state = context.life(chat);
         useWarmth(chat);
@@ -361,7 +361,7 @@ public final class EmployeeChat {
         return other == null || !Set.of("insult", "offensive", "threat").contains(other.intent().effect());
     }
 
-    private static void sayTopic(NbtCompound chat, EmployeeDialogues dialogues, EmployeeTopics.Topic topic, Context context) {
+    private static void sayTopic(CompoundTag chat, EmployeeDialogues dialogues, EmployeeTopics.Topic topic, Context context) {
         EmployeeLife life = EmployeeLife.get(context.lang);
         EmployeeLife.State state = context.life(chat);
         useWarmth(chat);
@@ -384,12 +384,12 @@ public final class EmployeeChat {
         answer(chat, fill(raw, context));
     }
 
-    private static void useWarmth(NbtCompound chat) {
+    private static void useWarmth(CompoundTag chat) {
         chat.putInt("warm", Math.max(0, chat.getInt("warm") - 1));
     }
 
-    private static List<String> recent(NbtCompound chat) {
-        NbtList list = chat.getList("recent", NbtElement.STRING_TYPE);
+    private static List<String> recent(CompoundTag chat) {
+        ListTag list = chat.getList("recent", Tag.TAG_STRING);
         List<String> out = new ArrayList<>(list.size());
         for (int i = 0; i < list.size(); i++) {
             out.add(list.getString(i));
@@ -397,10 +397,10 @@ public final class EmployeeChat {
         return out;
     }
 
-    private static void answer(NbtCompound chat, String text) {
+    private static void answer(CompoundTag chat, String text) {
         chat.putString("lastReply", text);
-        NbtList recent = chat.getList("recent", NbtElement.STRING_TYPE);
-        recent.add(NbtString.of(text));
+        ListTag recent = chat.getList("recent", Tag.TAG_STRING);
+        recent.add(StringTag.valueOf(text));
         while (recent.size() > 3) {
             recent.remove(0);
         }
@@ -423,10 +423,10 @@ public final class EmployeeChat {
         }
     }
 
-    private record Context(ServerPlayerEntity player, UUID uuid, WorkRegistry.Record record, @Nullable VillagerEntityMCA villager, String lang) {
-        EmployeeLife.State life(NbtCompound chat) {
+    private record Context(ServerPlayer player, UUID uuid, WorkRegistry.Record record, @Nullable VillagerEntityMCA villager, String lang) {
+        EmployeeLife.State life(CompoundTag chat) {
             MinecraftServer server = player.getServer();
-            int hour = (int) ((server.getOverworld().getTimeOfDay() + 6000) % 24000 / 1000);
+            int hour = (int) ((server.overworld().getDayTime() + 6000) % 24000 / 1000);
             String part = EmployeeLife.partOfDay(hour);
             boolean working = villager != null ? WorkManager.isWorking(villager) : record.lastStatus >= 0;
             // PNJ non chargé : présumé endormi la nuit, sauf s'il travaillait à son dernier passage
@@ -434,11 +434,11 @@ public final class EmployeeChat {
                     : villager == null && "night".equals(part) ? "sleeping" : "idle";
             int hearts = villager != null ? villager.getVillagerBrain().getMemoriesForPlayer(player).getHearts()
                     : chat.contains("hearts") ? chat.getInt("hearts") : 20;
-            FamilyTree tree = FamilyTree.get(server.getOverworld());
+            FamilyTree tree = FamilyTree.get(server.overworld());
             FamilyTreeNode node = tree.getOrEmpty(uuid).orElse(null);
             String kin = "";
             if (node != null) {
-                UUID self = player.getUuid();
+                UUID self = player.getUUID();
                 boolean promised = node.getRelationshipState() == RelationshipState.ENGAGED || node.getRelationshipState() == RelationshipState.PROMISED;
                 kin = node.partner().equals(self) ? (promised ? "fiance" : "spouse")
                         : node.father().equals(self) || node.mother().equals(self) ? "child"
@@ -450,7 +450,7 @@ public final class EmployeeChat {
         }
 
         private EmployeeLife.Profile profile(MinecraftServer server, FamilyTree tree, @Nullable FamilyTreeNode node) {
-            ServerWorld world = server.getOverworld();
+            ServerLevel world = server.overworld();
             String weather = world.isThundering() ? "thunder" : world.isRaining() ? "rain" : "clear";
             String village = villager != null
                     ? villager.getResidency().getHomeVillage().map(Village::getName).orElse(null) : null;
@@ -489,7 +489,7 @@ public final class EmployeeChat {
                     birth == null ? null : LifeCycle.ageInYears(birth, today));
         }
 
-        String mood(NbtCompound chat) {
+        String mood(CompoundTag chat) {
             int value = villager != null ? villager.getVillagerBrain().getMoodValue() : chat.getInt("mood");
             if (chat.getInt("tension") >= 2) {
                 return "bad";
@@ -499,7 +499,7 @@ public final class EmployeeChat {
     }
 
     private static String fill(String source, Context c) {
-        boolean female = FamilyTree.get(c.player.getServer().getOverworld()).getOrEmpty(c.uuid)
+        boolean female = FamilyTree.get(c.player.getServer().overworld()).getOrEmpty(c.uuid)
                 .map(n -> n.gender() == Gender.FEMALE).orElse(false);
         String text = EmployeeLife.accord(source, female);
         if (!text.contains("{")) {
@@ -508,27 +508,27 @@ public final class EmployeeChat {
         MinecraftServer server = c.player.getServer();
         WorkRegistry.Record r = c.record;
         String name = c.villager != null ? c.villager.getName().getString() : PhoneEmployees.nameOf(server, c.uuid, r);
-        BlockPos pos = c.villager != null ? c.villager.getBlockPos() : r.lastPos != null ? r.lastPos : r.center;
-        String dimension = c.villager != null ? c.villager.getWorld().getRegistryKey().getValue().toString()
+        BlockPos pos = c.villager != null ? c.villager.blockPosition() : r.lastPos != null ? r.lastPos : r.center;
+        String dimension = c.villager != null ? c.villager.level().dimension().location().toString()
                 : r.lastDimension != null ? r.lastDimension.toString() : "";
         String distance = "?";
-        if (pos != null && c.player.getWorld().getRegistryKey().getValue().toString().equals(dimension)) {
-            distance = String.valueOf((int) Math.sqrt(c.player.getBlockPos().getSquaredDistance(pos)));
+        if (pos != null && c.player.level().dimension().location().toString().equals(dimension)) {
+            distance = String.valueOf((int) Math.sqrt(c.player.blockPosition().distSqr(pos)));
         }
         float health = c.villager != null ? c.villager.getHealth() : r.lastHealth;
         float max = c.villager != null ? c.villager.getMaxHealth() : r.lastMaxHealth;
         int status = c.villager != null ? PhoneEmployees.statusOf(c.villager) : r.lastStatus;
-        long time = (server.getOverworld().getTimeOfDay() + 6000) % 24000;
-        FamilyTree tree = FamilyTree.get(server.getOverworld());
+        long time = (server.overworld().getDayTime() + 6000) % 24000;
+        FamilyTree tree = FamilyTree.get(server.overworld());
         FamilyTreeNode node = tree.getOrEmpty(c.uuid).orElse(null);
         String partner = node != null && !node.partner().equals(Util.NIL_UUID)
                 ? tree.getOrEmpty(node.partner()).map(FamilyTreeNode::getName).orElse("?")
-                : token(Text.translatable("gui.mca_vie.phone.employees.nobody"));
+                : token(Component.translatable("gui.mca_vie.phone.employees.nobody"));
         int children = node != null ? node.children().size() : 0;
         return text.replace("{joueur}", c.player.getName().getString())
                 .replace("{nom}", name)
                 .replace("{metier}", token(r.job.getName()))
-                .replace("{etat}", token(status < 0 ? Text.translatable("gui.mca_vie.phone.employees.resting")
+                .replace("{etat}", token(status < 0 ? Component.translatable("gui.mca_vie.phone.employees.resting")
                         : WorkStatus.byId(status).getText()))
                 .replace("{lieu}", pos != null ? pos.getX() + ", " + pos.getY() + ", " + pos.getZ() : "?")
                 .replace("{distance}", distance)
@@ -540,19 +540,19 @@ public final class EmployeeChat {
     }
 
     private static String harvest(MinecraftServer server, WorkRegistry.Record record) {
-        NbtCompound report = PhoneEmployees.report(server, record);
+        CompoundTag report = PhoneEmployees.report(server, record);
         if (report.isEmpty()) {
-            return token(Text.translatable("gui.mca_vie.phone.employees.report_none"));
+            return token(Component.translatable("gui.mca_vie.phone.employees.report_none"));
         }
-        List<String> keys = new ArrayList<>(report.getKeys());
+        List<String> keys = new ArrayList<>(report.getAllKeys());
         keys.sort(Comparator.comparingInt(report::getInt).reversed());
         StringBuilder b = new StringBuilder();
         for (int i = 0; i < Math.min(4, keys.size()); i++) {
-            Item item = Registries.ITEM.get(Identifier.tryParse(keys.get(i)));
+            Item item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(keys.get(i)));
             if (b.length() > 0) {
                 b.append(", ");
             }
-            b.append(report.getInt(keys.get(i))).append(' ').append(token(item.getName()));
+            b.append(report.getInt(keys.get(i))).append(' ').append(token(item.getDescription()));
         }
         return b.toString();
     }

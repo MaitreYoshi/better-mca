@@ -8,17 +8,16 @@ import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import net.mca.entity.VillagerEntityMCA;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,8 +43,8 @@ public class TeacherTask extends AbstractJobTask {
     }
 
     @Override
-    protected boolean canWork(ServerWorld world, VillagerEntityMCA villager) {
-        long now = world.getTime();
+    protected boolean canWork(ServerLevel world, VillagerEntityMCA villager) {
+        long now = world.getGameTime();
         if (now < nextScan) {
             return lastScan;
         }
@@ -55,12 +54,12 @@ public class TeacherTask extends AbstractJobTask {
     }
 
     @Override
-    protected boolean keepWorking(ServerWorld world, VillagerEntityMCA villager) {
+    protected boolean keepWorking(ServerLevel world, VillagerEntityMCA villager) {
         return lessonTicks < LESSON_TICKS;
     }
 
     @Override
-    protected void run(ServerWorld world, VillagerEntityMCA villager, long time) {
+    protected void start(ServerLevel world, VillagerEntityMCA villager, long time) {
         lessonTicks = 0;
         pupils.clear();
         pupils.addAll(findPupils(world, villager));
@@ -68,13 +67,13 @@ public class TeacherTask extends AbstractJobTask {
     }
 
     @Override
-    protected void keepRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+    protected void tick(ServerLevel world, VillagerEntityMCA villager, long time) {
         lessonTicks++;
         if (lessonTicks % 20 != 1) {
             return;
         }
         WorkManager.Zone zone = zone(villager);
-        pupils.removeIf(p -> !p.isAlive() || p.isRemoved() || !zone.contains(p.getBlockPos()));
+        pupils.removeIf(p -> !p.isAlive() || p.isRemoved() || !zone.contains(p.blockPosition()));
         if (pupils.isEmpty()) {
             lessonTicks = LESSON_TICKS;
             return;
@@ -85,29 +84,29 @@ public class TeacherTask extends AbstractJobTask {
             y += pupil.getY();
             z += pupil.getZ();
         }
-        Vec3d group = new Vec3d(x / pupils.size(), y / pupils.size(), z / pupils.size());
-        BlockPos groupPos = BlockPos.ofFloored(group);
-        if (villager.squaredDistanceTo(group) > STAY_SQ) {
+        Vec3 group = new Vec3(x / pupils.size(), y / pupils.size(), z / pupils.size());
+        BlockPos groupPos = BlockPos.containing(group);
+        if (villager.distanceToSqr(group) > STAY_SQ) {
             walkTo(villager, groupPos);
         } else {
             arrive(villager, WorkGesture.TEACH);
             villager.lookAt(groupPos);
         }
         if (lessonTicks % 40 == 1) {
-            villager.swingHand(Hand.MAIN_HAND);
-            world.spawnParticles(ParticleTypes.ENCHANT, villager.getX(), villager.getBodyY(1.0), villager.getZ(), 8, 0.3, 0.3, 0.3, 0.3);
-            world.playSound(null, villager.getBlockPos(), SoundEvents.ITEM_BOOK_PAGE_TURN, SoundCategory.NEUTRAL, 0.6F, 1.0F);
+            villager.swing(InteractionHand.MAIN_HAND);
+            world.sendParticles(ParticleTypes.ENCHANT, villager.getX(), villager.getY(1.0), villager.getZ(), 8, 0.3, 0.3, 0.3, 0.3);
+            world.playSound(null, villager.blockPosition(), SoundEvents.BOOK_PAGE_TURN, SoundSource.NEUTRAL, 0.6F, 1.0F);
         }
         long today = WorldCalendar.now(world).dayIndex();
         for (VillagerEntityMCA pupil : pupils) {
-            Long last = taughtDay.get(pupil.getUuid());
+            Long last = taughtDay.get(pupil.getUUID());
             if (last != null && last == today) {
                 continue;
             }
-            if (villager.squaredDistanceTo(pupil) <= TEACH_SQ) {
-                Wellbeing.addHappiness(world, pupil.getUuid(), HAPPINESS);
-                world.spawnParticles(ParticleTypes.ENCHANT, pupil.getX(), pupil.getBodyY(1.2), pupil.getZ(), 15, 0.4, 0.4, 0.4, 0.5);
-                taughtDay.put(pupil.getUuid(), today);
+            if (villager.distanceToSqr(pupil) <= TEACH_SQ) {
+                Wellbeing.addHappiness(world, pupil.getUUID(), HAPPINESS);
+                world.sendParticles(ParticleTypes.ENCHANT, pupil.getX(), pupil.getY(1.2), pupil.getZ(), 15, 0.4, 0.4, 0.4, 0.5);
+                taughtDay.put(pupil.getUUID(), today);
                 store(villager, new ItemStack(Items.EXPERIENCE_BOTTLE));
                 gainExperience(villager, 1);
             }
@@ -115,8 +114,8 @@ public class TeacherTask extends AbstractJobTask {
     }
 
     @Override
-    protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
-        super.finishRunning(world, villager, time);
+    protected void stop(ServerLevel world, VillagerEntityMCA villager, long time) {
+        super.stop(world, villager, time);
         lessonTicks = 0;
         nextScan = 0;
         pupils.clear();
@@ -125,17 +124,17 @@ public class TeacherTask extends AbstractJobTask {
         }
     }
 
-    private List<VillagerEntityMCA> findPupils(ServerWorld world, VillagerEntityMCA villager) {
+    private List<VillagerEntityMCA> findPupils(ServerLevel world, VillagerEntityMCA villager) {
         WorkManager.Zone zone = zone(villager);
         int radius = zone.radius();
-        Box box = new Box(zone.center()).expand(radius, radius, radius);
+        AABB box = new AABB(zone.center()).inflate(radius, radius, radius);
         LifeRegistry registry = LifeRegistry.get(world.getServer());
         long today = WorldCalendar.now(world).dayIndex();
-        return world.getEntitiesByClass(VillagerEntityMCA.class, box, v -> {
-            if (v == villager || !v.isAlive() || !zone.contains(v.getBlockPos())) {
+        return world.getEntitiesOfClass(VillagerEntityMCA.class, box, v -> {
+            if (v == villager || !v.isAlive() || !zone.contains(v.blockPosition())) {
                 return false;
             }
-            Long birth = registry.getBirthDay(v.getUuid());
+            Long birth = registry.getBirthDay(v.getUUID());
             if (birth == null) {
                 return false;
             }

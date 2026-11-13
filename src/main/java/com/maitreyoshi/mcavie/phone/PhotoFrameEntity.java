@@ -1,67 +1,66 @@
 package com.maitreyoshi.mcavie.phone;
 
-import net.minecraft.block.AbstractRedstoneGateBlock;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.decoration.AbstractDecorationEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.EntitySpawnS2CPacket;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.GameRules;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.decoration.HangingEntity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.DiodeBlock;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 
-public class PhotoFrameEntity extends AbstractDecorationEntity {
+public class PhotoFrameEntity extends HangingEntity {
     public static final int MIN_SIZE = 1;
     public static final int MAX_SIZE = 64;
-    private static final TrackedData<Optional<UUID>> PHOTO = DataTracker.registerData(PhotoFrameEntity.class, TrackedDataHandlerRegistry.OPTIONAL_UUID);
-    private static final TrackedData<Integer> WIDTH = DataTracker.registerData(PhotoFrameEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TrackedData<Integer> HEIGHT = DataTracker.registerData(PhotoFrameEntity.class, TrackedDataHandlerRegistry.INTEGER);
-    private static final TrackedData<Integer> TOP = DataTracker.registerData(PhotoFrameEntity.class, TrackedDataHandlerRegistry.INTEGER);
+    private static final EntityDataAccessor<Optional<UUID>> PHOTO = SynchedEntityData.defineId(PhotoFrameEntity.class, EntityDataSerializers.OPTIONAL_UUID);
+    private static final EntityDataAccessor<Integer> WIDTH = SynchedEntityData.defineId(PhotoFrameEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> HEIGHT = SynchedEntityData.defineId(PhotoFrameEntity.class, EntityDataSerializers.INT);
+    private static final EntityDataAccessor<Integer> TOP = SynchedEntityData.defineId(PhotoFrameEntity.class, EntityDataSerializers.INT);
 
     private String author = "";
     private long date;
 
-    public PhotoFrameEntity(EntityType<? extends PhotoFrameEntity> type, World world) {
+    public PhotoFrameEntity(EntityType<? extends PhotoFrameEntity> type, Level world) {
         super(type, world);
     }
 
-    public PhotoFrameEntity(World world, BlockPos pos, Direction facing, Direction top, int width, int height, @Nullable UUID photo, String author, long date) {
+    public PhotoFrameEntity(Level world, BlockPos pos, Direction facing, Direction top, int width, int height, @Nullable UUID photo, String author, long date) {
         super(PhoneServer.PHOTO_FRAME, world, pos);
-        this.dataTracker.set(PHOTO, Optional.ofNullable(photo));
-        this.dataTracker.set(WIDTH, clamp(width));
-        this.dataTracker.set(HEIGHT, clamp(height));
-        this.dataTracker.set(TOP, top.getAxis().isHorizontal() ? top.getHorizontal() : 0);
+        this.entityData.set(PHOTO, Optional.ofNullable(photo));
+        this.entityData.set(WIDTH, clamp(width));
+        this.entityData.set(HEIGHT, clamp(height));
+        this.entityData.set(TOP, top.getAxis().isHorizontal() ? top.get2DDataValue() : 0);
         this.author = author;
         this.date = date;
-        setFacing(facing);
+        setDirection(facing);
     }
 
-    public static boolean fits(World world, BlockPos pos, Direction facing) {
+    public static boolean fits(Level world, BlockPos pos, Direction facing) {
         return supported(world, pos, facing);
     }
 
-    private static boolean supported(World world, BlockPos pos, Direction facing) {
-        BlockState state = world.getBlockState(pos.offset(facing.getOpposite()));
-        return state.isSolid() || facing.getAxis().isHorizontal() && AbstractRedstoneGateBlock.isRedstoneGate(state);
+    private static boolean supported(Level world, BlockPos pos, Direction facing) {
+        BlockState state = world.getBlockState(pos.relative(facing.getOpposite()));
+        return state.isSolid() || facing.getAxis().isHorizontal() && DiodeBlock.isDiode(state);
     }
 
     public static Direction topFor(Direction facing, Direction look) {
@@ -73,103 +72,103 @@ public class PhotoFrameEntity extends AbstractDecorationEntity {
     }
 
     @Override
-    protected void initDataTracker() {
-        this.dataTracker.startTracking(PHOTO, Optional.empty());
-        this.dataTracker.startTracking(WIDTH, 4);
-        this.dataTracker.startTracking(HEIGHT, 2);
-        this.dataTracker.startTracking(TOP, 0);
+    protected void defineSynchedData() {
+        this.entityData.define(PHOTO, Optional.empty());
+        this.entityData.define(WIDTH, 4);
+        this.entityData.define(HEIGHT, 2);
+        this.entityData.define(TOP, 0);
     }
 
     @Override
-    public void onTrackedDataSet(TrackedData<?> data) {
-        if ((WIDTH.equals(data) || HEIGHT.equals(data) || TOP.equals(data)) && this.facing != null && this.attachmentPos != null) {
-            updateAttachmentPosition();
+    public void onSyncedDataUpdated(EntityDataAccessor<?> data) {
+        if ((WIDTH.equals(data) || HEIGHT.equals(data) || TOP.equals(data)) && this.direction != null && this.pos != null) {
+            recalculateBoundingBox();
         }
-        super.onTrackedDataSet(data);
+        super.onSyncedDataUpdated(data);
     }
 
     @Nullable
     public UUID photo() {
-        return this.dataTracker.get(PHOTO).orElse(null);
+        return this.entityData.get(PHOTO).orElse(null);
     }
 
     public int widthHalves() {
-        return this.dataTracker.get(WIDTH);
+        return this.entityData.get(WIDTH);
     }
 
     public int heightHalves() {
-        return this.dataTracker.get(HEIGHT);
+        return this.entityData.get(HEIGHT);
     }
 
     public Direction facing() {
-        return this.facing;
+        return this.direction;
     }
 
     public Direction top() {
-        return this.facing.getAxis().isHorizontal() ? Direction.UP : Direction.fromHorizontal(this.dataTracker.get(TOP));
+        return this.direction.getAxis().isHorizontal() ? Direction.UP : Direction.from2DDataValue(this.entityData.get(TOP));
     }
 
     private Direction right() {
-        return this.facing.getAxis().isHorizontal() ? this.facing.rotateYCounterclockwise() : top().rotateYCounterclockwise();
+        return this.direction.getAxis().isHorizontal() ? this.direction.getCounterClockWise() : top().getCounterClockWise();
     }
 
     @Override
-    public int getWidthPixels() {
+    public int getWidth() {
         return 8 * widthHalves();
     }
 
     @Override
-    public int getHeightPixels() {
+    public int getHeight() {
         return 8 * heightHalves();
     }
 
     @Override
-    protected void setFacing(Direction facing) {
-        this.facing = facing;
+    protected void setDirection(Direction facing) {
+        this.direction = facing;
         if (facing.getAxis().isHorizontal()) {
-            setPitch(0.0f);
-            setYaw(facing.getHorizontal() * 90);
+            setXRot(0.0f);
+            setYRot(facing.get2DDataValue() * 90);
         } else {
-            setPitch(-90 * facing.getDirection().offset());
-            setYaw(0.0f);
+            setXRot(-90 * facing.getAxisDirection().getStep());
+            setYRot(0.0f);
         }
-        this.prevPitch = getPitch();
-        this.prevYaw = getYaw();
-        updateAttachmentPosition();
+        this.xRotO = getXRot();
+        this.yRotO = getYRot();
+        recalculateBoundingBox();
     }
 
     @Override
-    protected void updateAttachmentPosition() {
-        if (this.facing == null || this.attachmentPos == null) {
+    protected void recalculateBoundingBox() {
+        if (this.direction == null || this.pos == null) {
             return;
         }
         Direction right = right();
         Direction up = top();
-        double x = this.attachmentPos.getX() + 0.5 - this.facing.getOffsetX() * 0.46875;
-        double y = this.attachmentPos.getY() + 0.5 - this.facing.getOffsetY() * 0.46875;
-        double z = this.attachmentPos.getZ() + 0.5 - this.facing.getOffsetZ() * 0.46875;
-        setPos(x, y, z);
-        double hw = getWidthPixels() / 32.0;
-        double hh = getHeightPixels() / 32.0;
+        double x = this.pos.getX() + 0.5 - this.direction.getStepX() * 0.46875;
+        double y = this.pos.getY() + 0.5 - this.direction.getStepY() * 0.46875;
+        double z = this.pos.getZ() + 0.5 - this.direction.getStepZ() * 0.46875;
+        setPosRaw(x, y, z);
+        double hw = getWidth() / 32.0;
+        double hh = getHeight() / 32.0;
         double depth = 1.0 / 32.0;
-        double ex = Math.abs(right.getOffsetX()) * hw + Math.abs(up.getOffsetX()) * hh + Math.abs(this.facing.getOffsetX()) * depth;
-        double ey = Math.abs(right.getOffsetY()) * hw + Math.abs(up.getOffsetY()) * hh + Math.abs(this.facing.getOffsetY()) * depth;
-        double ez = Math.abs(right.getOffsetZ()) * hw + Math.abs(up.getOffsetZ()) * hh + Math.abs(this.facing.getOffsetZ()) * depth;
-        setBoundingBox(new Box(x - ex, y - ey, z - ez, x + ex, y + ey, z + ez));
+        double ex = Math.abs(right.getStepX()) * hw + Math.abs(up.getStepX()) * hh + Math.abs(this.direction.getStepX()) * depth;
+        double ey = Math.abs(right.getStepY()) * hw + Math.abs(up.getStepY()) * hh + Math.abs(this.direction.getStepY()) * depth;
+        double ez = Math.abs(right.getStepZ()) * hw + Math.abs(up.getStepZ()) * hh + Math.abs(this.direction.getStepZ()) * depth;
+        setBoundingBox(new AABB(x - ex, y - ey, z - ez, x + ex, y + ey, z + ez));
     }
 
     @Override
-    public boolean canStayAttached() {
-        return supported(getWorld(), this.attachmentPos, this.facing);
+    public boolean survives() {
+        return supported(level(), this.pos, this.direction);
     }
 
     @Override
-    public ActionResult interact(PlayerEntity player, Hand hand) {
-        if (getWorld().isClient) {
-            return ActionResult.SUCCESS;
+    public InteractionResult interact(Player player, InteractionHand hand) {
+        if (level().isClientSide) {
+            return InteractionResult.SUCCESS;
         }
-        if (player instanceof ServerPlayerEntity serverPlayer) {
-            if (player.isSneaking()) {
+        if (player instanceof ServerPlayer serverPlayer) {
+            if (player.isShiftKeyDown()) {
                 PhoneServer.openResize(serverPlayer, this);
             } else {
                 UUID photo = photo();
@@ -178,33 +177,33 @@ public class PhotoFrameEntity extends AbstractDecorationEntity {
                 }
             }
         }
-        return ActionResult.CONSUME;
+        return InteractionResult.CONSUME;
     }
 
     public void resize(int width, int height) {
         if (clamp(width) == widthHalves() && clamp(height) == heightHalves()) {
             return;
         }
-        this.dataTracker.set(WIDTH, clamp(width));
-        this.dataTracker.set(HEIGHT, clamp(height));
-        playSound(SoundEvents.ENTITY_ITEM_FRAME_ROTATE_ITEM, 1.0f, 1.0f);
+        this.entityData.set(WIDTH, clamp(width));
+        this.entityData.set(HEIGHT, clamp(height));
+        playSound(SoundEvents.ITEM_FRAME_ROTATE_ITEM, 1.0f, 1.0f);
     }
 
     @Override
-    public void onBreak(@Nullable Entity breaker) {
-        if (!getWorld().getGameRules().getBoolean(GameRules.DO_ENTITY_DROPS)) {
+    public void dropItem(@Nullable Entity breaker) {
+        if (!level().getGameRules().getBoolean(GameRules.RULE_DOENTITYDROPS)) {
             return;
         }
-        playSound(SoundEvents.ENTITY_PAINTING_BREAK, 1.0f, 1.0f);
-        if (breaker instanceof PlayerEntity player && player.getAbilities().creativeMode) {
+        playSound(SoundEvents.PAINTING_BREAK, 1.0f, 1.0f);
+        if (breaker instanceof Player player && player.getAbilities().instabuild) {
             return;
         }
-        dropStack(item());
+        spawnAtLocation(item());
     }
 
     @Override
-    public void onPlace() {
-        playSound(SoundEvents.ENTITY_PAINTING_PLACE, 1.0f, 1.0f);
+    public void playPlacementSound() {
+        playSound(SoundEvents.PAINTING_PLACE, 1.0f, 1.0f);
     }
 
     private ItemStack item() {
@@ -213,63 +212,63 @@ public class PhotoFrameEntity extends AbstractDecorationEntity {
     }
 
     @Override
-    public ItemStack getPickBlockStack() {
+    public ItemStack getPickResult() {
         return item();
     }
 
     @Override
-    public void writeCustomDataToNbt(NbtCompound nbt) {
-        super.writeCustomDataToNbt(nbt);
+    public void addAdditionalSaveData(CompoundTag nbt) {
+        super.addAdditionalSaveData(nbt);
         UUID photo = photo();
         if (photo != null) {
-            nbt.putUuid("photo", photo);
+            nbt.putUUID("photo", photo);
         }
         nbt.putInt("w", widthHalves());
         nbt.putInt("h", heightHalves());
         nbt.putString("author", author);
         nbt.putLong("date", date);
-        nbt.putByte("dir", (byte) this.facing.getId());
-        nbt.putByte("top", this.dataTracker.get(TOP).byteValue());
+        nbt.putByte("dir", (byte) this.direction.get3DDataValue());
+        nbt.putByte("top", this.entityData.get(TOP).byteValue());
     }
 
     @Override
-    public void readCustomDataFromNbt(NbtCompound nbt) {
-        if (nbt.containsUuid("photo")) {
-            this.dataTracker.set(PHOTO, Optional.of(nbt.getUuid("photo")));
+    public void readAdditionalSaveData(CompoundTag nbt) {
+        if (nbt.hasUUID("photo")) {
+            this.entityData.set(PHOTO, Optional.of(nbt.getUUID("photo")));
         }
         if (nbt.contains("w")) {
-            this.dataTracker.set(WIDTH, clamp(nbt.getInt("w")));
-            this.dataTracker.set(HEIGHT, clamp(nbt.getInt("h")));
+            this.entityData.set(WIDTH, clamp(nbt.getInt("w")));
+            this.entityData.set(HEIGHT, clamp(nbt.getInt("h")));
         } else {
             int size = Math.max(1, nbt.getInt("size"));
-            this.dataTracker.set(WIDTH, clamp(2 * size));
-            this.dataTracker.set(HEIGHT, clamp(Math.round(size * 9f / 8f)));
+            this.entityData.set(WIDTH, clamp(2 * size));
+            this.entityData.set(HEIGHT, clamp(Math.round(size * 9f / 8f)));
         }
-        this.dataTracker.set(TOP, nbt.getByte("top") & 3);
+        this.entityData.set(TOP, nbt.getByte("top") & 3);
         this.author = nbt.getString("author");
         this.date = nbt.getLong("date");
-        super.readCustomDataFromNbt(nbt);
-        setFacing(nbt.contains("dir") ? Direction.byId(nbt.getByte("dir")) : Direction.fromHorizontal(nbt.getByte("facing")));
+        super.readAdditionalSaveData(nbt);
+        setDirection(nbt.contains("dir") ? Direction.from3DDataValue(nbt.getByte("dir")) : Direction.from2DDataValue(nbt.getByte("facing")));
     }
 
     @Override
-    public void refreshPositionAndAngles(double x, double y, double z, float yaw, float pitch) {
-        setPosition(x, y, z);
+    public void moveTo(double x, double y, double z, float yaw, float pitch) {
+        setPos(x, y, z);
     }
 
     @Override
-    public void updateTrackedPositionAndAngles(double x, double y, double z, float yaw, float pitch, int interpolationSteps, boolean interpolate) {
-        setPosition(x, y, z);
+    public void lerpTo(double x, double y, double z, float yaw, float pitch, int interpolationSteps, boolean interpolate) {
+        setPos(x, y, z);
     }
 
     @Override
-    public Packet<ClientPlayPacketListener> createSpawnPacket() {
-        return new EntitySpawnS2CPacket(this, this.facing.getId(), getDecorationBlockPos());
+    public Packet<ClientGamePacketListener> getAddEntityPacket() {
+        return new ClientboundAddEntityPacket(this, this.direction.get3DDataValue(), getPos());
     }
 
     @Override
-    public void onSpawnPacket(EntitySpawnS2CPacket packet) {
-        super.onSpawnPacket(packet);
-        setFacing(Direction.byId(packet.getEntityData()));
+    public void recreateFromPacket(ClientboundAddEntityPacket packet) {
+        super.recreateFromPacket(packet);
+        setDirection(Direction.from3DDataValue(packet.getData()));
     }
 }

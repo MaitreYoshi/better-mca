@@ -1,6 +1,6 @@
 package com.maitreyoshi.mcavie.work;
 
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 
 // ordinal envoyé au client : ajouter seulement à la fin
 public enum WorkStatus {
@@ -22,8 +22,8 @@ public enum WorkStatus {
         this.id = id;
     }
 
-    public Text getText() {
-        return Text.translatable("job.mca_vie.status." + id);
+    public Component getText() {
+        return Component.translatable("job.mca_vie.status." + id);
     }
 
     public static WorkStatus byId(int ordinal) {

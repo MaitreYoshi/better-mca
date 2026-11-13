@@ -6,9 +6,8 @@ import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.VillagerLike;
 import net.mca.entity.ai.Traits;
 import net.mca.entity.ai.relationship.Gender;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.random.Random;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import java.util.UUID;
 
 public enum Orientation {
@@ -54,11 +53,11 @@ public enum Orientation {
     }
 
     public static void update(VillagerEntityMCA villager) {
-        if (!(villager.getWorld() instanceof ServerWorld world)) {
+        if (!(villager.level() instanceof ServerLevel world)) {
             return;
         }
         OrientationRegistry registry = OrientationRegistry.get(world.getServer());
-        UUID uuid = villager.getUuid();
+        UUID uuid = villager.getUUID();
         Orientation stored = registry.get(uuid);
         if (stored != null && !registry.isObserved(uuid)) {
             apply(villager.getTraits(), stored);
@@ -66,7 +65,7 @@ public enum Orientation {
         registry.set(uuid, of(villager), true);
     }
 
-    public static Orientation known(ServerWorld world, UUID uuid, Random random) {
+    public static Orientation known(ServerLevel world, UUID uuid, RandomSource random) {
         OrientationRegistry registry = OrientationRegistry.get(world.getServer());
         Orientation stored = registry.get(uuid);
         if (stored == null) {
@@ -76,18 +75,18 @@ public enum Orientation {
         return stored;
     }
 
-    public static void assign(ServerWorld world, UUID uuid, Orientation orientation) {
+    public static void assign(ServerLevel world, UUID uuid, Orientation orientation) {
         OrientationRegistry.get(world.getServer()).set(uuid, orientation, false);
     }
 
-    public static Orientation roll(Random random) {
+    public static Orientation roll(RandomSource random) {
         boolean gay = rolls(random, Traits.HOMOSEXUAL);
         boolean bisexual = rolls(random, Traits.BISEXUAL);
         boolean asexual = rolls(random, Traits.ASEXUAL);
         return gay ? GAY : bisexual ? BISEXUAL : asexual ? ASEXUAL : STRAIGHT;
     }
 
-    private static boolean rolls(Random random, Traits.Trait trait) {
+    private static boolean rolls(RandomSource random, Traits.Trait trait) {
         if (!trait.isEnabled()) {
             return false;
         }

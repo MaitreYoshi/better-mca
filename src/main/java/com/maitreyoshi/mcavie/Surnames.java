@@ -9,10 +9,10 @@ import net.mca.resources.Names;
 import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
 import net.mca.server.world.data.PlayerSaveData;
-import net.minecraft.entity.Entity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -25,7 +25,7 @@ public final class Surnames {
     }
 
     public static void update(VillagerEntityMCA villager) {
-        if (!(villager.getWorld() instanceof ServerWorld world)) {
+        if (!(villager.level() instanceof ServerLevel world)) {
             return;
         }
 
@@ -35,9 +35,9 @@ public final class Surnames {
         }
 
         SurnameRegistry registry = SurnameRegistry.get(world.getServer());
-        String surname = registry.get(villager.getUuid());
+        String surname = registry.get(villager.getUUID());
         if (surname == null && (surname = existingSurname(current)) != null) {
-            registry.set(villager.getUuid(), surname);
+            registry.set(villager.getUUID(), surname);
         }
         if (surname == null) {
             FamilyTree tree = FamilyTree.get(world);
@@ -110,7 +110,7 @@ public final class Surnames {
     }
 
     public static void onEditorRename(VillagerEntityMCA villager) {
-        if (!(villager.getWorld() instanceof ServerWorld world)) {
+        if (!(villager.level() instanceof ServerLevel world)) {
             return;
         }
         String surname = existingSurname(villager.getTrackedValue(VillagerLike.VILLAGER_NAME));
@@ -118,13 +118,13 @@ public final class Surnames {
             return;
         }
         SurnameRegistry registry = SurnameRegistry.get(world.getServer());
-        String current = registry.get(villager.getUuid());
+        String current = registry.get(villager.getUUID());
         if (current == null || !surname.equals(SurnameText.display(current, villager.getGenetics().getGender()))) {
-            registry.set(villager.getUuid(), surname);
+            registry.set(villager.getUUID(), surname);
         }
     }
 
-    public static int fillMissing(ServerWorld world) {
+    public static int fillMissing(ServerLevel world) {
         FamilyTree tree = FamilyTree.get(world);
         SurnameRegistry registry = SurnameRegistry.get(world.getServer());
         List<FamilyTreeNode> missing = ((FamilyTreeAccessor) tree).mcavie$getEntries().values().stream()
@@ -140,7 +140,7 @@ public final class Surnames {
     }
 
     /** Met en majuscules le nom de famille déjà présent dans les fiches de l'arbre (anciens mondes). */
-    public static void uppercaseTree(ServerWorld world) {
+    public static void uppercaseTree(ServerLevel world) {
         FamilyTree tree = FamilyTree.get(world);
         SurnameRegistry registry = SurnameRegistry.get(world.getServer());
         for (FamilyTreeNode node : ((FamilyTreeAccessor) tree).mcavie$getEntries().values()) {
@@ -161,28 +161,28 @@ public final class Surnames {
     }
 
     /** Joueur dont le nom MCA garde un nom de famille en minuscules. */
-    public static void uppercasePlayer(ServerPlayerEntity player) {
-        String surname = SurnameRegistry.get(player.getServer()).get(player.getUuid());
+    public static void uppercasePlayer(ServerPlayer player) {
+        String surname = SurnameRegistry.get(player.getServer()).get(player.getUUID());
         if (surname == null) {
             return;
         }
         PlayerSaveData data = PlayerSaveData.get(player);
-        NbtCompound entityData = data.getEntityData();
+        CompoundTag entityData = data.getEntityData();
         String name = entityData != null && entityData.contains("villagerName") ? entityData.getString("villagerName") : null;
         if (name == null) {
-            name = FamilyTree.get(player.getServerWorld()).getOrEmpty(player.getUuid()).map(FamilyTreeNode::getName).orElse(null);
+            name = FamilyTree.get(player.serverLevel()).getOrEmpty(player.getUUID()).map(FamilyTreeNode::getName).orElse(null);
         }
         if (name != null && !SurnameText.withSurname(SurnameText.firstName(name, surname), surname).equals(name.trim())) {
             setPlayerSurname(player, surname, true);
         }
     }
 
-    public static void assign(ServerWorld world, FamilyTreeNode node) {
+    public static void assign(ServerLevel world, FamilyTreeNode node) {
         resolve(FamilyTree.get(world), SurnameRegistry.get(world.getServer()), node, SurnameLists.DEFAULT_REGION, 0);
     }
 
     @Nullable
-    public static String babySurname(ServerWorld world, Entity near, UUID father, UUID mother) {
+    public static String babySurname(ServerLevel world, Entity near, UUID father, UUID mother) {
         FamilyTree tree = FamilyTree.get(world);
         SurnameRegistry registry = SurnameRegistry.get(world.getServer());
         for (UUID parent : new UUID[]{father, mother}) {
@@ -206,16 +206,16 @@ public final class Surnames {
         return SurnameLists.pick(regionOf(entity));
     }
 
-    public static void setPlayerSurname(ServerPlayerEntity player, String surname, boolean renameNow) {
-        ServerWorld world = player.getServerWorld();
+    public static void setPlayerSurname(ServerPlayer player, String surname, boolean renameNow) {
+        ServerLevel world = player.serverLevel();
         SurnameRegistry registry = SurnameRegistry.get(world.getServer());
-        String previous = registry.get(player.getUuid());
-        registry.set(player.getUuid(), surname);
+        String previous = registry.get(player.getUUID());
+        registry.set(player.getUUID(), surname);
 
         if (renameNow) {
             FamilyTreeNode node = FamilyTree.get(world).getOrCreate(player);
             PlayerSaveData data = PlayerSaveData.get(player);
-            NbtCompound entityData = data.getEntityData();
+            CompoundTag entityData = data.getEntityData();
             String oldName = entityData != null && entityData.contains("villagerName")
                     ? entityData.getString("villagerName")
                     : node.getName();
@@ -227,10 +227,10 @@ public final class Surnames {
 
             node.setName(fullName);
             if (data.isEntityDataSet() && entityData != null) {
-                NbtCompound copy = entityData.copy();
+                CompoundTag copy = entityData.copy();
                 copy.putString("villagerName", fullName);
                 data.setEntityData(copy);
-                world.getPlayers().forEach(p -> NetworkHandler.sendToPlayer(new PlayerDataMessage(player.getUuid(), copy), p));
+                world.players().forEach(p -> NetworkHandler.sendToPlayer(new PlayerDataMessage(player.getUUID(), copy), p));
             }
         }
 

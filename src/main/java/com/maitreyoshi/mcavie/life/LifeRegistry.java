@@ -2,9 +2,9 @@ package com.maitreyoshi.mcavie.life;
 
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.PersistentState;
+import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-public class LifeRegistry extends PersistentState {
+public class LifeRegistry extends SavedData {
     private static final String DATA_ID = "mca_surnames_life";
 
     private final Map<UUID, Long> births = new HashMap<>();
@@ -26,10 +26,10 @@ public class LifeRegistry extends PersistentState {
     private final Map<UUID, Long> forcedAges = new HashMap<>();
 
     public static LifeRegistry get(MinecraftServer server) {
-        return server.getOverworld().getPersistentStateManager().getOrCreate(LifeRegistry::fromNbt, LifeRegistry::new, DATA_ID);
+        return server.overworld().getDataStorage().computeIfAbsent(LifeRegistry::fromNbt, LifeRegistry::new, DATA_ID);
     }
 
-    private static LifeRegistry fromNbt(NbtCompound nbt) {
+    private static LifeRegistry fromNbt(CompoundTag nbt) {
         LifeRegistry registry = new LifeRegistry();
         read(nbt.getCompound("births"), registry.births);
         read(nbt.getCompound("deaths"), registry.deaths);
@@ -43,8 +43,8 @@ public class LifeRegistry extends PersistentState {
         return registry;
     }
 
-    private static void readLives(NbtCompound entries, Map<UUID, long[]> into) {
-        for (String key : entries.getKeys()) {
+    private static void readLives(CompoundTag entries, Map<UUID, long[]> into) {
+        for (String key : entries.getAllKeys()) {
             try {
                 into.put(UUID.fromString(key), entries.getLongArray(key));
             } catch (IllegalArgumentException e) {
@@ -53,8 +53,8 @@ public class LifeRegistry extends PersistentState {
         }
     }
 
-    private static void read(NbtCompound entries, Map<UUID, Long> into) {
-        for (String key : entries.getKeys()) {
+    private static void read(CompoundTag entries, Map<UUID, Long> into) {
+        for (String key : entries.getAllKeys()) {
             try {
                 into.put(UUID.fromString(key), entries.getLong(key));
             } catch (IllegalArgumentException e) {
@@ -63,14 +63,14 @@ public class LifeRegistry extends PersistentState {
         }
     }
 
-    private static NbtCompound write(Map<UUID, Long> from) {
-        NbtCompound entries = new NbtCompound();
+    private static CompoundTag write(Map<UUID, Long> from) {
+        CompoundTag entries = new CompoundTag();
         from.forEach((uuid, day) -> entries.putLong(uuid.toString(), day));
         return entries;
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    public CompoundTag save(CompoundTag nbt) {
         nbt.put("births", write(births));
         nbt.put("deaths", write(deaths));
         nbt.put("zombies", write(zombies));
@@ -78,10 +78,10 @@ public class LifeRegistry extends PersistentState {
         nbt.put("forced_ages", write(forcedAges));
         nbt.put("exact_births", write(exactBirths));
         nbt.put("exact_deaths", write(exactDeaths));
-        NbtCompound lives = new NbtCompound();
+        CompoundTag lives = new CompoundTag();
         pastLives.forEach((uuid, days) -> lives.putLongArray(uuid.toString(), days));
         nbt.put("lives", lives);
-        NbtCompound legacy = new NbtCompound();
+        CompoundTag legacy = new CompoundTag();
         legacyLives.forEach((uuid, days) -> legacy.putLongArray(uuid.toString(), days));
         nbt.put("past_lives", legacy);
         return nbt;
@@ -95,7 +95,7 @@ public class LifeRegistry extends PersistentState {
     public void setBirthDay(UUID uuid, long day) {
         births.put(uuid, day);
         exactBirths.remove(uuid);
-        markDirty();
+        setDirty();
     }
 
     public void forceBirthDay(UUID uuid, long day) {
@@ -115,13 +115,13 @@ public class LifeRegistry extends PersistentState {
     public void setDeathDay(UUID uuid, long day) {
         deaths.put(uuid, day);
         exactDeaths.remove(uuid);
-        markDirty();
+        setDirty();
     }
 
     public void clearDeathDay(UUID uuid) {
         exactDeaths.remove(uuid);
         if (deaths.remove(uuid) != null) {
-            markDirty();
+            setDirty();
         }
     }
 
@@ -131,12 +131,12 @@ public class LifeRegistry extends PersistentState {
 
     public void setZombified(UUID uuid, long day) {
         zombies.put(uuid, day);
-        markDirty();
+        setDirty();
     }
 
     public void clearZombie(UUID uuid) {
         if (zombies.remove(uuid) != null) {
-            markDirty();
+            setDirty();
         }
     }
 
@@ -151,7 +151,7 @@ public class LifeRegistry extends PersistentState {
             births.put(uuid, WorldCalendar.gameDayOf(WorldCalendar.calendarDay(birth) + elapsed));
             exactBirths.computeIfPresent(uuid, (k, exact) -> exact + elapsed);
         }
-        markDirty();
+        setDirty();
     }
 
     public void recordBirth(UUID uuid, long day, long exactCalendarDay) {
@@ -194,7 +194,7 @@ public class LifeRegistry extends PersistentState {
         resurrectedAt.put(uuid, gameTime);
         deaths.remove(uuid);
         exactDeaths.remove(uuid);
-        markDirty();
+        setDirty();
     }
 
     private long[] lives(UUID uuid) {
@@ -205,7 +205,7 @@ public class LifeRegistry extends PersistentState {
                 converted[i] = WorldCalendar.spreadCalendarDay(legacy[i], uuid.getLeastSignificantBits() + i);
             }
             pastLives.put(uuid, converted);
-            markDirty();
+            setDirty();
         }
         return pastLives.getOrDefault(uuid, new long[0]);
     }

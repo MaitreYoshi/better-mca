@@ -3,7 +3,7 @@ package com.maitreyoshi.mcavie.tree.server.mixin;
 import com.maitreyoshi.mcavie.tree.server.TreeRepair;
 import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
-import net.minecraft.world.PersistentState;
+import net.minecraft.world.level.saveddata.SavedData;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -23,7 +23,7 @@ public abstract class FamilyTreeMixin {
     @Inject(method = "<init>*", at = @At("TAIL"))
     private void mcavie$repairLinks(CallbackInfo ci) {
         if (TreeRepair.repair(entries)) {
-            ((PersistentState) (Object) this).markDirty();
+            ((SavedData) (Object) this).setDirty();
         }
     }
 }

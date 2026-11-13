@@ -6,9 +6,8 @@ import com.maitreyoshi.mcavie.tree.server.mixin.FamilyTreeAccessor;
 import com.maitreyoshi.mcavie.compat.ServerLifecycleEvents;
 import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.random.Random;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -35,13 +34,13 @@ public final class FamilyAges {
 
     public static void register() {
         ServerLifecycleEvents.SERVER_STARTED.register(server -> {
-            repair(server.getOverworld());
-            com.maitreyoshi.mcavie.Surnames.uppercaseTree(server.getOverworld());
-            com.maitreyoshi.mcavie.village.CivilRegistry.fillExactDates(server.getOverworld());
+            repair(server.overworld());
+            com.maitreyoshi.mcavie.Surnames.uppercaseTree(server.overworld());
+            com.maitreyoshi.mcavie.village.CivilRegistry.fillExactDates(server.overworld());
         });
     }
 
-    static int initialYears(ServerWorld world, UUID self, int lo, int hi, Random random) {
+    static int initialYears(ServerLevel world, UUID self, int lo, int hi, RandomSource random) {
         long today = WorldCalendar.now(world).dayIndex();
         Family family = Family.around(world, self, today);
         int worldYears = worldYears(world, today);
@@ -66,7 +65,7 @@ public final class FamilyAges {
         return lo + random.nextInt(top - lo + 1);
     }
 
-    public static void repair(ServerWorld world) {
+    public static void repair(ServerLevel world) {
         LifeRegistry life = LifeRegistry.get(world.getServer());
         long today = WorldCalendar.now(world).dayIndex();
         int worldYears = worldYears(world, today);
@@ -87,12 +86,12 @@ public final class FamilyAges {
         }
     }
 
-    private static Map<UUID, FamilyTreeNode> entries(ServerWorld world) {
+    private static Map<UUID, FamilyTreeNode> entries(ServerLevel world) {
         return ((FamilyTreeAccessor) FamilyTree.get(world)).mcavie$getEntries();
     }
 
-    static int worldYears(ServerWorld world, long today) {
-        long start = Math.min(0, today - world.getTime() / WorldCalendar.TICKS_PER_DAY);
+    static int worldYears(ServerLevel world, long today) {
+        long start = Math.min(0, today - world.getGameTime() / WorldCalendar.TICKS_PER_DAY);
         return (int) Math.floor(WorldCalendar.yearsBetween(start, today));
     }
 
@@ -124,7 +123,7 @@ public final class FamilyAges {
             return ids.size();
         }
 
-        static Family around(ServerWorld world, UUID start, long today) {
+        static Family around(ServerLevel world, UUID start, long today) {
             Map<UUID, FamilyTreeNode> entries = entries(world);
             LifeRegistry life = LifeRegistry.get(world.getServer());
             Family f = new Family();

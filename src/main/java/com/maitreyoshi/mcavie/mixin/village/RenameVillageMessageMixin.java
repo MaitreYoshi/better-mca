@@ -3,8 +3,8 @@ package com.maitreyoshi.mcavie.mixin.village;
 import com.maitreyoshi.mcavie.village.VillageRights;
 import net.mca.network.c2s.RenameVillageMessage;
 import net.mca.server.world.data.VillageManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -22,11 +22,11 @@ public abstract class RenameVillageMessageMixin {
     private String name;
 
     @Inject(method = "receive", at = @At("HEAD"), cancellable = true)
-    private void mcavie$checkRights(ServerPlayerEntity player, CallbackInfo ci) {
+    private void mcavie$checkRights(ServerPlayer player, CallbackInfo ci) {
         ci.cancel();
-        VillageManager.get(player.getServerWorld()).getOrEmpty(id).ifPresent(village -> {
+        VillageManager.get(player.serverLevel()).getOrEmpty(id).ifPresent(village -> {
             if (!VillageRights.personalRank(village, player).isAtLeast(VillageRights.RENAME)) {
-                player.sendMessage(Text.translatable("msg.mca_vie.rights.denied", Text.translatable(VillageRights.RENAME.getTranslationKey())), true);
+                player.displayClientMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.RENAME.getTranslationKey())), true);
                 return;
             }
             String clean = name == null ? "" : name.strip();

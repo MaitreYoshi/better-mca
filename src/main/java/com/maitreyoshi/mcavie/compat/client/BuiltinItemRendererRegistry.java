@@ -1,13 +1,12 @@
 package com.maitreyoshi.mcavie.compat.client;
 
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.render.model.json.ModelTransformationMode;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-
+import com.mojang.blaze3d.vertex.PoseStack;
 import java.util.IdentityHashMap;
 import java.util.Map;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.item.ItemStack;
 
 public final class BuiltinItemRendererRegistry {
     public static final BuiltinItemRendererRegistry INSTANCE = new BuiltinItemRendererRegistry();
@@ -26,6 +25,6 @@ public final class BuiltinItemRendererRegistry {
 
     @FunctionalInterface
     public interface DynamicItemRenderer {
-        void render(ItemStack stack, ModelTransformationMode mode, MatrixStack matrices, VertexConsumerProvider vertexConsumers, int light, int overlay);
+        void render(ItemStack stack, ItemDisplayContext mode, PoseStack matrices, MultiBufferSource vertexConsumers, int light, int overlay);
     }
 }

@@ -5,7 +5,6 @@ import com.maitreyoshi.mcavie.social.SocialNetwork;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
-import net.minecraft.network.PacketByteBuf;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -14,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.network.FriendlyByteBuf;
 
 public final class RelationsClient {
     private static final Map<UUID, Relations> CACHE = new HashMap<>();
@@ -29,12 +29,12 @@ public final class RelationsClient {
 
     public static void register() {
         ClientPlayNetworking.registerGlobalReceiver(SocialNetwork.RELATIONS, (client, handler, buf, responseSender) -> {
-            UUID owner = buf.readUuid();
+            UUID owner = buf.readUUID();
             long today = buf.readVarLong();
             int count = buf.readVarInt();
             List<Entry> entries = new ArrayList<>(count);
             for (int i = 0; i < count; i++) {
-                entries.add(new Entry(buf.readUuid(), buf.readString(), buf.readBoolean(), buf.readVarInt(), buf.readVarLong(), buf.readVarInt(), buf.readBoolean()));
+                entries.add(new Entry(buf.readUUID(), buf.readUtf(), buf.readBoolean(), buf.readVarInt(), buf.readVarLong(), buf.readVarInt(), buf.readBoolean()));
             }
             entries.sort(Comparator.comparingInt((Entry e) -> e.score() >= 0 ? 0 : 1)
                     .thenComparingInt(e -> e.score() >= 0 ? -e.score() : e.score())
@@ -46,8 +46,8 @@ public final class RelationsClient {
     }
 
     public static void request(UUID villager) {
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeUuid(villager);
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUUID(villager);
         ClientPlayNetworking.send(SocialNetwork.RELATIONS_REQUEST, buf);
     }
 

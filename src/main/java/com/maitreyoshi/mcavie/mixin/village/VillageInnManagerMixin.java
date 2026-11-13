@@ -4,7 +4,7 @@ import com.maitreyoshi.mcavie.Surnames;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.VillagerLike;
 import net.mca.server.world.data.villageComponents.VillageInnManager;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -22,7 +22,7 @@ public abstract class VillageInnManagerMixin {
         Surnames.update(adventurer);
         String full = adventurer.getTrackedValue(VillagerLike.VILLAGER_NAME);
         if (full != null && !full.isBlank() && (adventurer.getCustomName() == null || !full.equals(adventurer.getCustomName().getString()))) {
-            adventurer.setCustomName(Text.literal(full));
+            adventurer.setCustomName(Component.literal(full));
         }
     }
 }

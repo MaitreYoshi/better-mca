@@ -2,17 +2,16 @@ package com.maitreyoshi.mcavie.book;
 
 import net.mca.client.book.pages.Page;
 import net.mca.client.gui.ExtendedBookScreen;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.potion.PotionUtil;
-import net.minecraft.registry.Registries;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Language;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.locale.Language;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.alchemy.PotionUtils;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,7 +36,7 @@ public class IllustratedPage extends Page {
     private final List<String> grid = new ArrayList<>();
     private String noteKey;
     private String bigIcon;
-    private Identifier image;
+    private ResourceLocation image;
     private int imageWidth;
     private int imageHeight;
     private String[] recipe;
@@ -88,7 +87,7 @@ public class IllustratedPage extends Page {
         return this;
     }
 
-    public IllustratedPage image(Identifier image, int width, int height) {
+    public IllustratedPage image(ResourceLocation image, int width, int height) {
         this.image = image;
         this.imageWidth = width;
         this.imageHeight = height;
@@ -114,51 +113,51 @@ public class IllustratedPage extends Page {
     private static ItemStack stack(String id) {
         int at = id.indexOf('@');
         if (at < 0) {
-            return new ItemStack(Registries.ITEM.get(new Identifier(id)));
+            return new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation(id)));
         }
-        ItemStack stack = new ItemStack(Registries.ITEM.get(new Identifier(id.substring(0, at))));
-        return PotionUtil.setPotion(stack, Registries.POTION.get(new Identifier(id.substring(at + 1))));
+        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation(id.substring(0, at))));
+        return PotionUtils.setPotion(stack, BuiltInRegistries.POTION.get(new ResourceLocation(id.substring(at + 1))));
     }
 
     @Override
-    public void render(ExtendedBookScreen screen, DrawContext context, int mouseX, int mouseY, float delta) {
-        TextRenderer font = screen.getTextRenderer();
+    public void render(ExtendedBookScreen screen, GuiGraphics context, int mouseX, int mouseY, float delta) {
+        Font font = screen.getTextRenderer();
         int left = (screen.width - 192) / 2 + 36;
 
         if (image != null) {
             int h = 124;
             int w = imageWidth * h / imageHeight;
-            context.drawTexture(image, left + (WIDTH - w) / 2, 28, w, h, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
+            context.blit(image, left + (WIDTH - w) / 2, 28, w, h, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
             return;
         }
-        Text title = Text.translatable(titleKey).formatted(Formatting.BOLD);
-        int titleWidth = font.getWidth(title);
+        Component title = Component.translatable(titleKey).withStyle(ChatFormatting.BOLD);
+        int titleWidth = font.width(title);
         if (titleWidth > WIDTH) {
             float scale = WIDTH / (float) titleWidth;
-            context.getMatrices().push();
-            context.getMatrices().translate(left, 30 + 4 * (1 - scale), 0);
-            context.getMatrices().scale(scale, scale, 1);
-            context.drawText(font, title, 0, 0, TITLE_COLOR, false);
-            context.getMatrices().pop();
+            context.pose().pushPose();
+            context.pose().translate(left, 30 + 4 * (1 - scale), 0);
+            context.pose().scale(scale, scale, 1);
+            context.drawString(font, title, 0, 0, TITLE_COLOR, false);
+            context.pose().popPose();
         } else {
-            context.drawText(font, title, left + (WIDTH - titleWidth) / 2, 30, TITLE_COLOR, false);
+            context.drawString(font, title, left + (WIDTH - titleWidth) / 2, 30, TITLE_COLOR, false);
         }
         context.fill(left + 10, 41, left + WIDTH - 10, 42, 0x55000000 | TITLE_COLOR);
 
         int y = 46;
         if (introKey != null) {
-            for (OrderedText line : font.wrapLines(Text.translatable(introKey), WIDTH)) {
-                context.drawText(font, line, left, y, TEXT_COLOR, false);
+            for (FormattedCharSequence line : font.split(Component.translatable(introKey), WIDTH)) {
+                context.drawString(font, line, left, y, TEXT_COLOR, false);
                 y += 9;
             }
             y += 4;
         }
         if (bigIcon != null) {
-            context.getMatrices().push();
-            context.getMatrices().translate(left + (WIDTH - 48) / 2f, y, 0);
-            context.getMatrices().scale(3, 3, 1);
-            context.drawItem(stack(bigIcon), 0, 0);
-            context.getMatrices().pop();
+            context.pose().pushPose();
+            context.pose().translate(left + (WIDTH - 48) / 2f, y, 0);
+            context.pose().scale(3, 3, 1);
+            context.renderItem(stack(bigIcon), 0, 0);
+            context.pose().popPose();
             y += 52;
         }
         if (recipe != null) {
@@ -169,37 +168,37 @@ public class IllustratedPage extends Page {
                 context.fill(sx, sy, sx + 18, sy + 18, 0x40000000 | TITLE_COLOR);
                 context.fill(sx + 1, sy + 1, sx + 17, sy + 17, 0xFFE9DDBF);
                 if (i < recipe.length && !recipe[i].isEmpty()) {
-                    context.drawItem(stack(recipe[i]), sx + 1, sy + 1);
+                    context.renderItem(stack(recipe[i]), sx + 1, sy + 1);
                 }
             }
             int arrowX = gridLeft + 54 + 4;
-            context.drawText(font, Text.literal("→").formatted(Formatting.BOLD), arrowX + 3, y + 23, TITLE_COLOR, false);
+            context.drawString(font, Component.literal("→").withStyle(ChatFormatting.BOLD), arrowX + 3, y + 23, TITLE_COLOR, false);
             int rx = arrowX + 18;
             context.fill(rx, y + 18, rx + 18, y + 36, 0x40000000 | TITLE_COLOR);
             context.fill(rx + 1, y + 19, rx + 17, y + 35, 0xFFE9DDBF);
-            context.drawItem(stack(recipeResult), rx + 1, y + 19);
+            context.renderItem(stack(recipeResult), rx + 1, y + 19);
             y += 58;
         }
         Row hovered = null;
         for (Row row : rows) {
             if (row.icon == null) {
-                Text value = Text.literal(row.value).formatted(Formatting.BOLD);
-                context.drawText(font, Text.literal("\u2022 ").append(Text.translatable(row.key)), left + 4, y, TEXT_COLOR, false);
-                context.drawText(font, value, left + WIDTH - font.getWidth(value), y, row.color, false);
+                Component value = Component.literal(row.value).withStyle(ChatFormatting.BOLD);
+                context.drawString(font, Component.literal("\u2022 ").append(Component.translatable(row.key)), left + 4, y, TEXT_COLOR, false);
+                context.drawString(font, value, left + WIDTH - font.width(value), y, row.color, false);
                 y += LINE_HEIGHT;
                 continue;
             }
-            context.drawItem(stack(row.icon), left, y);
-            Text value = Text.literal(row.value).formatted(Formatting.BOLD);
-            int valueWidth = font.getWidth(value);
-            context.drawText(font, value, left + WIDTH - valueWidth, y + 4, row.color, false);
-            List<OrderedText> lines = font.wrapLines(Text.translatable(row.key), WIDTH - 20 - valueWidth - 3);
+            context.renderItem(stack(row.icon), left, y);
+            Component value = Component.literal(row.value).withStyle(ChatFormatting.BOLD);
+            int valueWidth = font.width(value);
+            context.drawString(font, value, left + WIDTH - valueWidth, y + 4, row.color, false);
+            List<FormattedCharSequence> lines = font.split(Component.translatable(row.key), WIDTH - 20 - valueWidth - 3);
             int rowHeight = Math.max(ROW_HEIGHT, lines.size() * 9 + 2);
             if (lines.size() == 1) {
-                context.drawText(font, lines.get(0), left + 19, y + 4, TEXT_COLOR, false);
+                context.drawString(font, lines.get(0), left + 19, y + 4, TEXT_COLOR, false);
             } else {
                 for (int i = 0; i < lines.size(); i++) {
-                    context.drawText(font, lines.get(i), left + 19, y + i * 9, TEXT_COLOR, false);
+                    context.drawString(font, lines.get(i), left + 19, y + i * 9, TEXT_COLOR, false);
                 }
             }
             if (mouseX >= left && mouseX < left + WIDTH && mouseY >= y - 1 && mouseY < y + rowHeight - 1) {
@@ -212,23 +211,23 @@ public class IllustratedPage extends Page {
             int perLine = WIDTH / 19;
             int gridLeft = left + (WIDTH - perLine * 19 + 3) / 2;
             for (int i = 0; i < grid.size(); i++) {
-                context.drawItem(stack(grid.get(i)), gridLeft + (i % perLine) * 19, y + (i / perLine) * 18);
+                context.renderItem(stack(grid.get(i)), gridLeft + (i % perLine) * 19, y + (i / perLine) * 18);
             }
             y += ((grid.size() + perLine - 1) / perLine) * 18 + 2;
         }
 
         if (noteKey != null) {
-            for (OrderedText line : font.wrapLines(Text.translatable(noteKey), WIDTH)) {
+            for (FormattedCharSequence line : font.split(Component.translatable(noteKey), WIDTH)) {
                 if (y > LAST_LINE_Y) {
                     break;
                 }
-                context.drawText(font, line, left, y, NOTE_COLOR, false);
+                context.drawString(font, line, left, y, NOTE_COLOR, false);
                 y += 9;
             }
         }
 
-        if (hovered != null && Language.getInstance().hasTranslation(hovered.key + ".tip")) {
-            context.drawOrderedTooltip(font, font.wrapLines(Text.translatable(hovered.key + ".tip"), 170), mouseX, mouseY);
+        if (hovered != null && Language.getInstance().has(hovered.key + ".tip")) {
+            context.renderTooltip(font, font.split(Component.translatable(hovered.key + ".tip"), 170), mouseX, mouseY);
         }
     }
 }

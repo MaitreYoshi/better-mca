@@ -2,13 +2,13 @@ package com.maitreyoshi.mcavie.compat;
 
 import dev.architectury.event.events.common.PlayerEvent;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayNetworkHandler;
+import net.minecraft.server.network.ServerGamePacketListenerImpl;
 
 public final class ServerPlayConnectionEvents {
     public static final Event<Join> JOIN = listener -> PlayerEvent.PLAYER_JOIN.register(player ->
-            listener.onPlayReady(player.networkHandler, new PacketSender(player), player.server));
+            listener.onPlayReady(player.connection, new PacketSender(player), player.server));
     public static final Event<Disconnect> DISCONNECT = listener -> PlayerEvent.PLAYER_QUIT.register(player ->
-            listener.onPlayDisconnect(player.networkHandler, player.server));
+            listener.onPlayDisconnect(player.connection, player.server));
 
     private ServerPlayConnectionEvents() {
     }
@@ -20,11 +20,11 @@ public final class ServerPlayConnectionEvents {
 
     @FunctionalInterface
     public interface Join {
-        void onPlayReady(ServerPlayNetworkHandler handler, PacketSender sender, MinecraftServer server);
+        void onPlayReady(ServerGamePacketListenerImpl handler, PacketSender sender, MinecraftServer server);
     }
 
     @FunctionalInterface
     public interface Disconnect {
-        void onPlayDisconnect(ServerPlayNetworkHandler handler, MinecraftServer server);
+        void onPlayDisconnect(ServerGamePacketListenerImpl handler, MinecraftServer server);
     }
 }

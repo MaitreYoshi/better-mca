@@ -9,20 +9,17 @@ import net.mca.client.book.Book;
 import net.mca.client.book.pages.TextPage;
 import net.mca.client.book.pages.TitlePage;
 import net.mca.item.ExtendedWrittenBookItem;
-import net.minecraft.advancement.Advancement;
-import net.minecraft.advancement.AdvancementProgress;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.advancements.Advancement;
+import net.minecraft.advancements.AdvancementProgress;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -33,7 +30,7 @@ public final class HappinessBook {
     private static final String TAG = "mca_vie.happiness_book_given";
     private static final String P = "mca_vie.books.happiness.";
     private static final int HOTBAR_SLOT = 1;
-    private static final Identifier MCA_ROOT = new Identifier("mca", "root");
+    private static final ResourceLocation MCA_ROOT = new ResourceLocation("mca", "root");
     private static final Set<UUID> PENDING = new HashSet<>();
 
     public static Item HAPPINESS_BOOK;
@@ -42,25 +39,25 @@ public final class HappinessBook {
     }
 
     public static void register() {
-        com.maitreyoshi.mcavie.compat.Registration.register(net.minecraft.registry.RegistryKeys.ITEM, "happiness_book",
-                () -> new ExtendedWrittenBookItem(new Item.Settings().maxCount(1), createBook()), item -> HAPPINESS_BOOK = item);
+        com.maitreyoshi.mcavie.compat.Registration.register(net.minecraft.core.registries.Registries.ITEM, "happiness_book",
+                () -> new ExtendedWrittenBookItem(new Item.Properties().stacksTo(1), createBook()), item -> HAPPINESS_BOOK = item);
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            if (!handler.player.getCommandTags().contains(TAG)) {
-                PENDING.add(handler.player.getUuid());
+            if (!handler.player.getTags().contains(TAG)) {
+                PENDING.add(handler.player.getUUID());
             }
         });
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> PENDING.remove(handler.player.getUuid()));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> PENDING.remove(handler.player.getUUID()));
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             if (PENDING.isEmpty()) {
                 return;
             }
-            Advancement mcaRoot = server.getAdvancementLoader().get(MCA_ROOT);
+            Advancement mcaRoot = server.getAdvancements().getAdvancement(MCA_ROOT);
             Iterator<UUID> it = PENDING.iterator();
             while (it.hasNext()) {
-                ServerPlayerEntity player = server.getPlayerManager().getPlayer(it.next());
+                ServerPlayer player = server.getPlayerList().getPlayer(it.next());
                 if (player == null) {
                     it.remove();
-                } else if (player.isAlive() && (mcaRoot == null || player.getAdvancementTracker().getProgress(mcaRoot).isDone())) {
+                } else if (player.isAlive() && (mcaRoot == null || player.getAdvancements().getOrStartProgress(mcaRoot).isDone())) {
                     it.remove();
                     giveOnce(player);
                 }
@@ -69,7 +66,7 @@ public final class HappinessBook {
     }
 
     private static Book createBook() {
-        return new Book("happiness", Text.translatable(P + "author").formatted(Formatting.GRAY))
+        return new Book("happiness", Component.translatable(P + "author").withStyle(ChatFormatting.GRAY))
                 .setBackground(MCAVie.id("textures/gui/books/happiness.png"))
                 .addPage(new TitlePage("item.mca_vie.happiness_book", P + "author"))
                 .addPage(new TextPage("{\"translate\":\"" + P + "intro\"}"))
@@ -129,25 +126,25 @@ public final class HappinessBook {
                         .note(P + "cure.note"));
     }
 
-    private static void giveOnce(ServerPlayerEntity player) {
-        if (!player.addCommandTag(TAG)) {
+    private static void giveOnce(ServerPlayer player) {
+        if (!player.addTag(TAG)) {
             return;
         }
         ItemStack book = new ItemStack(HAPPINESS_BOOK);
-        PlayerInventory inventory = player.getInventory();
-        if (inventory.getStack(HOTBAR_SLOT).isEmpty()) {
-            inventory.setStack(HOTBAR_SLOT, book);
-        } else if (!inventory.insertStack(book)) {
-            player.dropItem(book, false);
+        Inventory inventory = player.getInventory();
+        if (inventory.getItem(HOTBAR_SLOT).isEmpty()) {
+            inventory.setItem(HOTBAR_SLOT, book);
+        } else if (!inventory.add(book)) {
+            player.drop(book, false);
         }
-        player.getWorld().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENTITY_ITEM_PICKUP, SoundCategory.PLAYERS,
+        player.level().playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS,
                 0.2F, ((player.getRandom().nextFloat() - player.getRandom().nextFloat()) * 0.7F + 1.0F) * 2.0F);
-        player.currentScreenHandler.sendContentUpdates();
-        Advancement advancement = player.server.getAdvancementLoader().get(MCAVie.id("happiness_book"));
+        player.containerMenu.broadcastChanges();
+        Advancement advancement = player.server.getAdvancements().getAdvancement(MCAVie.id("happiness_book"));
         if (advancement != null) {
-            AdvancementProgress progress = player.getAdvancementTracker().getProgress(advancement);
-            for (String criterion : progress.getUnobtainedCriteria()) {
-                player.getAdvancementTracker().grantCriterion(advancement, criterion);
+            AdvancementProgress progress = player.getAdvancements().getOrStartProgress(advancement);
+            for (String criterion : progress.getRemainingCriteria()) {
+                player.getAdvancements().award(advancement, criterion);
             }
         }
     }

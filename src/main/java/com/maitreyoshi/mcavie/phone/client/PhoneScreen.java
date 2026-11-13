@@ -15,24 +15,9 @@ import com.maitreyoshi.mcavie.tree.client.TreeClient;
 import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkStatus;
 import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.math.Axis;
 import java.awt.Color;
 import java.util.concurrent.ThreadLocalRandom;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.PlayerSkinDrawer;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.registry.Registries;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
 import org.lwjgl.glfw.GLFW;
 
 import java.time.LocalDate;
@@ -44,6 +29,21 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.IntSupplier;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.PlayerFaceRenderer;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.util.Mth;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 
 public class PhoneScreen extends Screen {
     private static final int BEZEL = 6;
@@ -78,8 +78,8 @@ public class PhoneScreen extends Screen {
     private enum View { LOCK, HOME, CONTACTS, ADD_CONTACT, MESSAGES, NEW_MESSAGE, CONVERSATION, SETTINGS, SET_CODE, CAMERA, TREE, GALLERY, PICK_CONTACT, FOLDER_NAME, MAP, WALLPAPER, CROP, AGENDA, AGENDA_EDIT, HOME_APPS, EMPLOYEES, EMPLOYEE, EMPLOYEE_CHAT }
 
     private record App(String key, View view, IntSupplier badge) {
-        Identifier texture() {
-            return new Identifier("mca_vie", "textures/gui/phone/app_" + key + ".png");
+        ResourceLocation texture() {
+            return new ResourceLocation("mca_vie", "textures/gui/phone/app_" + key + ".png");
         }
     }
 
@@ -123,12 +123,12 @@ public class PhoneScreen extends Screen {
     private String draft = "";
     private String numberInput = "";
     private String codeInput = "";
-    private Text toast;
+    private Component toast;
     private long toastUntil;
     private long ticks;
     private int mouseX;
     private int mouseY;
-    private TextFieldWidget mainField;
+    private EditBox mainField;
     private static final float[] MAP_SCALES = {0.5f, 1f, 2f, 3f};
     private int mapZoom = 1;
     private double mapPanX;
@@ -163,7 +163,7 @@ public class PhoneScreen extends Screen {
     private long revealTick;
 
     public PhoneScreen(State state) {
-        super(Text.translatable("item.mca_vie.phone"));
+        super(Component.translatable("item.mca_vie.phone"));
         PhoneSettings.load();
         applyTheme();
         this.state = state;
@@ -219,7 +219,7 @@ public class PhoneScreen extends Screen {
         }
     }
 
-    public void showError(Text text) {
+    public void showError(Component text) {
         toast = text;
         toastUntil = ticks + TOAST_TICKS;
     }
@@ -241,7 +241,7 @@ public class PhoneScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 
@@ -257,7 +257,7 @@ public class PhoneScreen extends Screen {
         return Math.round(height / ui());
     }
 
-    private void scissor(DrawContext context, int x1, int y1, int x2, int y2) {
+    private void scissor(GuiGraphics context, int x1, int y1, int x2, int y2) {
         float s = ui();
         context.enableScissor(Math.round(x1 * s), Math.round(y1 * s), Math.round(x2 * s), Math.round(y2 * s));
     }
@@ -270,16 +270,16 @@ public class PhoneScreen extends Screen {
         return !PhoneSettings.light || (r * 299 + g * 587 + b * 114) / 1000 > 160;
     }
 
-    private void centered(DrawContext context, String text, int x, int y, int color) {
-        context.drawText(textRenderer, text, x - textRenderer.getWidth(text) / 2, y, color, shadow(color));
+    private void centered(GuiGraphics context, String text, int x, int y, int color) {
+        context.drawString(font, text, x - font.width(text) / 2, y, color, shadow(color));
     }
 
-    private void centered(DrawContext context, Text text, int x, int y, int color) {
-        context.drawText(textRenderer, text, x - textRenderer.getWidth(text) / 2, y, color, shadow(color));
+    private void centered(GuiGraphics context, Component text, int x, int y, int color) {
+        context.drawString(font, text, x - font.width(text) / 2, y, color, shadow(color));
     }
 
-    private void centered(DrawContext context, OrderedText text, int x, int y, int color) {
-        context.drawText(textRenderer, text, x - textRenderer.getWidth(text) / 2, y, color, shadow(color));
+    private void centered(GuiGraphics context, FormattedCharSequence text, int x, int y, int color) {
+        context.drawString(font, text, x - font.width(text) / 2, y, color, shadow(color));
     }
 
     private static void applyTheme() {
@@ -350,7 +350,7 @@ public class PhoneScreen extends Screen {
         if (next == View.EMPLOYEES) {
             requestEmployees();
         }
-        clearAndInit();
+        rebuildWidgets();
     }
 
     private View parent() {
@@ -367,7 +367,7 @@ public class PhoneScreen extends Screen {
         };
     }
 
-    private void send(int op, Consumer<PacketByteBuf> body) {
+    private void send(int op, Consumer<FriendlyByteBuf> body) {
         PhoneClient.send(state.number(), op, body);
     }
 
@@ -400,17 +400,17 @@ public class PhoneScreen extends Screen {
         }
     }
 
-    private TextFieldWidget field(int x, int y, int w, int max, String value, Consumer<String> listener, boolean digits) {
-        TextFieldWidget field = new TextFieldWidget(textRenderer, x, y, w, 10, Text.empty());
-        field.setDrawsBackground(false);
+    private EditBox field(int x, int y, int w, int max, String value, Consumer<String> listener, boolean digits) {
+        EditBox field = new EditBox(font, x, y, w, 10, Component.empty());
+        field.setBordered(false);
         field.setMaxLength(max);
-        field.setEditableColor(TEXT);
+        field.setTextColor(TEXT);
         if (digits) {
-            field.setTextPredicate(s -> s.chars().allMatch(c -> c >= '0' && c <= '9'));
+            field.setFilter(s -> s.chars().allMatch(c -> c >= '0' && c <= '9'));
         }
-        field.setText(value);
-        field.setChangedListener(listener);
-        addDrawableChild(field);
+        field.setValue(value);
+        field.setResponder(listener);
+        addRenderableWidget(field);
         return field;
     }
 
@@ -437,7 +437,7 @@ public class PhoneScreen extends Screen {
         if (current.length() == PhoneNetwork.CODE_LENGTH) {
             String code = current;
             codeInput = "";
-            send(view == View.LOCK ? PhoneNetwork.OP_UNLOCK : PhoneNetwork.OP_SET_CODE, buf -> buf.writeString(code));
+            send(view == View.LOCK ? PhoneNetwork.OP_UNLOCK : PhoneNetwork.OP_SET_CODE, buf -> buf.writeUtf(code));
         }
     }
 
@@ -471,11 +471,11 @@ public class PhoneScreen extends Screen {
         int target = other;
         send(PhoneNetwork.OP_SEND, buf -> {
             buf.writeVarInt(target);
-            buf.writeString(text);
+            buf.writeUtf(text);
         });
         draft = "";
         if (mainField != null) {
-            mainField.setText("");
+            mainField.setValue("");
         }
     }
 
@@ -564,7 +564,7 @@ public class PhoneScreen extends Screen {
                     int target = drop.folder();
                     if (target != folder) {
                         send(PhoneNetwork.OP_MOVE_PHOTO, buf -> {
-                            buf.writeUuid(id);
+                            buf.writeUUID(id);
                             buf.writeVarInt(target);
                         });
                     }
@@ -619,7 +619,7 @@ public class PhoneScreen extends Screen {
     @Override
     public boolean mouseScrolled(double x, double y, double amount) {
         if (view == View.CROP) {
-            cropZoom = MathHelper.clamp(cropZoom * (amount > 0 ? 1.1f : 1 / 1.1f), 1f, MAX_CROP_ZOOM);
+            cropZoom = Mth.clamp(cropZoom * (amount > 0 ? 1.1f : 1 / 1.1f), 1f, MAX_CROP_ZOOM);
             return true;
         }
         if (view == View.MAP) {
@@ -635,7 +635,7 @@ public class PhoneScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int realMouseX, int realMouseY, float delta) {
+    public void render(GuiGraphics context, int realMouseX, int realMouseY, float delta) {
         int mouseX = Math.round(realMouseX / ui());
         int mouseY = Math.round(realMouseY / ui());
         this.mouseX = mouseX;
@@ -644,8 +644,8 @@ public class PhoneScreen extends Screen {
         cells.clear();
         drops.clear();
         renderBackground(context);
-        context.getMatrices().push();
-        context.getMatrices().scale(ui(), ui(), 1);
+        context.pose().pushPose();
+        context.pose().scale(ui(), ui(), 1);
 
         int px = phoneLeft();
         int py = phoneTop();
@@ -707,15 +707,15 @@ public class PhoneScreen extends Screen {
         super.render(context, mouseX, mouseY, delta);
 
         if (dragging && pressed != null) {
-            context.getMatrices().push();
-            context.getMatrices().translate(0, 0, 200);
+            context.pose().pushPose();
+            context.pose().translate(0, 0, 200);
             context.fill(mouseX - 17, mouseY - 10, mouseX + 17, mouseY + 10, 0xFFFFFFFF);
             drawPhoto(context, pressed, mouseX - 16, mouseY - 9, 32, 18);
-            context.getMatrices().pop();
+            context.pose().popPose();
         }
 
         if (toast != null && ticks < toastUntil) {
-            List<OrderedText> lines = textRenderer.wrapLines(toast, sw - 28);
+            List<FormattedCharSequence> lines = font.split(toast, sw - 28);
             int th = lines.size() * 10 + 8;
             int ty = contentBottom() - th - 30;
             round(context, sx + 8, ty, sw - 16, th, 6, 0xF0303540);
@@ -723,63 +723,63 @@ public class PhoneScreen extends Screen {
                 centered(context, lines.get(i), sx + sw / 2, ty + 5 + i * 10, 0xFFFF8080);
             }
         }
-        context.getMatrices().pop();
+        context.pose().popPose();
     }
 
-    private void renderMap(DrawContext context) {
-        renderHeader(context, Text.translatable("gui.mca_vie.phone.app.map"), true);
+    private void renderMap(GuiGraphics context) {
+        renderHeader(context, Component.translatable("gui.mca_vie.phone.app.map"), true);
         int sx = sx();
         int sw = sw();
         int top = contentTop();
         int bottom = contentBottom();
         context.fill(sx, top, sx + sw, bottom, 0xFF0A0B0E);
-        if (client == null || client.world == null || client.player == null
-                || client.world.getDimension().hasCeiling() || !PhoneMap.update(client)) {
-            centered(context, fit(Text.translatable("gui.mca_vie.phone.map.no_signal").getString(), sw - 12), sx + sw / 2, (top + bottom) / 2 - 4, MUTED);
+        if (minecraft == null || minecraft.level == null || minecraft.player == null
+                || minecraft.level.dimensionType().hasCeiling() || !PhoneMap.update(minecraft)) {
+            centered(context, fit(Component.translatable("gui.mca_vie.phone.map.no_signal").getString(), sw - 12), sx + sw / 2, (top + bottom) / 2 - 4, MUTED);
             return;
         }
         float scale = MAP_SCALES[mapZoom];
-        float tickDelta = client.getTickDelta();
-        double px = MathHelper.lerp(tickDelta, client.player.prevX, client.player.getX());
-        double pz = MathHelper.lerp(tickDelta, client.player.prevZ, client.player.getZ());
+        float tickDelta = minecraft.getFrameTime();
+        double px = Mth.lerp(tickDelta, minecraft.player.xo, minecraft.player.getX());
+        double pz = Mth.lerp(tickDelta, minecraft.player.zo, minecraft.player.getZ());
         double viewX = px + mapPanX;
         double viewZ = pz + mapPanZ;
         float cx = sx + sw / 2f;
         float cy = (top + bottom) / 2f;
         int size = PhoneMap.size();
         // Carte orientee : le regard du joueur pointe vers le haut de l'ecran.
-        mapAngle = PhoneSettings.mapRotate ? MathHelper.wrapDegrees(MathHelper.lerp(tickDelta, client.player.prevYaw, client.player.getYaw()) + 180f) : 0f;
+        mapAngle = PhoneSettings.mapRotate ? Mth.wrapDegrees(Mth.lerp(tickDelta, minecraft.player.yRotO, minecraft.player.getYRot()) + 180f) : 0f;
         scissor(context, sx, top, sx + sw, bottom);
-        context.getMatrices().push();
-        context.getMatrices().translate(cx, cy, 0);
-        context.getMatrices().multiply(RotationAxis.POSITIVE_Z.rotationDegrees(mapAngle));
-        context.getMatrices().scale(scale, scale, 1);
-        context.getMatrices().translate((float) (PhoneMap.originX() - viewX), (float) (PhoneMap.originZ() - viewZ), 0);
-        context.drawTexture(PhoneMap.TEXTURE, 0, 0, 0, 0, size, size, size, size);
-        context.getMatrices().pop();
+        context.pose().pushPose();
+        context.pose().translate(cx, cy, 0);
+        context.pose().mulPose(Axis.ZP.rotationDegrees(mapAngle));
+        context.pose().scale(scale, scale, 1);
+        context.pose().translate((float) (PhoneMap.originX() - viewX), (float) (PhoneMap.originZ() - viewZ), 0);
+        context.blit(PhoneMap.TEXTURE, 0, 0, 0, 0, size, size, size, size);
+        context.pose().popPose();
 
         double rad = Math.toRadians(mapAngle);
         double ox = (px - viewX) * scale;
         double oz = (pz - viewZ) * scale;
         float hx = cx + (float) (ox * Math.cos(rad) - oz * Math.sin(rad));
         float hz = cy + (float) (ox * Math.sin(rad) + oz * Math.cos(rad));
-        context.getMatrices().push();
-        context.getMatrices().translate(hx, hz, 0);
+        context.pose().pushPose();
+        context.pose().translate(hx, hz, 0);
         context.fill(-7, -7, 7, 7, 0xFFFFFFFF);
-        PlayerSkinDrawer.draw(context, client.player.getSkinTexture(), -6, -6, 12);
-        context.getMatrices().pop();
+        PlayerFaceRenderer.draw(context, minecraft.player.getSkinTextureLocation(), -6, -6, 12);
+        context.pose().popPose();
         context.disableScissor();
 
         round(context, sx + 4, top + 4, 12, 12, 6, 0xC0000000);
-        context.getMatrices().push();
-        context.getMatrices().translate(sx + 10, top + 10, 0);
-        context.getMatrices().multiply(RotationAxis.POSITIVE_Z.rotationDegrees(mapAngle));
+        context.pose().pushPose();
+        context.pose().translate(sx + 10, top + 10, 0);
+        context.pose().mulPose(Axis.ZP.rotationDegrees(mapAngle));
         centered(context, "N", 0, -4, mapAngle == 0f ? WHITE : 0xFFFF6B6B);
-        context.getMatrices().pop();
-        String coords = "X " + MathHelper.floor(px) + "  Z " + MathHelper.floor(pz);
-        int cw = textRenderer.getWidth(coords) + 8;
+        context.pose().popPose();
+        String coords = "X " + Mth.floor(px) + "  Z " + Mth.floor(pz);
+        int cw = font.width(coords) + 8;
         round(context, sx + 4, bottom - 15, cw, 12, 5, 0xC0000000);
-        context.drawText(textRenderer, coords, sx + 8, bottom - 13, WHITE, false);
+        context.drawString(font, coords, sx + 8, bottom - 13, WHITE, false);
         if (Math.abs(mapPanX) > 1 || Math.abs(mapPanZ) > 1) {
             int bx = sx + sw - 18;
             int by = bottom - 18;
@@ -793,13 +793,13 @@ public class PhoneScreen extends Screen {
         }
     }
 
-    private void renderStatusBar(DrawContext context) {
+    private void renderStatusBar(GuiGraphics context) {
         int sx = sx();
         int sy = sy();
         int sw = sw();
-        String clock = client != null && client.world != null ? clock(WorldCalendar.flowingNow(client.world)) : "";
+        String clock = minecraft != null && minecraft.level != null ? clock(WorldCalendar.flowingNow(minecraft.level)) : "";
         int ink = view == View.HOME || view == View.LOCK || view == View.CROP || view == View.MAP ? WHITE : TEXT;
-        context.drawText(textRenderer, clock, sx + 10, sy + 4, ink, false);
+        context.drawString(font, clock, sx + 10, sy + 4, ink, false);
         round(context, sx + sw / 2 - 18, sy + 2, 36, 9, 4, 0xFF000000);
         context.fill(sx + sw / 2 + 10, sy + 5, sx + sw / 2 + 13, sy + 8, 0xFF1E2A44);
         int bx = sx + sw - 24;
@@ -816,7 +816,7 @@ public class PhoneScreen extends Screen {
         return String.format("%02d:%02d", date.hour(), date.minute());
     }
 
-    private void renderHeader(DrawContext context, Text title, boolean back) {
+    private void renderHeader(GuiGraphics context, Component title, boolean back) {
         int sx = sx();
         int y = sy() + STATUS;
         int sw = sw();
@@ -827,29 +827,29 @@ public class PhoneScreen extends Screen {
             hits.add(new Hit(sx + 2, y + 2, 22, HEADER - 4, this::goBack));
         }
         String trimmed = fit(title.getString(), sw - 56);
-        centered(context, Text.literal(trimmed).formatted(Formatting.BOLD), sx + sw / 2, y + 8, TEXT);
+        centered(context, Component.literal(trimmed).withStyle(ChatFormatting.BOLD), sx + sw / 2, y + 8, TEXT);
     }
 
-    private void renderLock(DrawContext context) {
+    private void renderLock(GuiGraphics context) {
         int sx = sx();
         int sw = sw();
         int y = sy() + STATUS + 10;
-        String clock = client != null && client.world != null ? clock(WorldCalendar.flowingNow(client.world)) : "";
-        context.getMatrices().push();
-        context.getMatrices().translate(sx + sw / 2f, y, 0);
-        context.getMatrices().scale(2.5f, 2.5f, 1);
+        String clock = minecraft != null && minecraft.level != null ? clock(WorldCalendar.flowingNow(minecraft.level)) : "";
+        context.pose().pushPose();
+        context.pose().translate(sx + sw / 2f, y, 0);
+        context.pose().scale(2.5f, 2.5f, 1);
         centered(context, clock, 0, 0, WHITE);
-        context.getMatrices().pop();
+        context.pose().popPose();
         y += 30;
         drawLockIcon(context, sx + sw / 2 - 4, y);
         y += 14;
-        centered(context, fit(Text.translatable("gui.mca_vie.phone.enter_code").getString(), sw - 12), sx + sw / 2, y, WHITE);
+        centered(context, fit(Component.translatable("gui.mca_vie.phone.enter_code").getString(), sw - 12), sx + sw / 2, y, WHITE);
         y += 14;
         drawDots(context, y, codeInput.length());
         renderKeypad(context, y + 14, contentBottom() - 4, true);
     }
 
-    private void drawDots(DrawContext context, int y, int filled) {
+    private void drawDots(GuiGraphics context, int y, int filled) {
         int sx = sx();
         int sw = sw();
         int start = sx + sw / 2 - (PhoneNetwork.CODE_LENGTH * 12 - 4) / 2;
@@ -864,7 +864,7 @@ public class PhoneScreen extends Screen {
         }
     }
 
-    private void renderKeypad(DrawContext context, int top, int bottom, boolean light) {
+    private void renderKeypad(GuiGraphics context, int top, int bottom, boolean light) {
         int sx = sx();
         int sw = sw();
         int size = Math.max(14, Math.min(26, Math.min((sw - 40) / 3, (bottom - top - 12) / 4)));
@@ -892,18 +892,18 @@ public class PhoneScreen extends Screen {
         }
     }
 
-    private void renderHome(DrawContext context) {
+    private void renderHome(GuiGraphics context) {
         int sx = sx();
         int sw = sw();
         int top = sy() + STATUS;
-        CalendarDate date = client != null && client.world != null ? WorldCalendar.flowingNow(client.world) : null;
+        CalendarDate date = minecraft != null && minecraft.level != null ? WorldCalendar.flowingNow(minecraft.level) : null;
         if (date != null) {
-            context.getMatrices().push();
-            context.getMatrices().translate(sx + sw / 2f, top + 8, 0);
-            context.getMatrices().scale(2f, 2f, 1);
+            context.pose().pushPose();
+            context.pose().translate(sx + sw / 2f, top + 8, 0);
+            context.pose().scale(2f, 2f, 1);
             centered(context, clock(date), 0, 0, WHITE);
-            context.getMatrices().pop();
-            Text day = Text.translatable("calendar.mca_vie.day." + date.dayOfWeek().getValue());
+            context.pose().popPose();
+            Component day = Component.translatable("calendar.mca_vie.day." + date.dayOfWeek().getValue());
             centered(context, fit(day.getString() + " " + date.day() + "/" + date.month(), sw - 12), sx + sw / 2, top + 28, 0xFFDDE2F0);
         }
         int columns = 3;
@@ -916,19 +916,19 @@ public class PhoneScreen extends Screen {
             int cx = sx + 8 + (i % columns) * cell + (cell - icon) / 2;
             int cy = gridTop + (i / columns) * (icon + 22);
             drawApp(context, app, cx, cy, icon);
-            String label = fit(Text.translatable("gui.mca_vie.phone.app." + app.key()).getString(), (int) ((cell - 2) / 0.75f));
-            context.getMatrices().push();
-            context.getMatrices().translate(cx + icon / 2f, cy + icon + 3, 0);
-            context.getMatrices().scale(0.75f, 0.75f, 1);
+            String label = fit(Component.translatable("gui.mca_vie.phone.app." + app.key()).getString(), (int) ((cell - 2) / 0.75f));
+            context.pose().pushPose();
+            context.pose().translate(cx + icon / 2f, cy + icon + 3, 0);
+            context.pose().scale(0.75f, 0.75f, 1);
             centered(context, label, 0, 0, WHITE);
-            context.getMatrices().pop();
+            context.pose().popPose();
             hits.add(new Hit(cx - 2, cy - 2, icon + 4, icon + 14, () -> {
                 PhoneSettings.playAppClick();
                 if (app.view() == View.CAMERA) {
                     CameraMode.start(state);
                 } else if (app.view() == View.TREE) {
-                    if (client != null && client.player != null) {
-                        TreeClient.open(client.player.getUuid(), this);
+                    if (minecraft != null && minecraft.player != null) {
+                        TreeClient.open(minecraft.player.getUUID(), this);
                     }
                 } else {
                     switchTo(app.view());
@@ -937,31 +937,31 @@ public class PhoneScreen extends Screen {
         }
     }
 
-    private void drawApp(DrawContext context, App app, int x, int y, int size) {
+    private void drawApp(GuiGraphics context, App app, int x, int y, int size) {
         boolean hover = hovered(x, y, size, size);
         if (hover) {
             round(context, x - 2, y - 2, size + 4, size + 4, size / 4 + 2, 0x50FFFFFF);
         }
         RenderSystem.enableBlend();
-        context.drawTexture(app.texture(), x, y, size, size, 0, 0, 128, 128, 128, 128);
+        context.blit(app.texture(), x, y, size, size, 0, 0, 128, 128, 128, 128);
         RenderSystem.disableBlend();
         int badge = app.badge().getAsInt();
         if (badge > 0) {
             String text = badge > 99 ? "99+" : String.valueOf(badge);
-            int bw = Math.max(11, textRenderer.getWidth(text) + 5);
+            int bw = Math.max(11, font.width(text) + 5);
             round(context, x + size - bw + 4, y - 4, bw, 11, 5, DANGER);
             centered(context, text, x + size - bw / 2 + 4, y - 2, WHITE);
         }
     }
 
-    private void renderContacts(DrawContext context) {
-        renderHeader(context, Text.translatable("gui.mca_vie.phone.app.contacts"), true);
+    private void renderContacts(GuiGraphics context) {
+        renderHeader(context, Component.translatable("gui.mca_vie.phone.app.contacts"), true);
         List<Integer> contacts = new ArrayList<>(state.contacts());
         contacts.sort(Comparator.comparing(state::nameOf, String.CASE_INSENSITIVE_ORDER));
         int top = contentTop();
         int bottom = contentBottom();
         if (contacts.isEmpty()) {
-            centered(context, Text.translatable("gui.mca_vie.phone.no_contacts"), sx() + sw() / 2, top + 30, MUTED);
+            centered(context, Component.translatable("gui.mca_vie.phone.no_contacts"), sx() + sw() / 2, top + 30, MUTED);
         }
         int maxScroll = Math.max(0, contacts.size() * ROW - (bottom - top));
         scroll = Math.min(scroll, maxScroll);
@@ -979,8 +979,8 @@ public class PhoneScreen extends Screen {
                 context.fill(sx, ry, sx + sw, ry + ROW, CARD_HOVER);
             }
             drawAvatar(context, sx + 8, ry + 5, 20, number);
-            context.drawText(textRenderer, fit(state.nameOf(number), sw - 64), sx + 34, ry + 6, TEXT, false);
-            context.drawText(textRenderer, String.format("%03d", number), sx + 34, ry + 17, MUTED, false);
+            context.drawString(font, fit(state.nameOf(number), sw - 64), sx + 34, ry + 6, TEXT, false);
+            context.drawString(font, String.format("%03d", number), sx + 34, ry + 17, MUTED, false);
             context.fill(sx + 34, ry + ROW - 1, sx + sw, ry + ROW, LINE);
             boolean trashHover = hovered(sx + sw - 22, ry + 7, 16, 16);
             drawCross(context, sx + sw - 18, ry + 11, trashHover ? DANGER : MUTED);
@@ -996,21 +996,21 @@ public class PhoneScreen extends Screen {
         });
     }
 
-    private void renderAddContact(DrawContext context) {
-        renderHeader(context, Text.translatable("gui.mca_vie.phone.add"), true);
+    private void renderAddContact(GuiGraphics context) {
+        renderHeader(context, Component.translatable("gui.mca_vie.phone.add"), true);
         int number = parseNumber(numberInput);
-        renderNumberPad(context, Text.translatable("gui.mca_vie.phone.add_hint"), Text.translatable("gui.mca_vie.phone.add_button"), number >= 0, this::addContact);
+        renderNumberPad(context, Component.translatable("gui.mca_vie.phone.add_hint"), Component.translatable("gui.mca_vie.phone.add_button"), number >= 0, this::addContact);
     }
 
-    private void renderMessages(DrawContext context) {
-        renderHeader(context, Text.translatable("gui.mca_vie.phone.app.messages"), true);
+    private void renderMessages(GuiGraphics context) {
+        renderHeader(context, Component.translatable("gui.mca_vie.phone.app.messages"), true);
         List<Summary> conversations = state.conversations();
         int top = contentTop();
         int bottom = contentBottom();
         int sx = sx();
         int sw = sw();
         if (conversations.isEmpty()) {
-            centered(context, Text.translatable("gui.mca_vie.phone.no_messages"), sx + sw / 2, top + 30, MUTED);
+            centered(context, Component.translatable("gui.mca_vie.phone.no_messages"), sx + sw / 2, top + 30, MUTED);
         }
         int maxScroll = Math.max(0, conversations.size() * ROW - (bottom - top));
         scroll = Math.min(scroll, maxScroll);
@@ -1028,15 +1028,15 @@ public class PhoneScreen extends Screen {
             }
             drawAvatar(context, sx + 8, ry + 5, 20, summary.number());
             String time = clock(WorldCalendar.flowingFromTicks(summary.time()));
-            int timeWidth = textRenderer.getWidth(time);
-            Text title = Text.literal(fit(name, sw - 50 - timeWidth));
-            context.drawText(textRenderer, unread ? title.copy().formatted(Formatting.BOLD) : title, sx + 34, ry + 6, TEXT, false);
-            context.drawText(textRenderer, time, sx + sw - 8 - timeWidth, ry + 6, unread ? ACCENT : MUTED, false);
-            String body = summary.photo() ? Text.translatable("gui.mca_vie.phone.photo").getString() : summary.preview();
-            String preview = (summary.outgoing() ? Text.translatable("gui.mca_vie.phone.you").getString() + " " : "") + body;
+            int timeWidth = font.width(time);
+            Component title = Component.literal(fit(name, sw - 50 - timeWidth));
+            context.drawString(font, unread ? title.copy().withStyle(ChatFormatting.BOLD) : title, sx + 34, ry + 6, TEXT, false);
+            context.drawString(font, time, sx + sw - 8 - timeWidth, ry + 6, unread ? ACCENT : MUTED, false);
+            String body = summary.photo() ? Component.translatable("gui.mca_vie.phone.photo").getString() : summary.preview();
+            String preview = (summary.outgoing() ? Component.translatable("gui.mca_vie.phone.you").getString() + " " : "") + body;
             String count = summary.unread() > 99 ? "99+" : String.valueOf(summary.unread());
-            int bw = Math.max(10, textRenderer.getWidth(count) + 4);
-            context.drawText(textRenderer, fit(preview, sw - 42 - (unread ? bw + 4 : 0)), sx + 34, ry + 17, unread ? TEXT : MUTED, false);
+            int bw = Math.max(10, font.width(count) + 4);
+            context.drawString(font, fit(preview, sw - 42 - (unread ? bw + 4 : 0)), sx + 34, ry + 17, unread ? TEXT : MUTED, false);
             if (unread) {
                 round(context, sx + sw - 8 - bw, ry + 16, bw, 10, 5, ACCENT);
                 centered(context, count, sx + sw - 8 - bw / 2, ry + 17, WHITE);
@@ -1053,23 +1053,23 @@ public class PhoneScreen extends Screen {
         });
     }
 
-    private void renderNewMessage(DrawContext context) {
-        renderHeader(context, Text.translatable("gui.mca_vie.phone.new_message"), true);
+    private void renderNewMessage(GuiGraphics context) {
+        renderHeader(context, Component.translatable("gui.mca_vie.phone.new_message"), true);
         int number = parseNumber(numberInput);
-        renderNumberPad(context, Text.translatable("gui.mca_vie.phone.contact_number"), Text.translatable("gui.mca_vie.phone.open"), number >= 0, () -> openConversation(number));
+        renderNumberPad(context, Component.translatable("gui.mca_vie.phone.contact_number"), Component.translatable("gui.mca_vie.phone.open"), number >= 0, () -> openConversation(number));
     }
 
-    private void renderNumberPad(DrawContext context, Text hint, Text action, boolean valid, Runnable onValid) {
+    private void renderNumberPad(GuiGraphics context, Component hint, Component action, boolean valid, Runnable onValid) {
         int sx = sx();
         int sw = sw();
         int y = contentTop() + 8;
         centered(context, fit(hint.getString(), sw - 12), sx + sw / 2, y, MUTED);
         String shown = numberInput.isEmpty() ? "_ _ _" : String.join(" ", numberInput.split(""));
-        context.getMatrices().push();
-        context.getMatrices().translate(sx + sw / 2f, y + 14, 0);
-        context.getMatrices().scale(2f, 2f, 1);
+        context.pose().pushPose();
+        context.pose().translate(sx + sw / 2f, y + 14, 0);
+        context.pose().scale(2f, 2f, 1);
         centered(context, shown, 0, 0, numberInput.isEmpty() ? MUTED : TEXT);
-        context.getMatrices().pop();
+        context.pose().popPose();
         int number = parseNumber(numberInput);
         PhoneClient.Person person = number >= 0 ? state.person(number) : null;
         if (person != null && !person.name().isEmpty()) {
@@ -1080,19 +1080,19 @@ public class PhoneScreen extends Screen {
         pill(context, sx + 12, pillY, sw - 24, action, valid, onValid);
     }
 
-    private void renderConversation(DrawContext context) {
-        renderHeader(context, Text.literal(state.nameOf(other)), true);
+    private void renderConversation(GuiGraphics context) {
+        renderHeader(context, Component.literal(state.nameOf(other)), true);
         int x = sx() + 8;
         int w = sw() - 16;
         int areaTop = contentTop() + 2;
         int areaBottom = contentBottom() - 28;
         int bubbleWidth = w * 3 / 4;
-        List<List<OrderedText>> wrapped = new ArrayList<>(messages.size());
+        List<List<FormattedCharSequence>> wrapped = new ArrayList<>(messages.size());
         int total = 0;
         int thumbW = Math.min(bubbleWidth - 8, 112);
         int thumbH = thumbW * PhoneNetwork.THUMB_HEIGHT / PhoneNetwork.THUMB_WIDTH;
         for (Message message : messages) {
-            List<OrderedText> lines = message.photo() != null ? List.of() : textRenderer.wrapLines(Text.literal(message.text()), bubbleWidth - 10);
+            List<FormattedCharSequence> lines = message.photo() != null ? List.of() : font.split(Component.literal(message.text()), bubbleWidth - 10);
             wrapped.add(lines);
             total += (message.photo() != null ? thumbH + 8 : lines.size() * 10 + 6) + 4;
         }
@@ -1101,10 +1101,10 @@ public class PhoneScreen extends Screen {
         int y = areaBottom + scroll;
         for (int i = messages.size() - 1; i >= 0 && y > areaTop; i--) {
             Message message = messages.get(i);
-            List<OrderedText> lines = wrapped.get(i);
+            List<FormattedCharSequence> lines = wrapped.get(i);
             int textWidth = 0;
-            for (OrderedText line : lines) {
-                textWidth = Math.max(textWidth, textRenderer.getWidth(line));
+            for (FormattedCharSequence line : lines) {
+                textWidth = Math.max(textWidth, font.width(line));
             }
             if (message.photo() != null) {
                 int height = thumbH + 8;
@@ -1124,18 +1124,18 @@ public class PhoneScreen extends Screen {
             int bx = message.outgoing() ? x + w - bw : x;
             round(context, bx, y, bw, height, 6, message.outgoing() ? ACCENT : CARD);
             for (int l = 0; l < lines.size(); l++) {
-                context.drawText(textRenderer, lines.get(l), bx + 5, y + 4 + l * 10, message.outgoing() ? WHITE : TEXT, false);
+                context.drawString(font, lines.get(l), bx + 5, y + 4 + l * 10, message.outgoing() ? WHITE : TEXT, false);
             }
         }
         context.disableScissor();
         if (messages.isEmpty()) {
-            centered(context, Text.translatable("gui.mca_vie.phone.no_messages"), sx() + sw() / 2, areaTop + 30, MUTED);
+            centered(context, Component.translatable("gui.mca_vie.phone.no_messages"), sx() + sw() / 2, areaTop + 30, MUTED);
         }
         int barY = contentBottom() - 26;
         context.fill(sx(), barY - 2, sx() + sw(), barY - 1, LINE);
         round(context, sx() + 8, barY + 2, sw() - 38, 18, 9, CARD);
         if (draft.isEmpty() && (mainField == null || !mainField.isFocused())) {
-            context.drawText(textRenderer, Text.translatable("gui.mca_vie.phone.write"), sx() + 14, barY + 7, MUTED, false);
+            context.drawString(font, Component.translatable("gui.mca_vie.phone.write"), sx() + 14, barY + 7, MUTED, false);
         }
         int bx = sx() + sw() - 26;
         boolean hover = hovered(bx, barY + 1, 20, 20);
@@ -1146,9 +1146,9 @@ public class PhoneScreen extends Screen {
     }
 
     private void openPhoto(UUID id, boolean fromGallery) {
-        if (client != null) {
+        if (minecraft != null) {
             boolean saved = state.gallery().stream().anyMatch(p -> p.id().equals(id));
-            client.setScreen(new PhotoViewerScreen(this, state.number(), id, fromGallery && !state.contacts().isEmpty(), fromGallery, !saved));
+            minecraft.setScreen(new PhotoViewerScreen(this, state.number(), id, fromGallery && !state.contacts().isEmpty(), fromGallery, !saved));
         }
     }
 
@@ -1159,7 +1159,7 @@ public class PhoneScreen extends Screen {
     }
 
     public void deletePhoto(UUID id) {
-        send(PhoneNetwork.OP_DELETE_PHOTO, buf -> buf.writeUuid(id));
+        send(PhoneNetwork.OP_DELETE_PHOTO, buf -> buf.writeUUID(id));
         PhonePhotos.forget(id);
         view = View.GALLERY;
     }
@@ -1169,7 +1169,7 @@ public class PhoneScreen extends Screen {
         });
     }
 
-    private void drawPhoto(DrawContext context, UUID id, int x, int y, int w, int h) {
+    private void drawPhoto(GuiGraphics context, UUID id, int x, int y, int w, int h) {
         context.fill(x, y, x + w, y + h, 0xFF000000);
         PhonePhotos.Picture picture = PhonePhotos.get(state.number(), id, false);
         if (picture == null) {
@@ -1180,7 +1180,7 @@ public class PhoneScreen extends Screen {
         drawFitted(context, picture, x, y, w, h);
     }
 
-    static void drawFitted(DrawContext context, PhonePhotos.Picture picture, int x, int y, int w, int h) {
+    static void drawFitted(GuiGraphics context, PhonePhotos.Picture picture, int x, int y, int w, int h) {
         int dw = w;
         int dh = w * picture.height() / picture.width();
         if (dh > h) {
@@ -1189,15 +1189,15 @@ public class PhoneScreen extends Screen {
         }
         int dx = x + (w - dw) / 2;
         int dy = y + (h - dh) / 2;
-        context.drawTexture(picture.texture(), dx, dy, dw, dh, 0, 0, picture.width(), picture.height(), picture.width(), picture.height());
+        context.blit(picture.texture(), dx, dy, dw, dh, 0, 0, picture.width(), picture.height(), picture.width(), picture.height());
     }
 
-    private void renderGallery(DrawContext context) {
+    private void renderGallery(GuiGraphics context) {
         String folderName = folder == 0 ? null : state.folders().get(folder);
         int sx = sx();
         int sw = sw();
         int hy = sy() + STATUS;
-        renderHeader(context, folderName == null ? Text.translatable("gui.mca_vie.phone.app.gallery") : Text.literal(fit(folderName, sw - 92)), true);
+        renderHeader(context, folderName == null ? Component.translatable("gui.mca_vie.phone.app.gallery") : Component.literal(fit(folderName, sw - 92)), true);
         if (folder == 0) {
             boolean hover = hovered(sx + sw - 22, hy + 4, 16, 16);
             int color = hover ? ACCENT_HOVER : ACCENT;
@@ -1206,7 +1206,7 @@ public class PhoneScreen extends Screen {
             hits.add(new Hit(sx + sw - 22, hy + 4, 16, 16, () -> editFolder(0)));
         } else {
             boolean renameHover = hovered(sx + sw - 40, hy + 4, 16, 16);
-            context.drawText(textRenderer, "✎", sx + sw - 36, hy + 8, renameHover ? ACCENT_HOVER : ACCENT, false);
+            context.drawString(font, "✎", sx + sw - 36, hy + 8, renameHover ? ACCENT_HOVER : ACCENT, false);
             hits.add(new Hit(sx + sw - 40, hy + 4, 16, 16, () -> editFolder(folder)));
             boolean deleteHover = hovered(sx + sw - 22, hy + 4, 16, 16);
             drawCross(context, sx + sw - 18, hy + 8, deleteHover ? DANGER : MUTED);
@@ -1221,7 +1221,7 @@ public class PhoneScreen extends Screen {
         int top = contentTop() + 2;
         int bottom = contentBottom();
         if (gallery.isEmpty() && folders.isEmpty() && folder == 0) {
-            for (OrderedText line : textRenderer.wrapLines(Text.translatable("gui.mca_vie.phone.no_photos"), sw - 20)) {
+            for (FormattedCharSequence line : font.split(Component.translatable("gui.mca_vie.phone.no_photos"), sw - 20)) {
                 centered(context, line, sx + sw / 2, top + 28, MUTED);
                 top += 10;
             }
@@ -1249,14 +1249,14 @@ public class PhoneScreen extends Screen {
                 y += rowH;
             }
         } else {
-            folderRow(context, sx, y, sw, rowH, top, bottom, 0, "↑ " + Text.translatable("gui.mca_vie.phone.app.gallery").getString(), "", this::goBack);
+            folderRow(context, sx, y, sw, rowH, top, bottom, 0, "↑ " + Component.translatable("gui.mca_vie.phone.app.gallery").getString(), "", this::goBack);
             y += rowH;
         }
         if (listRows > 0) {
             y += gap;
         }
         if (gallery.isEmpty()) {
-            for (OrderedText line : textRenderer.wrapLines(Text.translatable("gui.mca_vie.phone.folder_empty"), sw - 20)) {
+            for (FormattedCharSequence line : font.split(Component.translatable("gui.mca_vie.phone.folder_empty"), sw - 20)) {
                 centered(context, line, sx + sw / 2, y + 8, MUTED);
                 y += 10;
             }
@@ -1281,7 +1281,7 @@ public class PhoneScreen extends Screen {
         context.disableScissor();
     }
 
-    private void folderRow(DrawContext context, int sx, int y, int sw, int h, int top, int bottom, int id, String name, String count, Runnable open) {
+    private void folderRow(GuiGraphics context, int sx, int y, int sw, int h, int top, int bottom, int id, String name, String count, Runnable open) {
         if (y + h < top || y > bottom) {
             return;
         }
@@ -1295,9 +1295,9 @@ public class PhoneScreen extends Screen {
         int iy = y + (h - 9) / 2;
         context.fill(ix, iy, ix + 5, iy + 2, 0xFFD69A2D);
         context.fill(ix, iy + 1, ix + 12, iy + 9, 0xFFF0B840);
-        context.drawText(textRenderer, fit(name, sw - 50), sx + 26, y + (h - 8) / 2, TEXT, false);
+        context.drawString(font, fit(name, sw - 50), sx + 26, y + (h - 8) / 2, TEXT, false);
         if (!count.isEmpty()) {
-            context.drawText(textRenderer, count, sx + sw - 8 - textRenderer.getWidth(count), y + (h - 8) / 2, MUTED, false);
+            context.drawString(font, count, sx + sw - 8 - font.width(count), y + (h - 8) / 2, MUTED, false);
         }
         context.fill(sx + 26, y + h - 1, sx + sw, y + h, LINE);
         if (visible(y, h, top, bottom)) {
@@ -1306,14 +1306,14 @@ public class PhoneScreen extends Screen {
         }
     }
 
-    private void renderFolderName(DrawContext context) {
-        renderHeader(context, Text.translatable(editingFolder == 0 ? "gui.mca_vie.phone.new_folder" : "gui.mca_vie.phone.rename_folder"), true);
+    private void renderFolderName(GuiGraphics context) {
+        renderHeader(context, Component.translatable(editingFolder == 0 ? "gui.mca_vie.phone.new_folder" : "gui.mca_vie.phone.rename_folder"), true);
         int sx = sx();
         int sw = sw();
         int top = contentTop();
-        context.drawText(textRenderer, Text.translatable("gui.mca_vie.phone.folder_name"), sx + 10, top + 14, MUTED, false);
+        context.drawString(font, Component.translatable("gui.mca_vie.phone.folder_name"), sx + 10, top + 14, MUTED, false);
         round(context, sx + 8, top + 26, sw - 16, 16, 6, CARD);
-        pill(context, sx + 20, top + 52, sw - 40, Text.translatable("gui.mca_vie.phone.folder_ok"), !folderInput.trim().isEmpty(), this::submitFolder);
+        pill(context, sx + 20, top + 52, sw - 40, Component.translatable("gui.mca_vie.phone.folder_ok"), !folderInput.trim().isEmpty(), this::submitFolder);
     }
 
     private void editFolder(int id) {
@@ -1329,11 +1329,11 @@ public class PhoneScreen extends Screen {
         }
         int id = editingFolder;
         if (id == 0) {
-            send(PhoneNetwork.OP_FOLDER_CREATE, buf -> buf.writeString(name));
+            send(PhoneNetwork.OP_FOLDER_CREATE, buf -> buf.writeUtf(name));
         } else {
             send(PhoneNetwork.OP_FOLDER_RENAME, buf -> {
                 buf.writeVarInt(id);
-                buf.writeString(name);
+                buf.writeUtf(name);
             });
         }
         switchTo(View.GALLERY);
@@ -1355,8 +1355,8 @@ public class PhoneScreen extends Screen {
         switchTo(parent());
     }
 
-    private void renderPickContact(DrawContext context) {
-        renderHeader(context, Text.translatable("gui.mca_vie.phone.send_to"), true);
+    private void renderPickContact(GuiGraphics context) {
+        renderHeader(context, Component.translatable("gui.mca_vie.phone.send_to"), true);
         List<Integer> contacts = new ArrayList<>(state.contacts());
         contacts.sort(Comparator.comparing(state::nameOf, String.CASE_INSENSITIVE_ORDER));
         int sx = sx();
@@ -1375,15 +1375,15 @@ public class PhoneScreen extends Screen {
                 context.fill(sx, ry, sx + sw, ry + ROW, CARD_HOVER);
             }
             drawAvatar(context, sx + 8, ry + 5, 20, number);
-            context.drawText(textRenderer, fit(state.nameOf(number), sw - 44), sx + 34, ry + 6, TEXT, false);
-            context.drawText(textRenderer, String.format("%03d", number), sx + 34, ry + 17, MUTED, false);
+            context.drawString(font, fit(state.nameOf(number), sw - 44), sx + 34, ry + 6, TEXT, false);
+            context.drawString(font, String.format("%03d", number), sx + 34, ry + 17, MUTED, false);
             context.fill(sx + 34, ry + ROW - 1, sx + sw, ry + ROW, LINE);
             UUID id = photo;
             if (visible(ry, ROW, top, bottom)) {
                 hits.add(new Hit(sx, ry, sw, ROW, () -> {
                     send(PhoneNetwork.OP_SEND_PHOTO, buf -> {
                         buf.writeVarInt(number);
-                        buf.writeUuid(id);
+                        buf.writeUUID(id);
                     });
                     openConversation(number);
                 }));
@@ -1416,24 +1416,24 @@ public class PhoneScreen extends Screen {
         PhoneSettings.save();
     }
 
-    private int section(DrawContext context, int x, int y, String key) {
-        context.drawText(textRenderer, Text.translatable(key).formatted(Formatting.BOLD), x + 2, y + 2, MUTED, false);
+    private int section(GuiGraphics context, int x, int y, String key) {
+        context.drawString(font, Component.translatable(key).withStyle(ChatFormatting.BOLD), x + 2, y + 2, MUTED, false);
         return y + 13;
     }
 
-    private int option(DrawContext context, int x, int y, int w, Text label, Text value, Runnable action) {
+    private int option(GuiGraphics context, int x, int y, int w, Component label, Component value, Runnable action) {
         boolean hover = hovered(x, y, w, 20);
         round(context, x, y, w, 20, 6, hover ? CARD_HOVER : CARD);
         String shown = value.getString();
-        int vw = textRenderer.getWidth(shown);
-        context.drawText(textRenderer, fit(label.getString(), w - vw - 22), x + 7, y + 6, TEXT, false);
-        context.drawText(textRenderer, shown, x + w - vw - 7, y + 6, ACCENT, false);
+        int vw = font.width(shown);
+        context.drawString(font, fit(label.getString(), w - vw - 22), x + 7, y + 6, TEXT, false);
+        context.drawString(font, shown, x + w - vw - 7, y + 6, ACCENT, false);
         hits.add(new Hit(x, y, w, 20, action));
         return y + 22;
     }
 
-    private static Text setting(String key) {
-        return Text.translatable("gui.mca_vie.phone.settings." + key);
+    private static Component setting(String key) {
+        return Component.translatable("gui.mca_vie.phone.settings." + key);
     }
 
     private void clampScroll(int contentEnd, int bottom) {
@@ -1445,8 +1445,8 @@ public class PhoneScreen extends Screen {
         hits.subList(first, hits.size()).removeIf(h -> h.y() + h.h() <= top || h.y() >= bottom);
     }
 
-    private void renderSettings(DrawContext context) {
-        renderHeader(context, Text.translatable("gui.mca_vie.phone.app.settings"), true);
+    private void renderSettings(GuiGraphics context) {
+        renderHeader(context, Component.translatable("gui.mca_vie.phone.app.settings"), true);
         int first = hits.size();
         int sx = sx();
         int sw = sw();
@@ -1457,15 +1457,15 @@ public class PhoneScreen extends Screen {
         int y = top + 8 - scroll;
         scissor(context, sx, top, sx + sw, bottom);
         round(context, x, y, w, 56, 8, CARD);
-        context.drawText(textRenderer, fit(Text.translatable("gui.mca_vie.phone.my_number").getString(), w - 16), x + 8, y + 5, MUTED, false);
-        context.drawText(textRenderer, String.format("%03d", state.number()), x + 8, y + 16, TEXT, false);
+        context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.my_number").getString(), w - 16), x + 8, y + 5, MUTED, false);
+        context.drawString(font, String.format("%03d", state.number()), x + 8, y + 16, TEXT, false);
         context.fill(x + 8, y + 27, x + w - 8, y + 28, LINE);
-        context.drawText(textRenderer, fit(Text.translatable("gui.mca_vie.phone.lock_code").getString(), w - 16), x + 8, y + 32, MUTED, false);
-        Text status = Text.translatable(state.hasCode() ? "gui.mca_vie.phone.on" : "gui.mca_vie.phone.off");
-        context.drawText(textRenderer, status, x + 8, y + 43, state.hasCode() ? 0xFF22C55E : TEXT, false);
+        context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.lock_code").getString(), w - 16), x + 8, y + 32, MUTED, false);
+        Component status = Component.translatable(state.hasCode() ? "gui.mca_vie.phone.on" : "gui.mca_vie.phone.off");
+        context.drawString(font, status, x + 8, y + 43, state.hasCode() ? 0xFF22C55E : TEXT, false);
         y += 64;
         if (state.owner()) {
-            y = option(context, x, y, w, Text.translatable("gui.mca_vie.phone.wallpaper"), Text.literal(">"), () -> {
+            y = option(context, x, y, w, Component.translatable("gui.mca_vie.phone.wallpaper"), Component.literal(">"), () -> {
                 folder = 0;
                 switchTo(View.WALLPAPER);
             });
@@ -1501,7 +1501,7 @@ public class PhoneScreen extends Screen {
         y = option(context, x, y, w, setting("text_size"), setting("text_size." + PhoneSettings.textSize), () -> {
             PhoneSettings.textSize = (PhoneSettings.textSize + 1) % PhoneSettings.TEXT_SCALES.length;
             PhoneSettings.save();
-            clearAndInit();
+            rebuildWidgets();
         });
 
         y = section(context, x, y + 4, "gui.mca_vie.phone.settings.section.map");
@@ -1510,22 +1510,22 @@ public class PhoneScreen extends Screen {
             PhoneSettings.save();
         });
         String zoom = "x" + (MAP_SCALES[PhoneSettings.mapZoom] == 0.5f ? "0.5" : String.valueOf((int) MAP_SCALES[PhoneSettings.mapZoom]));
-        y = option(context, x, y, w, setting("map_zoom"), Text.literal(zoom), () -> {
+        y = option(context, x, y, w, setting("map_zoom"), Component.literal(zoom), () -> {
             PhoneSettings.mapZoom = (PhoneSettings.mapZoom + 1) % MAP_SCALES.length;
             PhoneSettings.save();
         });
 
         y = section(context, x, y + 4, "gui.mca_vie.phone.settings.section.home");
-        y = option(context, x, y, w, setting("apps"), Text.literal(">"), () -> switchTo(View.HOME_APPS));
+        y = option(context, x, y, w, setting("apps"), Component.literal(">"), () -> switchTo(View.HOME_APPS));
         y += 6;
 
         if (!state.owner()) {
-            for (OrderedText line : textRenderer.wrapLines(Text.translatable("gui.mca_vie.phone.owner_only"), w)) {
-                context.drawText(textRenderer, line, x, y, MUTED, false);
+            for (FormattedCharSequence line : font.split(Component.translatable("gui.mca_vie.phone.owner_only"), w)) {
+                context.drawString(font, line, x, y, MUTED, false);
                 y += 10;
             }
         } else {
-            pill(context, x, y, w, Text.translatable(state.hasCode() ? "gui.mca_vie.phone.change_code" : "gui.mca_vie.phone.set_code"), true, () -> {
+            pill(context, x, y, w, Component.translatable(state.hasCode() ? "gui.mca_vie.phone.change_code" : "gui.mca_vie.phone.set_code"), true, () -> {
                 codeInput = "";
                 switchTo(View.SET_CODE);
             });
@@ -1533,12 +1533,12 @@ public class PhoneScreen extends Screen {
                 y += 26;
                 boolean hover = hovered(x, y, w, 20);
                 round(context, x, y, w, 20, 10, hover ? (PhoneSettings.light ? 0xFFFBE4E4 : 0xFF3A1D20) : CARD);
-                centered(context, fit(Text.translatable("gui.mca_vie.phone.remove_code").getString(), w - 12), x + w / 2, y + 6, DANGER);
-                hits.add(new Hit(x, y, w, 20, () -> send(PhoneNetwork.OP_SET_CODE, buf -> buf.writeString(""))));
+                centered(context, fit(Component.translatable("gui.mca_vie.phone.remove_code").getString(), w - 12), x + w / 2, y + 6, DANGER);
+                hits.add(new Hit(x, y, w, 20, () -> send(PhoneNetwork.OP_SET_CODE, buf -> buf.writeUtf(""))));
             }
             y += 30;
-            for (OrderedText line : textRenderer.wrapLines(Text.translatable(state.hasCode() ? "gui.mca_vie.phone.code_on" : "gui.mca_vie.phone.code_off"), w)) {
-                context.drawText(textRenderer, line, x, y, MUTED, false);
+            for (FormattedCharSequence line : font.split(Component.translatable(state.hasCode() ? "gui.mca_vie.phone.code_on" : "gui.mca_vie.phone.code_off"), w)) {
+                context.drawString(font, line, x, y, MUTED, false);
                 y += 10;
             }
         }
@@ -1547,7 +1547,7 @@ public class PhoneScreen extends Screen {
         clampScroll(y, bottom);
     }
 
-    private void renderHomeApps(DrawContext context) {
+    private void renderHomeApps(GuiGraphics context) {
         renderHeader(context, setting("apps"), true);
         int first = hits.size();
         int sx = sx();
@@ -1558,8 +1558,8 @@ public class PhoneScreen extends Screen {
         int bottom = contentBottom();
         int y = top + 6 - scroll;
         scissor(context, sx, top, sx + sw, bottom);
-        for (OrderedText line : textRenderer.wrapLines(setting("apps_hint"), w)) {
-            context.drawText(textRenderer, line, x, y, MUTED, false);
+        for (FormattedCharSequence line : font.split(setting("apps_hint"), w)) {
+            context.drawString(font, line, x, y, MUTED, false);
             y += 10;
         }
         y += 4;
@@ -1571,10 +1571,10 @@ public class PhoneScreen extends Screen {
             boolean visible = locked || !PhoneSettings.hidden.contains(app.key());
             round(context, x, y, w, 22, 6, CARD);
             RenderSystem.enableBlend();
-            context.drawTexture(app.texture(), x + 4, y + 3, 16, 16, 0, 0, 128, 128, 128, 128);
+            context.blit(app.texture(), x + 4, y + 3, 16, 16, 0, 0, 128, 128, 128, 128);
             RenderSystem.disableBlend();
             int controls = 54;
-            context.drawText(textRenderer, fit(Text.translatable("gui.mca_vie.phone.app." + app.key()).getString(), w - 26 - controls), x + 24, y + 7, visible ? TEXT : MUTED, false);
+            context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.app." + app.key()).getString(), w - 26 - controls), x + 24, y + 7, visible ? TEXT : MUTED, false);
             int bx = x + w - controls;
             arrowButton(context, bx, y + 3, true, i > 0, () -> moveApp(index, -1));
             arrowButton(context, bx + 16, y + 3, false, i < list.size() - 1, () -> moveApp(index, 1));
@@ -1597,7 +1597,7 @@ public class PhoneScreen extends Screen {
         clampScroll(y, bottom);
     }
 
-    private void arrowButton(DrawContext context, int x, int y, boolean up, boolean enabled, Runnable action) {
+    private void arrowButton(GuiGraphics context, int x, int y, boolean up, boolean enabled, Runnable action) {
         boolean hover = enabled && hovered(x, y, 14, 16);
         if (hover) {
             round(context, x, y, 14, 16, 4, CARD_HOVER);
@@ -1615,13 +1615,13 @@ public class PhoneScreen extends Screen {
     }
 
     public void setWallpaper(String key) {
-        send(PhoneNetwork.OP_SET_WALLPAPER, buf -> buf.writeString(key));
+        send(PhoneNetwork.OP_SET_WALLPAPER, buf -> buf.writeUtf(key));
     }
 
     private static int presetIndex(String key) {
         if (key.startsWith("preset:")) {
             try {
-                return MathHelper.clamp(Integer.parseInt(key.substring(7)), 0, WALLPAPERS.length - 1);
+                return Mth.clamp(Integer.parseInt(key.substring(7)), 0, WALLPAPERS.length - 1);
             } catch (NumberFormatException ignored) {
             }
         }
@@ -1639,8 +1639,8 @@ public class PhoneScreen extends Screen {
                 return new Crop(id, 1f, 0.5f, 0.5f);
             }
             String[] parts = key.substring(at + 1).split(",");
-            return new Crop(id, MathHelper.clamp(Float.parseFloat(parts[0]), 1f, MAX_CROP_ZOOM),
-                    MathHelper.clamp(Float.parseFloat(parts[1]), 0f, 1f), MathHelper.clamp(Float.parseFloat(parts[2]), 0f, 1f));
+            return new Crop(id, Mth.clamp(Float.parseFloat(parts[0]), 1f, MAX_CROP_ZOOM),
+                    Mth.clamp(Float.parseFloat(parts[1]), 0f, 1f), Mth.clamp(Float.parseFloat(parts[2]), 0f, 1f));
         } catch (RuntimeException e) {
             return null;
         }
@@ -1656,7 +1656,7 @@ public class PhoneScreen extends Screen {
         view = View.CROP;
         scroll = 0;
         mapDragging = false;
-        clearAndInit();
+        rebuildWidgets();
     }
 
     private void applyCrop() {
@@ -1671,10 +1671,10 @@ public class PhoneScreen extends Screen {
         if (visible >= 1f) {
             return 0.5f;
         }
-        return MathHelper.clamp(center, visible / 2f, 1f - visible / 2f);
+        return Mth.clamp(center, visible / 2f, 1f - visible / 2f);
     }
 
-    private void drawCropPreview(DrawContext context, int x, int y, int w, int h) {
+    private void drawCropPreview(GuiGraphics context, int x, int y, int w, int h) {
         PhonePhotos.Picture picture = cropId == null ? null : PhonePhotos.get(state.number(), cropId, true);
         if (picture == null) {
             round(context, x, y, w, h, 11, BG);
@@ -1688,21 +1688,21 @@ public class PhoneScreen extends Screen {
         drawPhotoWallpaper(context, picture, cropZoom, cropU, cropV, x, y, w, h);
     }
 
-    private void renderCrop(DrawContext context) {
-        renderHeader(context, Text.translatable("gui.mca_vie.phone.crop"), true);
+    private void renderCrop(GuiGraphics context) {
+        renderHeader(context, Component.translatable("gui.mca_vie.phone.crop"), true);
         int sx = sx();
         int sw = sw();
         int by = contentBottom() - 26;
         int half = (sw - 24) / 2;
-        List<OrderedText> hint = textRenderer.wrapLines(Text.translatable("gui.mca_vie.phone.crop_hint"), sw - 16);
+        List<FormattedCharSequence> hint = font.split(Component.translatable("gui.mca_vie.phone.crop_hint"), sw - 16);
         for (int i = 0; i < hint.size(); i++) {
             centered(context, hint.get(i), sx + sw / 2, by - 4 - (hint.size() - i) * 10, WHITE);
         }
-        pill(context, sx + 8, by, half, Text.translatable("gui.mca_vie.phone.crop_cancel"), true, this::goBack);
-        pill(context, sx + 16 + half, by, half, Text.translatable("gui.mca_vie.phone.crop_apply"), cropId != null, this::applyCrop);
+        pill(context, sx + 8, by, half, Component.translatable("gui.mca_vie.phone.crop_cancel"), true, this::goBack);
+        pill(context, sx + 16 + half, by, half, Component.translatable("gui.mca_vie.phone.crop_apply"), cropId != null, this::applyCrop);
     }
 
-    private void drawWallpaper(DrawContext context, int x, int y, int w, int h) {
+    private void drawWallpaper(GuiGraphics context, int x, int y, int w, int h) {
         String key = state.wallpaper();
         Crop crop = parseCrop(key);
         PhonePhotos.Picture picture = crop == null ? null : PhonePhotos.get(state.number(), crop.id(), true);
@@ -1714,15 +1714,15 @@ public class PhoneScreen extends Screen {
         drawPhotoWallpaper(context, picture, crop.zoom(), crop.u(), crop.v(), x, y, w, h);
     }
 
-    private static void drawPhotoWallpaper(DrawContext context, PhonePhotos.Picture picture, float zoom, float u, float v, int x, int y, int w, int h) {
+    private static void drawPhotoWallpaper(GuiGraphics context, PhonePhotos.Picture picture, float zoom, float u, float v, int x, int y, int w, int h) {
         int pw = picture.width();
         int ph = picture.height();
         float scale = Math.max(w / (float) pw, h / (float) ph) * zoom;
-        int rw = MathHelper.clamp(Math.round(w / scale), 1, pw);
-        int rh = MathHelper.clamp(Math.round(h / scale), 1, ph);
-        float u0 = MathHelper.clamp(u * pw - rw / 2f, 0, pw - rw);
-        float v0 = MathHelper.clamp(v * ph - rh / 2f, 0, ph - rh);
-        context.drawTexture(picture.texture(), x, y, w, h, u0, v0, rw, rh, pw, ph);
+        int rw = Mth.clamp(Math.round(w / scale), 1, pw);
+        int rh = Mth.clamp(Math.round(h / scale), 1, ph);
+        float u0 = Mth.clamp(u * pw - rw / 2f, 0, pw - rw);
+        float v0 = Mth.clamp(v * ph - rh / 2f, 0, ph - rh);
+        context.blit(picture.texture(), x, y, w, h, u0, v0, rw, rh, pw, ph);
         context.fill(x, y, x + w, y + h, 0x48000000);
         int r = Math.min(11, Math.min(w, h) / 2);
         for (int i = 0; i < r; i++) {
@@ -1734,18 +1734,18 @@ public class PhoneScreen extends Screen {
         }
     }
 
-    private static void outline(DrawContext context, int x, int y, int w, int h, int color) {
+    private static void outline(GuiGraphics context, int x, int y, int w, int h, int color) {
         context.fill(x - 1, y - 1, x + w + 1, y, color);
         context.fill(x - 1, y + h, x + w + 1, y + h + 1, color);
         context.fill(x - 1, y, x, y + h, color);
         context.fill(x + w, y, x + w + 1, y + h, color);
     }
 
-    private void renderWallpaper(DrawContext context) {
+    private void renderWallpaper(GuiGraphics context) {
         String folderName = folder == 0 ? null : state.folders().get(folder);
         int sx = sx();
         int sw = sw();
-        renderHeader(context, folderName == null ? Text.translatable("gui.mca_vie.phone.wallpaper") : Text.literal(fit(folderName, sw - 56)), true);
+        renderHeader(context, folderName == null ? Component.translatable("gui.mca_vie.phone.wallpaper") : Component.literal(fit(folderName, sw - 56)), true);
         String current = state.wallpaper();
         Crop currentCrop = parseCrop(current);
         UUID currentId = currentCrop == null ? null : currentCrop.id();
@@ -1768,7 +1768,7 @@ public class PhoneScreen extends Screen {
         scroll = Math.min(scroll, Math.max(0, total - (bottom - top)));
         scissor(context, sx, top, sx + sw, bottom);
         int y = top - scroll;
-        context.drawText(textRenderer, Text.translatable("gui.mca_vie.phone.wallpaper_presets"), sx + 6, y + 3, MUTED, false);
+        context.drawString(font, Component.translatable("gui.mca_vie.phone.wallpaper_presets"), sx + 6, y + 3, MUTED, false);
         y += 14;
         for (int i = 0; i < WALLPAPERS.length; i++) {
             int px = sx + 4 + i * (presetW + 4);
@@ -1785,7 +1785,7 @@ public class PhoneScreen extends Screen {
             }
         }
         y += presetH + 8;
-        context.drawText(textRenderer, Text.translatable("gui.mca_vie.phone.app.gallery"), sx + 6, y + 3, MUTED, false);
+        context.drawString(font, Component.translatable("gui.mca_vie.phone.app.gallery"), sx + 6, y + 3, MUTED, false);
         y += 14;
         if (folder == 0) {
             for (Map.Entry<Integer, String> entry : folders) {
@@ -1798,14 +1798,14 @@ public class PhoneScreen extends Screen {
                 y += rowH;
             }
         } else {
-            folderRow(context, sx, y, sw, rowH, top, bottom, 0, "↑ " + Text.translatable("gui.mca_vie.phone.app.gallery").getString(), "", this::goBack);
+            folderRow(context, sx, y, sw, rowH, top, bottom, 0, "↑ " + Component.translatable("gui.mca_vie.phone.app.gallery").getString(), "", this::goBack);
             y += rowH;
         }
         if (listRows > 0) {
             y += gap;
         }
         if (gallery.isEmpty()) {
-            for (OrderedText line : textRenderer.wrapLines(Text.translatable(folder == 0 ? "gui.mca_vie.phone.no_photos" : "gui.mca_vie.phone.folder_empty"), sw - 20)) {
+            for (FormattedCharSequence line : font.split(Component.translatable(folder == 0 ? "gui.mca_vie.phone.no_photos" : "gui.mca_vie.phone.folder_empty"), sw - 20)) {
                 centered(context, line, sx + sw / 2, y + 8, MUTED);
                 y += 10;
             }
@@ -1831,7 +1831,7 @@ public class PhoneScreen extends Screen {
     }
 
     private long agendaToday() {
-        return client != null && client.world != null ? WorldCalendar.exactCalendarDay(client.world) : 0;
+        return minecraft != null && minecraft.level != null ? WorldCalendar.exactCalendarDay(minecraft.level) : 0;
     }
 
     private int eventsToday() {
@@ -1839,8 +1839,8 @@ public class PhoneScreen extends Screen {
         return (int) state.agenda().stream().filter(e -> PhoneAgenda.occursOn(e.day(), e.yearly(), today)).count();
     }
 
-    private void renderAgenda(DrawContext context) {
-        renderHeader(context, Text.translatable("gui.mca_vie.phone.app.agenda"), true);
+    private void renderAgenda(GuiGraphics context) {
+        renderHeader(context, Component.translatable("gui.mca_vie.phone.app.agenda"), true);
         int sx = sx();
         int sw = sw();
         int top = contentTop();
@@ -1854,7 +1854,7 @@ public class PhoneScreen extends Screen {
         }
         int y = top + 4;
         int year = agendaMonth.getYear() <= 0 ? agendaMonth.getYear() - 1 : agendaMonth.getYear();
-        String title = Text.translatable("calendar.mca_vie.month." + agendaMonth.getMonthValue()).getString() + " " + year;
+        String title = Component.translatable("calendar.mca_vie.month." + agendaMonth.getMonthValue()).getString() + " " + year;
         centered(context, fit(title, sw - 40), sx + sw / 2, y + 3, TEXT);
         boolean prevHover = hovered(sx + 4, y, 16, 14);
         boolean nextHover = hovered(sx + sw - 20, y, 16, 14);
@@ -1866,7 +1866,7 @@ public class PhoneScreen extends Screen {
         int cell = (sw - 8) / 7;
         int gx = sx + (sw - cell * 7) / 2;
         for (int d = 1; d <= 7; d++) {
-            String letter = Text.translatable("calendar.mca_vie.day." + d).getString().substring(0, 1);
+            String letter = Component.translatable("calendar.mca_vie.day." + d).getString().substring(0, 1);
             centered(context, letter, gx + (d - 1) * cell + cell / 2, y, MUTED);
         }
         y += 11;
@@ -1901,9 +1901,9 @@ public class PhoneScreen extends Screen {
         y += 6 * rowH + 4;
         context.fill(sx, y, sx + sw, y + 1, LINE);
         LocalDate selectedDate = PhoneAgenda.date(agendaSelected);
-        Text dayLabel = agendaSelected == today ? Text.translatable("gui.mca_vie.phone.agenda_today")
-                : Text.literal(Text.translatable("calendar.mca_vie.day." + selectedDate.getDayOfWeek().getValue()).getString() + " " + selectedDate.getDayOfMonth() + "/" + selectedDate.getMonthValue());
-        context.drawText(textRenderer, fit(dayLabel.getString(), sw - 16), sx + 8, y + 4, MUTED, false);
+        Component dayLabel = agendaSelected == today ? Component.translatable("gui.mca_vie.phone.agenda_today")
+                : Component.literal(Component.translatable("calendar.mca_vie.day." + selectedDate.getDayOfWeek().getValue()).getString() + " " + selectedDate.getDayOfMonth() + "/" + selectedDate.getMonthValue());
+        context.drawString(font, fit(dayLabel.getString(), sw - 16), sx + 8, y + 4, MUTED, false);
         int listTop = y + 15;
         List<PhoneClient.Event> events = new ArrayList<>();
         long selectedDay = agendaSelected;
@@ -1914,7 +1914,7 @@ public class PhoneScreen extends Screen {
         }
         int row = 20;
         if (events.isEmpty()) {
-            centered(context, Text.translatable("gui.mca_vie.phone.agenda_empty"), sx + sw / 2, listTop + 8, MUTED);
+            centered(context, Component.translatable("gui.mca_vie.phone.agenda_empty"), sx + sw / 2, listTop + 8, MUTED);
         }
         scroll = Math.min(scroll, Math.max(0, events.size() * row - (bottom - listTop)));
         scissor(context, sx, listTop, sx + sw, bottom);
@@ -1925,10 +1925,10 @@ public class PhoneScreen extends Screen {
                 continue;
             }
             context.fill(sx + 8, ry + 6, sx + 11, ry + 9, event.yearly() ? 0xFFF59E0B : ACCENT);
-            context.drawText(textRenderer, fit(event.title(), sw - 44), sx + 16, ry + 4, TEXT, false);
+            context.drawString(font, fit(event.title(), sw - 44), sx + 16, ry + 4, TEXT, false);
             if (event.yearly() && event.day() != selectedDay) {
                 int years = selectedDate.getYear() - PhoneAgenda.date(event.day()).getYear();
-                context.drawText(textRenderer, Text.translatable("gui.mca_vie.phone.agenda_years", years), sx + 16, ry + 13, MUTED, false);
+                context.drawString(font, Component.translatable("gui.mca_vie.phone.agenda_years", years), sx + 16, ry + 13, MUTED, false);
             }
             context.fill(sx + 16, ry + row - 1, sx + sw, ry + row, LINE);
             boolean crossHover = hovered(sx + sw - 22, ry + 2, 16, 16);
@@ -1946,14 +1946,14 @@ public class PhoneScreen extends Screen {
         });
     }
 
-    private void renderAgendaEdit(DrawContext context) {
-        renderHeader(context, Text.translatable("gui.mca_vie.phone.agenda_new"), true);
+    private void renderAgendaEdit(GuiGraphics context) {
+        renderHeader(context, Component.translatable("gui.mca_vie.phone.agenda_new"), true);
         int sx = sx();
         int sw = sw();
         int top = contentTop();
         LocalDate date = PhoneAgenda.date(agendaSelected);
-        String when = date.getDayOfMonth() + " " + Text.translatable("calendar.mca_vie.month." + date.getMonthValue()).getString();
-        context.drawText(textRenderer, fit(Text.translatable("gui.mca_vie.phone.agenda_title", when).getString(), sw - 20), sx + 10, top + 14, MUTED, false);
+        String when = date.getDayOfMonth() + " " + Component.translatable("calendar.mca_vie.month." + date.getMonthValue()).getString();
+        context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.agenda_title", when).getString(), sw - 20), sx + 10, top + 14, MUTED, false);
         round(context, sx + 8, top + 26, sw - 16, 16, 6, CARD);
         int y = top + 50;
         boolean hover = hovered(sx + 8, y, sw - 16, 16);
@@ -1963,9 +1963,9 @@ public class PhoneScreen extends Screen {
         if (eventYearly) {
             context.fill(box + 3, y + 6, box + 7, y + 10, WHITE);
         }
-        context.drawText(textRenderer, fit(Text.translatable("gui.mca_vie.phone.agenda_yearly").getString(), sw - 40), box + 15, y + 4, TEXT, false);
+        context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.agenda_yearly").getString(), sw - 40), box + 15, y + 4, TEXT, false);
         hits.add(new Hit(sx + 8, y, sw - 16, 16, () -> eventYearly = !eventYearly));
-        pill(context, sx + 20, y + 26, sw - 40, Text.translatable("gui.mca_vie.phone.folder_ok"), !eventInput.trim().isEmpty(), this::submitEvent);
+        pill(context, sx + 20, y + 26, sw - 40, Component.translatable("gui.mca_vie.phone.folder_ok"), !eventInput.trim().isEmpty(), this::submitEvent);
     }
 
     private void submitEvent() {
@@ -1978,7 +1978,7 @@ public class PhoneScreen extends Screen {
         send(PhoneNetwork.OP_AGENDA_ADD, buf -> {
             buf.writeVarLong(day);
             buf.writeBoolean(yearly);
-            buf.writeString(title);
+            buf.writeUtf(title);
         });
         switchTo(View.AGENDA);
     }
@@ -2002,8 +2002,8 @@ public class PhoneScreen extends Screen {
         return employees.stream().filter(e -> e.uuid().equals(employee)).findFirst().orElse(null);
     }
 
-    private static Text employeeStatus(PhoneEmployees.Employee e) {
-        return e.status() < 0 ? Text.translatable("gui.mca_vie.phone.employees.resting")
+    private static Component employeeStatus(PhoneEmployees.Employee e) {
+        return e.status() < 0 ? Component.translatable("gui.mca_vie.phone.employees.resting")
                 : WorkStatus.byId(e.status()).getText();
     }
 
@@ -2014,37 +2014,37 @@ public class PhoneScreen extends Screen {
                 || e.status() == WorkStatus.NO_TOOL.ordinal();
     }
 
-    private Text employeeWhere(PhoneEmployees.Employee e) {
+    private Component employeeWhere(PhoneEmployees.Employee e) {
         String pos = e.pos().getX() + ", " + e.pos().getY() + ", " + e.pos().getZ();
-        var player = MinecraftClient.getInstance().player;
-        if (player != null && player.getWorld().getRegistryKey().getValue().toString().equals(e.dimension())) {
-            int distance = (int) Math.sqrt(player.getBlockPos().getSquaredDistance(e.pos()));
-            return Text.translatable("gui.mca_vie.phone.employees.where", pos, distance);
+        var player = Minecraft.getInstance().player;
+        if (player != null && player.level().dimension().location().toString().equals(e.dimension())) {
+            int distance = (int) Math.sqrt(player.blockPosition().distSqr(e.pos()));
+            return Component.translatable("gui.mca_vie.phone.employees.where", pos, distance);
         }
-        return Text.literal(pos);
+        return Component.literal(pos);
     }
 
-    private static Text employeeSeen(PhoneEmployees.Employee e) {
+    private static Component employeeSeen(PhoneEmployees.Employee e) {
         if (e.loaded()) {
-            return Text.translatable("gui.mca_vie.phone.employees.live");
+            return Component.translatable("gui.mca_vie.phone.employees.live");
         }
         if (e.seenAgo() < 0) {
-            return Text.translatable("gui.mca_vie.phone.employees.unknown");
+            return Component.translatable("gui.mca_vie.phone.employees.unknown");
         }
         long minutes = e.seenAgo() / 1200;
-        return minutes < 60 ? Text.translatable("gui.mca_vie.phone.employees.seen_minutes", Math.max(1, minutes))
-                : Text.translatable("gui.mca_vie.phone.employees.seen_hours", minutes / 60);
+        return minutes < 60 ? Component.translatable("gui.mca_vie.phone.employees.seen_minutes", Math.max(1, minutes))
+                : Component.translatable("gui.mca_vie.phone.employees.seen_hours", minutes / 60);
     }
 
-    private void renderEmployees(DrawContext context) {
-        renderHeader(context, Text.translatable("gui.mca_vie.phone.app.employees"), true);
+    private void renderEmployees(GuiGraphics context) {
+        renderHeader(context, Component.translatable("gui.mca_vie.phone.app.employees"), true);
         int top = contentTop();
         int bottom = contentBottom();
         int sx = sx();
         int sw = sw();
         if (employees.isEmpty()) {
-            Text empty = Text.translatable(employeesLoaded ? "gui.mca_vie.phone.employees.none" : "gui.mca_vie.phone.employees.loading");
-            List<OrderedText> lines = textRenderer.wrapLines(empty, sw - 24);
+            Component empty = Component.translatable(employeesLoaded ? "gui.mca_vie.phone.employees.none" : "gui.mca_vie.phone.employees.loading");
+            List<FormattedCharSequence> lines = font.split(empty, sw - 24);
             for (int i = 0; i < lines.size(); i++) {
                 centered(context, lines.get(i), sx + sw / 2, top + 30 + i * 10, MUTED);
             }
@@ -2064,10 +2064,10 @@ public class PhoneScreen extends Screen {
                 context.fill(sx, ry, sx + sw, ry + ROW, CARD_HOVER);
             }
             drawEmployeeHead(context, e, sx + 6, ry + 5, 20);
-            context.drawText(textRenderer, fit(e.name(), sw - 50), sx + 30, ry + 6, e.loaded() ? TEXT : MUTED, false);
+            context.drawString(font, fit(e.name(), sw - 50), sx + 30, ry + 6, e.loaded() ? TEXT : MUTED, false);
             String line = Job.byId(e.job()).getName().getString() + " · "
-                    + (e.loaded() ? employeeStatus(e).getString() : Text.translatable("gui.mca_vie.phone.employees.away").getString());
-            context.drawText(textRenderer, fit(line, sw - 50), sx + 30, ry + 17, MUTED, false);
+                    + (e.loaded() ? employeeStatus(e).getString() : Component.translatable("gui.mca_vie.phone.employees.away").getString());
+            context.drawString(font, fit(line, sw - 50), sx + 30, ry + 17, MUTED, false);
             if (employeeAlert(e)) {
                 round(context, sx + sw - 14, ry + ROW / 2 - 3, 6, 6, 3, DANGER);
             }
@@ -2083,13 +2083,13 @@ public class PhoneScreen extends Screen {
         context.disableScissor();
     }
 
-    private void renderEmployee(DrawContext context) {
+    private void renderEmployee(GuiGraphics context) {
         var e = findEmployee();
         if (e == null) {
-            renderHeader(context, Text.translatable("gui.mca_vie.phone.app.employees"), true);
+            renderHeader(context, Component.translatable("gui.mca_vie.phone.app.employees"), true);
             return;
         }
-        renderHeader(context, Text.literal(e.name()), true);
+        renderHeader(context, Component.literal(e.name()), true);
         int first = hits.size();
         int sx = sx();
         int sw = sw();
@@ -2111,43 +2111,43 @@ public class PhoneScreen extends Screen {
         }
         y += frameH + 8;
         var job = Job.byId(e.job());
-        context.drawItem(job.icon(), x, y);
-        context.drawText(textRenderer, fit(job.getName().getString(), w - 22), x + 22, y + 4, TEXT, false);
+        context.renderItem(job.icon(), x, y);
+        context.drawString(font, fit(job.getName().getString(), w - 22), x + 22, y + 4, TEXT, false);
         y += 24;
-        context.drawText(textRenderer, Text.translatable("gui.mca_vie.phone.employees.state"), x, y, MUTED, false);
+        context.drawString(font, Component.translatable("gui.mca_vie.phone.employees.state"), x, y, MUTED, false);
         y += 10;
-        Text state = e.loaded() ? employeeStatus(e) : Text.translatable("gui.mca_vie.phone.employees.away");
-        for (OrderedText l : textRenderer.wrapLines(state, w)) {
-            context.drawText(textRenderer, l, x, y, TEXT, false);
+        Component state = e.loaded() ? employeeStatus(e) : Component.translatable("gui.mca_vie.phone.employees.away");
+        for (FormattedCharSequence l : font.split(state, w)) {
+            context.drawString(font, l, x, y, TEXT, false);
             y += 10;
         }
         y += 4;
-        context.drawText(textRenderer, Text.translatable("gui.mca_vie.phone.employees.health"), x, y, MUTED, false);
+        context.drawString(font, Component.translatable("gui.mca_vie.phone.employees.health"), x, y, MUTED, false);
         y += 11;
-        float ratio = e.maxHealth() > 0 ? MathHelper.clamp(e.health() / e.maxHealth(), 0, 1) : 0;
+        float ratio = e.maxHealth() > 0 ? Mth.clamp(e.health() / e.maxHealth(), 0, 1) : 0;
         round(context, x, y, w, 6, 3, CARD);
         if (ratio > 0) {
             round(context, x, y, Math.max(6, (int) (w * ratio)), 6, 3, ratio < 0.5f ? DANGER : 0xFF30A46C);
         }
         y += 12;
-        context.drawText(textRenderer, Text.translatable("gui.mca_vie.phone.employees.position"), x, y, MUTED, false);
+        context.drawString(font, Component.translatable("gui.mca_vie.phone.employees.position"), x, y, MUTED, false);
         y += 10;
-        for (OrderedText l : textRenderer.wrapLines(employeeWhere(e), w)) {
-            context.drawText(textRenderer, l, x, y, TEXT, false);
+        for (FormattedCharSequence l : font.split(employeeWhere(e), w)) {
+            context.drawString(font, l, x, y, TEXT, false);
             y += 10;
         }
-        context.drawText(textRenderer, fit(employeeSeen(e).getString(), w), x, y, MUTED, false);
+        context.drawString(font, fit(employeeSeen(e).getString(), w), x, y, MUTED, false);
         y += 18;
         if (!e.loaded()) {
-            for (OrderedText l : textRenderer.wrapLines(Text.translatable("gui.mca_vie.phone.employees.pending_hint"), w)) {
-                context.drawText(textRenderer, l, x, y, MUTED, false);
+            for (FormattedCharSequence l : font.split(Component.translatable("gui.mca_vie.phone.employees.pending_hint"), w)) {
+                context.drawString(font, l, x, y, MUTED, false);
                 y += 10;
             }
             y += 4;
         }
         y = renderEmployeeExtras(context, e, x, y, w);
         int by = Math.max(y, bottom - 30 - scroll);
-        Text label = Text.translatable(confirmFire ? "gui.mca_vie.phone.employees.fire_confirm" : "gui.mca_vie.phone.employees.fire");
+        Component label = Component.translatable(confirmFire ? "gui.mca_vie.phone.employees.fire_confirm" : "gui.mca_vie.phone.employees.fire");
         boolean hover = hovered(x, by, w, 20);
         round(context, x, by, w, 20, 10, hover ? 0xFFFF6369 : DANGER);
         centered(context, fit(label.getString(), w - 12), x + w / 2, by + 6, WHITE);
@@ -2158,8 +2158,8 @@ public class PhoneScreen extends Screen {
                 return;
             }
             confirmFire = false;
-            PacketByteBuf buf = PacketByteBufs.create();
-            buf.writeUuid(id);
+            FriendlyByteBuf buf = PacketByteBufs.create();
+            buf.writeUUID(id);
             ClientPlayNetworking.send(PhoneEmployees.FIRE, buf);
             switchTo(View.EMPLOYEES);
         }));
@@ -2169,7 +2169,7 @@ public class PhoneScreen extends Screen {
     }
 
     // tête du PNJ (entité du monde ou reconstruite depuis son apparence), sinon pastille avec l'initiale
-    private void drawEmployeeHead(DrawContext context, PhoneEmployees.Employee e, int x, int y, int box) {
+    private void drawEmployeeHead(GuiGraphics context, PhoneEmployees.Employee e, int x, int y, int box) {
         LivingEntity look = EmployeeLooks.get(e);
         if (look == null) {
             drawEmployeeInitial(context, e, x, y, box);
@@ -2181,7 +2181,7 @@ public class PhoneScreen extends Screen {
         context.disableScissor();
     }
 
-    private void drawEmployeeInitial(DrawContext context, PhoneEmployees.Employee e, int x, int y, int box) {
+    private void drawEmployeeInitial(GuiGraphics context, PhoneEmployees.Employee e, int x, int y, int box) {
         int color = 0xFF000000 | (Color.HSBtoRGB((e.uuid().hashCode() & 0xFFFF) / 65535f, 0.45f, 0.75f) & 0xFFFFFF);
         round(context, x, y, box, box, box / 2, color);
         String initial = e.name().isEmpty() ? "?" : e.name().substring(0, e.name().offsetByCodePoints(0, 1)).toUpperCase(Locale.ROOT);
@@ -2191,16 +2191,16 @@ public class PhoneScreen extends Screen {
     private static final String[] EMPLOYEE_ORDERS = {"follow", "stay", "home", "work"};
 
     // fiche employé : ordre actif/en attente, boutons d'ordres, messagerie, rapport du jour
-    private int renderEmployeeExtras(DrawContext context, PhoneEmployees.Employee e, int x, int y, int w) {
+    private int renderEmployeeExtras(GuiGraphics context, PhoneEmployees.Employee e, int x, int y, int w) {
         UUID id = e.uuid();
         if (!e.order().isEmpty()) {
-            context.drawText(textRenderer, fit(Text.translatable("gui.mca_vie.phone.employees.order_active",
-                    Text.translatable("gui.mca_vie.phone.employees.order." + e.order())).getString(), w), x, y, MUTED, false);
+            context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.employees.order_active",
+                    Component.translatable("gui.mca_vie.phone.employees.order." + e.order())).getString(), w), x, y, MUTED, false);
             y += 10;
         }
         if (!e.pending().isEmpty()) {
-            context.drawText(textRenderer, fit(Text.translatable("gui.mca_vie.phone.employees.order_waiting",
-                    Text.translatable("gui.mca_vie.phone.employees.order." + e.pending())).getString(), w), x, y, ACCENT, false);
+            context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.employees.order_waiting",
+                    Component.translatable("gui.mca_vie.phone.employees.order." + e.pending())).getString(), w), x, y, ACCENT, false);
             y += 10;
         }
         y += 2;
@@ -2212,30 +2212,30 @@ public class PhoneScreen extends Screen {
             boolean active = order.equals(e.order());
             boolean hover = hovered(bx, by, bw, 18);
             round(context, bx, by, bw, 18, 9, active ? ACCENT : hover ? CARD_HOVER : CARD);
-            centered(context, fit(Text.translatable("gui.mca_vie.phone.employees.order." + order).getString(), bw - 8),
+            centered(context, fit(Component.translatable("gui.mca_vie.phone.employees.order." + order).getString(), bw - 8),
                     bx + bw / 2, by + 5, active ? WHITE : TEXT);
             hits.add(new Hit(bx, by, bw, 18, () -> sendEmployeeOrder(id, order)));
         }
         y += 46;
         boolean hover = hovered(x, y, w, 20);
         round(context, x, y, w, 20, 10, hover ? ACCENT_HOVER : ACCENT);
-        centered(context, fit(Text.translatable("gui.mca_vie.phone.employees.message").getString(), w - 12), x + w / 2, y + 6, WHITE);
+        centered(context, fit(Component.translatable("gui.mca_vie.phone.employees.message").getString(), w - 12), x + w / 2, y + 6, WHITE);
         hits.add(new Hit(x, y, w, 20, () -> openEmployeeChat()));
         y += 28;
-        context.drawText(textRenderer, Text.translatable("gui.mca_vie.phone.employees.report"), x, y, MUTED, false);
-        NbtCompound report = e.report();
+        context.drawString(font, Component.translatable("gui.mca_vie.phone.employees.report"), x, y, MUTED, false);
+        CompoundTag report = e.report();
         int total = 0;
-        for (String key : report.getKeys()) {
+        for (String key : report.getAllKeys()) {
             total += report.getInt(key);
         }
         y += 10;
         if (report.isEmpty()) {
-            context.drawText(textRenderer, fit(Text.translatable("gui.mca_vie.phone.employees.report_empty").getString(), w), x, y, MUTED, false);
+            context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.employees.report_empty").getString(), w), x, y, MUTED, false);
             return y + 14;
         }
-        context.drawText(textRenderer, fit(Text.translatable("gui.mca_vie.phone.employees.report_total", total).getString(), w), x, y, TEXT, false);
+        context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.employees.report_total", total).getString(), w), x, y, TEXT, false);
         y += 12;
-        List<String> keys = new ArrayList<>(report.getKeys());
+        List<String> keys = new ArrayList<>(report.getAllKeys());
         keys.sort(Comparator.comparingInt(report::getInt).reversed());
         int cell = 34;
         int perRow = Math.max(1, w / cell);
@@ -2243,17 +2243,17 @@ public class PhoneScreen extends Screen {
         for (int i = 0; i < shown; i++) {
             int cx = x + (i % perRow) * cell;
             int cy = y + (i / perRow) * 20;
-            var item = Registries.ITEM.get(Identifier.tryParse(keys.get(i)));
-            context.drawItem(new ItemStack(item), cx, cy);
-            context.drawText(textRenderer, String.valueOf(report.getInt(keys.get(i))), cx + 17, cy + 5, TEXT, false);
+            var item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(keys.get(i)));
+            context.renderItem(new ItemStack(item), cx, cy);
+            context.drawString(font, String.valueOf(report.getInt(keys.get(i))), cx + 17, cy + 5, TEXT, false);
         }
         return y + ((shown + perRow - 1) / perRow) * 20 + 4;
     }
 
     private void sendEmployeeOrder(UUID id, String order) {
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeUuid(id);
-        buf.writeString(order);
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUUID(id);
+        buf.writeUtf(order);
         ClientPlayNetworking.send(PhoneEmployees.ORDER, buf);
     }
 
@@ -2264,8 +2264,8 @@ public class PhoneScreen extends Screen {
         employeeChatLoaded = false;
         draft = "";
         switchTo(View.EMPLOYEE_CHAT);
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeUuid(employee);
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUUID(employee);
         ClientPlayNetworking.send(EmployeeChat.REQUEST, buf);
     }
 
@@ -2308,32 +2308,32 @@ public class PhoneScreen extends Screen {
         List<EmployeeChat.Line> lines = new ArrayList<>(employeeChat);
         lines.add(new EmployeeChat.Line(true, message));
         employeeChat = lines;
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeUuid(employee);
-        buf.writeString(message.length() > EmployeeChat.MAX_TEXT
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUUID(employee);
+        buf.writeUtf(message.length() > EmployeeChat.MAX_TEXT
                 ? message.substring(0, EmployeeChat.MAX_TEXT) : message);
-        buf.writeString(MinecraftClient.getInstance().getLanguageManager().getLanguage());
+        buf.writeUtf(Minecraft.getInstance().getLanguageManager().getSelected());
         ClientPlayNetworking.send(EmployeeChat.SEND, buf);
         draft = "";
         scroll = 0;
         if (mainField != null) {
-            mainField.setText("");
+            mainField.setValue("");
         }
     }
 
-    private void renderEmployeeChat(DrawContext context) {
+    private void renderEmployeeChat(GuiGraphics context) {
         var e = findEmployee();
-        renderHeader(context, Text.literal(e != null ? e.name() : "?"), true);
+        renderHeader(context, Component.literal(e != null ? e.name() : "?"), true);
         int x = sx() + 8;
         int w = sw() - 16;
         int areaTop = contentTop() + 2;
         int chipsTop = contentBottom() - 28 - 34;
         int areaBottom = chipsTop - 2;
         int bubbleWidth = w * 3 / 4;
-        List<List<OrderedText>> wrapped = new ArrayList<>(employeeChat.size());
+        List<List<FormattedCharSequence>> wrapped = new ArrayList<>(employeeChat.size());
         int total = 0;
         for (var line : employeeChat) {
-            List<OrderedText> lines = textRenderer.wrapLines(Text.literal(line.text().isEmpty() ? " " : line.text()), bubbleWidth - 10);
+            List<FormattedCharSequence> lines = font.split(Component.literal(line.text().isEmpty() ? " " : line.text()), bubbleWidth - 10);
             wrapped.add(lines);
             total += lines.size() * 10 + 6 + 4;
         }
@@ -2348,17 +2348,17 @@ public class PhoneScreen extends Screen {
             y -= 20;
             round(context, x, y, 30, 16, 6, CARD);
             for (int d = 0; d < 3; d++) {
-                float phase = (ticks + client.getTickDelta() - d * 4) / 6f;
-                int hop = Math.round(Math.max(0, MathHelper.sin(phase)) * 3);
+                float phase = (ticks + minecraft.getFrameTime() - d * 4) / 6f;
+                int hop = Math.round(Math.max(0, Mth.sin(phase)) * 3);
                 round(context, x + 7 + d * 6, y + 7 - hop, 4, 4, 2, MUTED);
             }
         }
         for (int i = employeeChat.size() - 1; i >= 0 && y > areaTop; i--) {
             var line = employeeChat.get(i);
-            List<OrderedText> lines = wrapped.get(i);
+            List<FormattedCharSequence> lines = wrapped.get(i);
             int textWidth = 0;
-            for (OrderedText l : lines) {
-                textWidth = Math.max(textWidth, textRenderer.getWidth(l));
+            for (FormattedCharSequence l : lines) {
+                textWidth = Math.max(textWidth, font.width(l));
             }
             int height = lines.size() * 10 + 6;
             y -= height + 4;
@@ -2366,20 +2366,20 @@ public class PhoneScreen extends Screen {
             int bx = line.outgoing() ? x + w - bw : x;
             round(context, bx, y, bw, height, 6, line.outgoing() ? ACCENT : CARD);
             for (int l = 0; l < lines.size(); l++) {
-                context.drawText(textRenderer, lines.get(l), bx + 5, y + 4 + l * 10, line.outgoing() ? WHITE : TEXT, false);
+                context.drawString(font, lines.get(l), bx + 5, y + 4 + l * 10, line.outgoing() ? WHITE : TEXT, false);
             }
         }
         context.disableScissor();
         if (employeeChat.isEmpty()) {
-            Text empty = Text.translatable(employeeChatLoaded ? "gui.mca_vie.phone.employees.chat_empty" : "gui.mca_vie.phone.employees.loading");
-            List<OrderedText> lines = textRenderer.wrapLines(empty, w - 8);
+            Component empty = Component.translatable(employeeChatLoaded ? "gui.mca_vie.phone.employees.chat_empty" : "gui.mca_vie.phone.employees.loading");
+            List<FormattedCharSequence> lines = font.split(empty, w - 8);
             for (int i = 0; i < lines.size(); i++) {
                 centered(context, lines.get(i), sx() + sw() / 2, areaTop + 30 + i * 10, MUTED);
             }
         }
         int cw = (w - 4) / 2;
         for (int i = 0; i < 4; i++) {
-            String suggestion = Text.translatable("gui.mca_vie.phone.employees.suggest." + (i + 1)).getString();
+            String suggestion = Component.translatable("gui.mca_vie.phone.employees.suggest." + (i + 1)).getString();
             int cx = x + (i % 2) * (cw + 4);
             int cy = chipsTop + (i / 2) * 16;
             boolean hover = hovered(cx, cy, cw, 14);
@@ -2391,7 +2391,7 @@ public class PhoneScreen extends Screen {
         context.fill(sx(), barY - 2, sx() + sw(), barY - 1, LINE);
         round(context, sx() + 8, barY + 2, sw() - 38, 18, 9, CARD);
         if (draft.isEmpty() && (mainField == null || !mainField.isFocused())) {
-            context.drawText(textRenderer, Text.translatable("gui.mca_vie.phone.write"), sx() + 14, barY + 7, MUTED, false);
+            context.drawString(font, Component.translatable("gui.mca_vie.phone.write"), sx() + 14, barY + 7, MUTED, false);
         }
         int bx = sx() + sw() - 26;
         boolean hover = hovered(bx, barY + 1, 20, 20);
@@ -2400,17 +2400,17 @@ public class PhoneScreen extends Screen {
         hits.add(new Hit(bx, barY + 1, 20, 20, () -> sendEmployeeChat(draft)));
     }
 
-    private void renderSetCode(DrawContext context) {
-        renderHeader(context, Text.translatable("gui.mca_vie.phone.lock_code"), true);
+    private void renderSetCode(GuiGraphics context) {
+        renderHeader(context, Component.translatable("gui.mca_vie.phone.lock_code"), true);
         int sx = sx();
         int sw = sw();
         int y = contentTop() + 10;
-        centered(context, fit(Text.translatable("gui.mca_vie.phone.new_code").getString(), sw - 12), sx + sw / 2, y, MUTED);
+        centered(context, fit(Component.translatable("gui.mca_vie.phone.new_code").getString(), sw - 12), sx + sw / 2, y, MUTED);
         drawDots(context, y + 16, codeInput.length());
         renderKeypad(context, y + 36, contentBottom() - 4, false);
     }
 
-    private void drawFab(DrawContext context, Runnable action) {
+    private void drawFab(GuiGraphics context, Runnable action) {
         int size = 22;
         int fx = sx() + sw() - size - 10;
         int fy = contentBottom() - size - 8;
@@ -2421,7 +2421,7 @@ public class PhoneScreen extends Screen {
         hits.add(0, new Hit(fx, fy, size, size, action));
     }
 
-    private void pill(DrawContext context, int x, int y, int w, Text label, boolean enabled, Runnable action) {
+    private void pill(GuiGraphics context, int x, int y, int w, Component label, boolean enabled, Runnable action) {
         boolean hover = enabled && hovered(x, y, w, 20);
         round(context, x, y, w, 20, 10, enabled ? (hover ? ACCENT_HOVER : ACCENT) : CARD);
         centered(context, fit(label.getString(), w - 12), x + w / 2, y + 6, enabled ? WHITE : MUTED);
@@ -2430,11 +2430,11 @@ public class PhoneScreen extends Screen {
         }
     }
 
-    private void drawAvatar(DrawContext context, int x, int y, int size, int number) {
-        Identifier head = PhoneSkins.head(state.person(number));
+    private void drawAvatar(GuiGraphics context, int x, int y, int size, int number) {
+        ResourceLocation head = PhoneSkins.head(state.person(number));
         if (head != null) {
             round(context, x - 1, y - 1, size + 2, size + 2, 3, 0xFF000000);
-            PlayerSkinDrawer.draw(context, head, x, y, size);
+            PlayerFaceRenderer.draw(context, head, x, y, size);
             return;
         }
         round(context, x, y, size, size, size / 2, AVATARS[number % AVATARS.length]);
@@ -2442,10 +2442,10 @@ public class PhoneScreen extends Screen {
     }
 
     private String fit(String text, int width) {
-        if (textRenderer.getWidth(text) <= width) {
+        if (font.width(text) <= width) {
             return text;
         }
-        return textRenderer.trimToWidth(text, Math.max(0, width - textRenderer.getWidth("…"))) + "…";
+        return font.plainSubstrByWidth(text, Math.max(0, width - font.width("…"))) + "…";
     }
 
     private boolean hovered(int x, int y, int w, int h) {
@@ -2456,7 +2456,7 @@ public class PhoneScreen extends Screen {
         return y >= top && y + h <= bottom;
     }
 
-    private static void round(DrawContext context, int x, int y, int w, int h, int radius, int color) {
+    private static void round(GuiGraphics context, int x, int y, int w, int h, int radius, int color) {
         int r = Math.max(0, Math.min(radius, Math.min(w, h) / 2));
         if (h - 2 * r > 0) {
             context.fill(x, y + r, x + w, y + h - r, color);
@@ -2468,7 +2468,7 @@ public class PhoneScreen extends Screen {
         }
     }
 
-    private static void roundGradient(DrawContext context, int x, int y, int w, int h, int radius, int top, int bottom) {
+    private static void roundGradient(GuiGraphics context, int x, int y, int w, int h, int radius, int top, int bottom) {
         int r = Math.max(0, Math.min(radius, Math.min(w, h) / 2));
         for (int i = 0; i < h; i++) {
             int inset = i < r ? inset(r, i) : i >= h - r ? inset(r, h - 1 - i) : 0;
@@ -2491,28 +2491,28 @@ public class PhoneScreen extends Screen {
         return result;
     }
 
-    private static void drawChevron(DrawContext context, int x, int y, int color) {
+    private static void drawChevron(GuiGraphics context, int x, int y, int color) {
         for (int i = 0; i < 5; i++) {
             context.fill(x + i, y - i - 1, x + i + 2, y - i, color);
             context.fill(x + i, y + i - 1, x + i + 2, y + i, color);
         }
     }
 
-    private static void drawCross(DrawContext context, int x, int y, int color) {
+    private static void drawCross(GuiGraphics context, int x, int y, int color) {
         for (int i = 0; i < 8; i++) {
             context.fill(x + i, y + i, x + i + 1, y + i + 1, color);
             context.fill(x + 7 - i, y + i, x + 8 - i, y + i + 1, color);
         }
     }
 
-    private static void drawSendArrow(DrawContext context, int x, int y, int color) {
+    private static void drawSendArrow(GuiGraphics context, int x, int y, int color) {
         for (int i = 0; i < 6; i++) {
             context.fill(x + i, y + i, x + i + 2, y + 12 - i, color);
         }
         context.fill(x, y + 5, x + 4, y + 7, color);
     }
 
-    private static void drawBackspace(DrawContext context, int x, int y, int color) {
+    private static void drawBackspace(GuiGraphics context, int x, int y, int color) {
         for (int i = 0; i < 4; i++) {
             context.fill(x + 3 - i, y + i, x + 4 - i, y + i + 1, color);
             context.fill(x + 3 - i, y + 8 - i, x + 4 - i, y + 9 - i, color);
@@ -2527,7 +2527,7 @@ public class PhoneScreen extends Screen {
         }
     }
 
-    private static void drawLockIcon(DrawContext context, int x, int y) {
+    private static void drawLockIcon(GuiGraphics context, int x, int y) {
         context.fill(x + 2, y, x + 6, y + 1, WHITE);
         context.fill(x + 1, y + 1, x + 2, y + 4, WHITE);
         context.fill(x + 6, y + 1, x + 7, y + 4, WHITE);

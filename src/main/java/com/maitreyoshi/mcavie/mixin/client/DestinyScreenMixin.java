@@ -7,11 +7,11 @@ import net.mca.MCA;
 import net.mca.client.gui.DestinyScreen;
 import net.mca.client.gui.VillagerEditorScreen;
 import net.mca.util.compat.ButtonWidget;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.network.chat.Component;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -33,7 +33,7 @@ public abstract class DestinyScreenMixin extends VillagerEditorScreen implements
 
     @Unique
     @Nullable
-    private TextFieldWidget mcavie$surnameField;
+    private EditBox mcavie$surnameField;
 
     @Unique
     @Nullable
@@ -77,64 +77,64 @@ public abstract class DestinyScreenMixin extends VillagerEditorScreen implements
         int x = width / 2 - DATA_WIDTH / 2;
         int nameY = height / 2;
 
-        for (Element element : new ArrayList<>(children())) {
-            if (element instanceof ClickableWidget widget && widget.getY() > nameY + 10) {
+        for (GuiEventListener element : new ArrayList<>(children())) {
+            if (element instanceof AbstractWidget widget && widget.getY() > nameY + 10) {
                 widget.setY(widget.getY() + ROW_HEIGHT);
             }
         }
 
-        TextFieldWidget field = new TextFieldWidget(textRenderer, x, nameY + ROW_HEIGHT, DATA_WIDTH / 3 * 2, 18, Text.translatable("gui.mca_vie.surname"));
+        EditBox field = new EditBox(font, x, nameY + ROW_HEIGHT, DATA_WIDTH / 3 * 2, 18, Component.translatable("gui.mca_vie.surname"));
         field.setMaxLength(SurnameText.MAX_LENGTH);
-        field.setPlaceholder(Text.translatable("gui.mca_vie.surname"));
-        field.setText(mcavie$typedSurname != null ? mcavie$typedSurname : MCAVieClient.getOwnSurname());
+        field.setHint(Component.translatable("gui.mca_vie.surname"));
+        field.setValue(mcavie$typedSurname != null ? mcavie$typedSurname : MCAVieClient.getOwnSurname());
         mcavie$surnameField = field;
-        field.setChangedListener(surname -> {
+        field.setResponder(surname -> {
             mcavie$typedSurname = surname;
             mcavie$refreshName();
         });
-        addDrawableChild(field);
+        addRenderableWidget(field);
 
-        addDrawableChild(new ButtonWidget(x + DATA_WIDTH / 3 * 2 + 1, nameY + ROW_HEIGHT - 1, DATA_WIDTH / 3 - 2, 20,
-                Text.translatable("gui.button.random"), b -> MCAVieClient.requestRandomSurname()));
+        addRenderableWidget(new ButtonWidget(x + DATA_WIDTH / 3 * 2 + 1, nameY + ROW_HEIGHT - 1, DATA_WIDTH / 3 - 2, 20,
+                Component.translatable("gui.button.random"), b -> MCAVieClient.requestRandomSurname()));
 
-        TextFieldWidget nameField = ((VillagerEditorScreenAccessor) this).mcavie$getNameField();
-        String surname = field.getText();
+        EditBox nameField = ((VillagerEditorScreenAccessor) this).mcavie$getNameField();
+        String surname = field.getValue();
         if (nameField != null && !surname.isBlank()) {
-            String first = SurnameText.firstName(nameField.getText(), surname);
-            if (!first.isBlank() && !first.equals(nameField.getText())) {
-                nameField.setText(first);
+            String first = SurnameText.firstName(nameField.getValue(), surname);
+            if (!first.isBlank() && !first.equals(nameField.getValue())) {
+                nameField.setValue(first);
             }
         }
     }
 
     @Inject(method = "render", at = @At("HEAD"))
-    private void mcavie$updateAcceptButton(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    private void mcavie$updateAcceptButton(GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if ("general".equals(page) && acceptWidget != null && mcavie$surnameField != null) {
-            TextFieldWidget nameField = ((VillagerEditorScreenAccessor) this).mcavie$getNameField();
-            boolean nameOk = nameField != null && !MCA.isBlankString(nameField.getText());
-            boolean surnameOk = !MCA.isBlankString(mcavie$surnameField.getText());
+            EditBox nameField = ((VillagerEditorScreenAccessor) this).mcavie$getNameField();
+            boolean nameOk = nameField != null && !MCA.isBlankString(nameField.getValue());
+            boolean surnameOk = !MCA.isBlankString(mcavie$surnameField.getValue());
             acceptWidget.active = nameOk && surnameOk;
         }
     }
 
     @Unique
     private void mcavie$refreshName() {
-        TextFieldWidget nameField = ((VillagerEditorScreenAccessor) this).mcavie$getNameField();
+        EditBox nameField = ((VillagerEditorScreenAccessor) this).mcavie$getNameField();
         if (nameField != null) {
-            updateName(nameField.getText());
+            updateName(nameField.getValue());
         }
     }
 
     @Override
     @Nullable
     public String mcavie$getSurname() {
-        return mcavie$surnameField == null ? null : mcavie$surnameField.getText();
+        return mcavie$surnameField == null ? null : mcavie$surnameField.getValue();
     }
 
     @Override
     public void mcavie$setSurname(String surname) {
         if (mcavie$surnameField != null) {
-            mcavie$surnameField.setText(surname);
+            mcavie$surnameField.setValue(surname);
         }
     }
 }

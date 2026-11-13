@@ -5,24 +5,24 @@ import com.maitreyoshi.mcavie.life.TombstoneBlocks;
 import com.maitreyoshi.mcavie.life.TombstoneDetails;
 import com.maitreyoshi.mcavie.life.TombstonePortraits;
 import com.maitreyoshi.mcavie.phone.client.PhonePhotos;
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.math.Axis;
 import dev.architectury.registry.client.rendering.RenderTypeRegistry;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import net.mca.block.TombstoneBlock;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.render.LightmapTextureManager;
-import net.minecraft.client.render.RenderLayer;
-import net.minecraft.client.render.VertexConsumer;
-import net.minecraft.client.render.VertexConsumerProvider;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.state.property.Properties;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.RotationAxis;
-import net.minecraft.util.Util;
+import net.minecraft.Util;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.renderer.LightTexture;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
+import net.minecraft.core.Direction;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
@@ -54,11 +54,11 @@ public final class TombstoneClient {
     }
 
     public static void register() {
-        RenderTypeRegistry.register(RenderLayer.getCutout(), TombstoneBlocks.WOODEN_CROSS, TombstoneBlocks.STELE, TombstoneBlocks.MARBLE);
+        RenderTypeRegistry.register(RenderType.cutout(), TombstoneBlocks.WOODEN_CROSS, TombstoneBlocks.STELE, TombstoneBlocks.MARBLE);
         ClientPlayNetworking.registerGlobalReceiver(TombstonePortraits.RESULT, (client, handler, buf, responseSender) -> {
-            UUID person = buf.readUuid();
-            UUID image = buf.readBoolean() ? buf.readUuid() : null;
-            client.execute(() -> PORTRAITS.put(person, new Portrait(Optional.ofNullable(image), Util.getMeasuringTimeMs())));
+            UUID person = buf.readUUID();
+            UUID image = buf.readBoolean() ? buf.readUUID() : null;
+            client.execute(() -> PORTRAITS.put(person, new Portrait(Optional.ofNullable(image), Util.getMillis())));
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
             PORTRAITS.clear();
@@ -68,29 +68,29 @@ public final class TombstoneClient {
 
     @Nullable
     static UUID portrait(UUID person) {
-        long now = Util.getMeasuringTimeMs();
+        long now = Util.getMillis();
         Portrait portrait = PORTRAITS.get(person);
         Long requested = REQUESTED.get(person);
         if ((portrait == null || now - portrait.time() > REFRESH_MS) && (requested == null || now - requested > REFRESH_MS)) {
             REQUESTED.put(person, now);
-            PacketByteBuf buf = PacketByteBufs.create();
-            buf.writeUuid(person);
+            FriendlyByteBuf buf = PacketByteBufs.create();
+            buf.writeUUID(person);
             ClientPlayNetworking.send(TombstonePortraits.REQUEST, buf);
         }
         return portrait == null ? null : portrait.image().orElse(null);
     }
 
-    private static Text date(long day) {
+    private static Component date(long day) {
         return date(WorldCalendar.dateOfDay(day));
     }
 
-    private static Text calendarDate(@Nullable Long exact, long day) {
+    private static Component calendarDate(@Nullable Long exact, long day) {
         return exact != null ? date(WorldCalendar.dateOfCalendarDay(exact)) : date(day);
     }
 
-    private static Text date(LocalDate date) {
-        return Text.translatable("block.mca_vie.tombstone.date", date.getDayOfMonth(),
-                Text.translatable("block.mca_vie.tombstone.month." + date.getMonthValue()), date.getYear() <= 0 ? date.getYear() - 1 : date.getYear());
+    private static Component date(LocalDate date) {
+        return Component.translatable("block.mca_vie.tombstone.date", date.getDayOfMonth(),
+                Component.translatable("block.mca_vie.tombstone.month." + date.getMonthValue()), date.getYear() <= 0 ? date.getYear() - 1 : date.getYear());
     }
 
     static String lives(TombstoneDetails details) {
@@ -106,52 +106,52 @@ public final class TombstoneClient {
         return out.append('(').append(start).append('-').append(end).append(')').toString();
     }
 
-    public static void render(TombstoneDetails details, TombstoneBlock block, TextRenderer text, MatrixStack matrices,
-                              VertexConsumerProvider consumers, int light) {
+    public static void render(TombstoneDetails details, TombstoneBlock block, Font text, PoseStack matrices,
+                              MultiBufferSource consumers, int light) {
         layout(details, TombstoneModels.Look.MCA, block.getLineWidth(), block.getMaxNameHeight() + 30, text, matrices, consumers, light);
     }
 
-    public static void renderStyled(TombstoneDetails details, int tier, BlockState state, TextRenderer text, MatrixStack matrices,
-                                    VertexConsumerProvider consumers, int light) {
-        matrices.push();
+    public static void renderStyled(TombstoneDetails details, int tier, BlockState state, Font text, PoseStack matrices,
+                                    MultiBufferSource consumers, int light) {
+        matrices.pushPose();
         matrices.translate(0.5, 0, 0.5);
-        Direction facing = state.get(Properties.HORIZONTAL_FACING).getOpposite();
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-facing.asRotation()));
+        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite();
+        matrices.mulPose(Axis.YP.rotationDegrees(-facing.toYRot()));
         TombstoneModels.TextArea area = TombstoneModels.area(tier);
         matrices.translate(0, area.top(), area.z());
         matrices.scale(0.010416667F, 0.010416667F, 0.010416667F);
-        matrices.multiply(RotationAxis.POSITIVE_Z.rotationDegrees(180));
+        matrices.mulPose(Axis.ZP.rotationDegrees(180));
         layout(details, area.look(), area.width(), area.height(), text, matrices, consumers, light);
-        matrices.pop();
+        matrices.popPose();
     }
 
-    private static void layout(TombstoneDetails details, TombstoneModels.Look look, float width, float height, TextRenderer text,
-                               MatrixStack matrices, VertexConsumerProvider consumers, int light) {
+    private static void layout(TombstoneDetails details, TombstoneModels.Look look, float width, float height, Font text,
+                               PoseStack matrices, MultiBufferSource consumers, int light) {
         UUID image = portrait(details.person());
 
-        List<Text> lines = new ArrayList<>();
-        lines.add(Text.literal(details.firstName()));
+        List<Component> lines = new ArrayList<>();
+        lines.add(Component.literal(details.firstName()));
         if (!details.lastName().isEmpty()) {
-            lines.add(Text.literal(details.lastName().toUpperCase(Locale.ROOT)));
+            lines.add(Component.literal(details.lastName().toUpperCase(Locale.ROOT)));
         }
         if (details.job() != null) {
-            lines.add(Text.translatable(details.job()));
+            lines.add(Component.translatable(details.job()));
         }
-        Text born = details.birth() == null ? null : Text.translatable("block.mca_vie.tombstone.born", calendarDate(details.exactBirth(), details.birth()));
-        Text died = Text.translatable("block.mca_vie.tombstone.died", calendarDate(details.exactDeath(), details.death()));
+        Component born = details.birth() == null ? null : Component.translatable("block.mca_vie.tombstone.born", calendarDate(details.exactBirth(), details.birth()));
+        Component died = Component.translatable("block.mca_vie.tombstone.died", calendarDate(details.exactDeath(), details.death()));
 
         float medallion = image == null ? 0 : Math.max(14, Math.min(36, Math.round(height * 0.4f)));
         float gap = image == null ? 0 : 3;
         float available = height - medallion - gap;
 
         if (!details.pastLives().isEmpty()) {
-            lines.add(Text.literal(lives(details)));
+            lines.add(Component.literal(lives(details)));
         } else if (born == null) {
             lines.add(died);
         } else {
-            Text both = Text.translatable("block.mca_vie.tombstone.dates", born, died);
+            Component both = Component.translatable("block.mca_vie.tombstone.dates", born, died);
             float scale = Math.min(MAX_SCALE, available / ((lines.size() + 1) * 10));
-            if (text.getWidth(both) * scale <= width) {
+            if (text.width(both) * scale <= width) {
                 lines.add(both);
             } else {
                 lines.add(born);
@@ -172,34 +172,34 @@ public final class TombstoneClient {
         }
 
         for (int i = 0; i < lines.size(); i++) {
-            Text line = lines.get(i);
-            float lineScale = Math.min(scale, width / Math.max(1, text.getWidth(line)));
-            matrices.push();
+            Component line = lines.get(i);
+            float lineScale = Math.min(scale, width / Math.max(1, text.width(line)));
+            matrices.pushPose();
             matrices.translate(0, y + (10 * scale - 10 * lineScale) / 2, 0);
             matrices.scale(lineScale, lineScale, lineScale);
             boolean name = i == 0 || (i == 1 && !details.lastName().isEmpty());
-            float x = -text.getWidth(line) / 2F;
-            Matrix4f position = matrices.peek().getPositionMatrix();
+            float x = -text.width(line) / 2F;
+            Matrix4f position = matrices.last().pose();
             switch (look) {
-                case WOOD -> text.draw(line.asOrderedText(), x, 0, name ? 0x2E1C0C : 0x4A3420, false, position, consumers,
-                        TextRenderer.TextLayerType.NORMAL, 0, light);
-                case ENGRAVED -> text.draw(line.asOrderedText(), x, 0, name ? 0x262626 : 0x3C3C3C, false, position, consumers,
-                        TextRenderer.TextLayerType.NORMAL, 0, light);
-                case GOLD -> text.drawWithOutline(line.asOrderedText(), x, 0, name ? 0xF2CC5A : 0xD9B24C, 0x3E2A0A, position, consumers, light);
-                default -> text.drawWithOutline(line.asOrderedText(), x, 0, name ? 0xFFFFFF : 0xD8D8D8, 0x000000, position, consumers, light);
+                case WOOD -> text.drawInBatch(line.getVisualOrderText(), x, 0, name ? 0x2E1C0C : 0x4A3420, false, position, consumers,
+                        Font.DisplayMode.NORMAL, 0, light);
+                case ENGRAVED -> text.drawInBatch(line.getVisualOrderText(), x, 0, name ? 0x262626 : 0x3C3C3C, false, position, consumers,
+                        Font.DisplayMode.NORMAL, 0, light);
+                case GOLD -> text.drawInBatch8xOutline(line.getVisualOrderText(), x, 0, name ? 0xF2CC5A : 0xD9B24C, 0x3E2A0A, position, consumers, light);
+                default -> text.drawInBatch8xOutline(line.getVisualOrderText(), x, 0, name ? 0xFFFFFF : 0xD8D8D8, 0x000000, position, consumers, light);
             }
-            matrices.pop();
+            matrices.popPose();
             y += 10 * scale;
         }
     }
 
-    static void drawOval(UUID image, MatrixStack matrices, VertexConsumerProvider consumers, float y, float size, int light) {
-        Matrix4f position = matrices.peek().getPositionMatrix();
+    static void drawOval(UUID image, PoseStack matrices, MultiBufferSource consumers, float y, float size, int light) {
+        Matrix4f position = matrices.last().pose();
         float border = Math.max(1, size / 14);
         float height = size;
         float width = size * 0.78f;
         float cy = y + height / 2;
-        VertexConsumer frame = consumers.getBuffer(RenderLayer.getTextBackground());
+        VertexConsumer frame = consumers.getBuffer(RenderType.textBackground());
         for (int i = 0; i < OVAL_STRIPS; i++) {
             float y0 = y + height * i / OVAL_STRIPS;
             float y1 = y + height * (i + 1) / OVAL_STRIPS;
@@ -220,7 +220,7 @@ public final class TombstoneClient {
             }
             return;
         }
-        VertexConsumer buffer = consumers.getBuffer(RenderLayer.getText(picture.texture()));
+        VertexConsumer buffer = consumers.getBuffer(RenderType.text(picture.texture()));
         for (int i = 0; i < OVAL_STRIPS; i++) {
             float y0 = top + 2 * innerH * i / OVAL_STRIPS;
             float y1 = top + 2 * innerH * (i + 1) / OVAL_STRIPS;
@@ -241,12 +241,12 @@ public final class TombstoneClient {
         return a * (float) Math.sqrt(Math.max(0, 1 - t * t));
     }
 
-    private static void drawMedallion(UUID image, MatrixStack matrices, VertexConsumerProvider consumers, float x, float y, float size, int frameColor, int light) {
-        Matrix4f position = matrices.peek().getPositionMatrix();
+    private static void drawMedallion(UUID image, PoseStack matrices, MultiBufferSource consumers, float x, float y, float size, int frameColor, int light) {
+        Matrix4f position = matrices.last().pose();
         float border = Math.max(1, size / 14);
         float x1 = x + size;
         float y1 = y + size;
-        VertexConsumer frame = consumers.getBuffer(RenderLayer.getTextBackground());
+        VertexConsumer frame = consumers.getBuffer(RenderType.textBackground());
         rect(frame, position, x, y, x1, y + border, 0, frameColor, light);
         rect(frame, position, x, y1 - border, x1, y1, 0, frameColor, light);
         rect(frame, position, x, y + border, x + border, y1 - border, 0, frameColor, light);
@@ -261,7 +261,7 @@ public final class TombstoneClient {
             rect(frame, position, ix, iy, ix1, iy1, 0, EMPTY_COLOR, light);
             return;
         }
-        VertexConsumer buffer = consumers.getBuffer(RenderLayer.getText(picture.texture()));
+        VertexConsumer buffer = consumers.getBuffer(RenderType.text(picture.texture()));
         vertex(buffer, position, ix, iy, 0, 0, 0);
         vertex(buffer, position, ix, iy1, 0, 0, 1);
         vertex(buffer, position, ix1, iy1, 0, 1, 1);
@@ -273,17 +273,17 @@ public final class TombstoneClient {
         int r = color >> 16 & 0xFF;
         int g = color >> 8 & 0xFF;
         int b = color & 0xFF;
-        buffer.vertex(position, x0, y0, z).color(r, g, b, a).light(light).next();
-        buffer.vertex(position, x0, y1, z).color(r, g, b, a).light(light).next();
-        buffer.vertex(position, x1, y1, z).color(r, g, b, a).light(light).next();
-        buffer.vertex(position, x1, y0, z).color(r, g, b, a).light(light).next();
-        buffer.vertex(position, x1, y0, z).color(r, g, b, a).light(light).next();
-        buffer.vertex(position, x1, y1, z).color(r, g, b, a).light(light).next();
-        buffer.vertex(position, x0, y1, z).color(r, g, b, a).light(light).next();
-        buffer.vertex(position, x0, y0, z).color(r, g, b, a).light(light).next();
+        buffer.vertex(position, x0, y0, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.vertex(position, x0, y1, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.vertex(position, x1, y1, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.vertex(position, x1, y0, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.vertex(position, x1, y0, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.vertex(position, x1, y1, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.vertex(position, x0, y1, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.vertex(position, x0, y0, z).color(r, g, b, a).uv2(light).endVertex();
     }
 
     private static void vertex(VertexConsumer buffer, Matrix4f position, float x, float y, float z, float u, float v) {
-        buffer.vertex(position, x, y, z).color(255, 255, 255, 255).texture(u, v).light(LightmapTextureManager.MAX_LIGHT_COORDINATE).next();
+        buffer.vertex(position, x, y, z).color(255, 255, 255, 255).uv(u, v).uv2(LightTexture.FULL_BRIGHT).endVertex();
     }
 }

@@ -1,12 +1,12 @@
 package com.maitreyoshi.mcavie.mixin.compat;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import net.minecraft.server.world.ThreadedAnvilChunkStorage;
+import net.minecraft.server.level.ChunkMap;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(ThreadedAnvilChunkStorage.class)
+@Mixin(ChunkMap.class)
 public interface ThreadedAnvilChunkStorageAccessor {
-    @Accessor("entityTrackers")
+    @Accessor("entityMap")
     Int2ObjectMap<?> mcavie$getEntityTrackers();
 }

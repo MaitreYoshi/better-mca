@@ -2,16 +2,16 @@ package com.maitreyoshi.mcavie.phone.client;
 
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.phone.PhoneNetwork;
+import com.mojang.blaze3d.platform.NativeImage;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.texture.NativeImage;
-import net.minecraft.client.texture.NativeImageBackedTexture;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
 import javax.imageio.ImageIO;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.renderer.texture.DynamicTexture;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -22,7 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class PhonePhotos {
-    public record Picture(Identifier texture, int width, int height) {
+    public record Picture(ResourceLocation texture, int width, int height) {
     }
 
     private record Key(UUID id, boolean full) {
@@ -43,8 +43,8 @@ public final class PhonePhotos {
         Picture picture = PICTURES.get(key);
         LAST_USE.put(key, ticks);
         if (picture == null && REQUESTED.add(key)) {
-            PacketByteBuf buf = PacketByteBufs.create();
-            buf.writeUuid(id);
+            FriendlyByteBuf buf = PacketByteBufs.create();
+            buf.writeUUID(id);
             buf.writeBoolean(full);
             ClientPlayNetworking.send(PhoneNetwork.PRINT_REQUEST, buf);
         }
@@ -64,8 +64,8 @@ public final class PhonePhotos {
         Picture picture = PICTURES.get(key);
         LAST_USE.put(key, ticks);
         if (picture == null && REQUESTED.add(key)) {
-            PacketByteBuf buf = PacketByteBufs.create();
-            buf.writeUuid(id);
+            FriendlyByteBuf buf = PacketByteBufs.create();
+            buf.writeUUID(id);
             ClientPlayNetworking.send(PhoneNetwork.PORTRAIT_REQUEST, buf);
         }
         return picture;
@@ -83,7 +83,7 @@ public final class PhonePhotos {
             Picture picture = PICTURES.remove(entry.getKey());
             REQUESTED.remove(entry.getKey());
             if (picture != null) {
-                MinecraftClient.getInstance().getTextureManager().destroyTexture(picture.texture());
+                Minecraft.getInstance().getTextureManager().release(picture.texture());
             }
             return true;
         });
@@ -96,7 +96,7 @@ public final class PhonePhotos {
         LAST_USE.put(key, ticks);
         if (picture == null && REQUESTED.add(key)) {
             PhoneClient.send(number, PhoneNetwork.OP_PHOTO, buf -> {
-                buf.writeUuid(id);
+                buf.writeUUID(id);
                 buf.writeBoolean(full);
             });
         }
@@ -113,10 +113,10 @@ public final class PhonePhotos {
         }
         try {
             NativeImage image = jpeg ? decodeJpeg(data) : NativeImage.read(data);
-            Identifier texture = MCAVie.id("phone_photo/" + id + (full ? "_full" : "_thumb"));
-            NativeImageBackedTexture backed = new NativeImageBackedTexture(image);
+            ResourceLocation texture = MCAVie.id("phone_photo/" + id + (full ? "_full" : "_thumb"));
+            DynamicTexture backed = new DynamicTexture(image);
             backed.setFilter(true, false);
-            MinecraftClient.getInstance().getTextureManager().registerTexture(texture, backed);
+            Minecraft.getInstance().getTextureManager().register(texture, backed);
             PICTURES.put(key, new Picture(texture, image.getWidth(), image.getHeight()));
         } catch (IOException | RuntimeException e) {
             MCAVie.LOGGER.warn("Photo illisible : {}", id);
@@ -135,7 +135,7 @@ public final class PhonePhotos {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int rgb = pixels[y * width + x];
-                image.setColor(x, y, 0xFF000000 | (rgb & 0xFF) << 16 | (rgb & 0xFF00) | (rgb >> 16 & 0xFF));
+                image.setPixelRGBA(x, y, 0xFF000000 | (rgb & 0xFF) << 16 | (rgb & 0xFF00) | (rgb >> 16 & 0xFF));
             }
         }
         return image;
@@ -148,14 +148,14 @@ public final class PhonePhotos {
             REQUESTED.remove(key);
             LAST_USE.remove(key);
             if (picture != null) {
-                MinecraftClient.getInstance().getTextureManager().destroyTexture(picture.texture());
+                Minecraft.getInstance().getTextureManager().release(picture.texture());
             }
         }
     }
 
     static void clear() {
         for (Picture picture : PICTURES.values()) {
-            MinecraftClient.getInstance().getTextureManager().destroyTexture(picture.texture());
+            Minecraft.getInstance().getTextureManager().release(picture.texture());
         }
         PICTURES.clear();
         REQUESTED.clear();

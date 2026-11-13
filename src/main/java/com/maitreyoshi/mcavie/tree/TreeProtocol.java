@@ -1,18 +1,18 @@
 package com.maitreyoshi.mcavie.tree;
 
 import com.maitreyoshi.mcavie.MCAVie;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.Util;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 
 public final class TreeProtocol {
-    public static final Identifier REQUEST = MCAVie.id("tree_request");
-    public static final Identifier RESPONSE = MCAVie.id("tree_response");
+    public static final ResourceLocation REQUEST = MCAVie.id("tree_request");
+    public static final ResourceLocation RESPONSE = MCAVie.id("tree_response");
 
     public static final int MODE_TREE = 0;
     public static final int MODE_PATH = 1;
@@ -41,17 +41,17 @@ public final class TreeProtocol {
             return new Request(MODE_LINEAGE, Util.NIL_UUID, Util.NIL_UUID, 0, 0, surname);
         }
 
-        public void write(PacketByteBuf buf) {
+        public void write(FriendlyByteBuf buf) {
             buf.writeVarInt(mode);
-            buf.writeUuid(root);
-            buf.writeUuid(other);
+            buf.writeUUID(root);
+            buf.writeUUID(other);
             buf.writeVarInt(up + 1);
             buf.writeVarInt(down + 1);
-            buf.writeString(text, 64);
+            buf.writeUtf(text, 64);
         }
 
-        public static Request read(PacketByteBuf buf) {
-            return new Request(buf.readVarInt(), buf.readUuid(), buf.readUuid(), buf.readVarInt() - 1, buf.readVarInt() - 1, buf.readString(64));
+        public static Request read(FriendlyByteBuf buf) {
+            return new Request(buf.readVarInt(), buf.readUUID(), buf.readUUID(), buf.readVarInt() - 1, buf.readVarInt() - 1, buf.readUtf(64));
         }
     }
 
@@ -61,9 +61,9 @@ public final class TreeProtocol {
             this(mode, root, persons, path, relation, viewer, text, 0, 0);
         }
 
-        public void write(PacketByteBuf buf) {
+        public void write(FriendlyByteBuf buf) {
             buf.writeVarInt(mode);
-            buf.writeUuid(root);
+            buf.writeUUID(root);
             buf.writeVarInt(persons.size());
             persons.forEach(p -> p.write(buf));
             FamilyPerson.writeUuids(buf, path);
@@ -71,15 +71,15 @@ public final class TreeProtocol {
             if (relation != null) {
                 relation.write(buf);
             }
-            buf.writeUuid(viewer);
-            buf.writeString(text, 64);
+            buf.writeUUID(viewer);
+            buf.writeUtf(text, 64);
             buf.writeVarInt(index);
             buf.writeVarInt(count);
         }
 
-        public static Response read(PacketByteBuf buf) {
+        public static Response read(FriendlyByteBuf buf) {
             int mode = buf.readVarInt();
-            UUID root = buf.readUuid();
+            UUID root = buf.readUUID();
             int size = buf.readVarInt();
             List<FamilyPerson> persons = new ArrayList<>(size);
             for (int i = 0; i < size; i++) {
@@ -87,8 +87,8 @@ public final class TreeProtocol {
             }
             List<UUID> path = FamilyPerson.readUuids(buf);
             RelationInfo relation = buf.readBoolean() ? RelationInfo.read(buf) : null;
-            UUID viewer = buf.readUuid();
-            String text = buf.readString(64);
+            UUID viewer = buf.readUUID();
+            String text = buf.readUtf(64);
             return new Response(mode, root, persons, path, relation, viewer, text, buf.readVarInt(), buf.readVarInt());
         }
     }

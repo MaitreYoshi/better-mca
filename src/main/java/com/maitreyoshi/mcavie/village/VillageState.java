@@ -2,11 +2,10 @@ package com.maitreyoshi.mcavie.village;
 
 import net.mca.server.world.data.Building;
 import net.mca.server.world.data.Village;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.util.math.BlockPos;
-
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -82,18 +81,18 @@ public final class VillageState {
         public long day;
         public long amount;
 
-        NbtCompound toNbt() {
-            NbtCompound nbt = new NbtCompound();
-            nbt.putUuid("suspect", suspect);
+        CompoundTag toNbt() {
+            CompoundTag nbt = new CompoundTag();
+            nbt.putUUID("suspect", suspect);
             nbt.putString("name", name);
             nbt.putLong("day", day);
             nbt.putLong("amount", amount);
             return nbt;
         }
 
-        static Case fromNbt(NbtCompound nbt) {
+        static Case fromNbt(CompoundTag nbt) {
             Case c = new Case();
-            c.suspect = nbt.getUuid("suspect");
+            c.suspect = nbt.getUUID("suspect");
             c.name = nbt.getString("name");
             c.day = nbt.getLong("day");
             c.amount = nbt.getLong("amount");
@@ -117,9 +116,9 @@ public final class VillageState {
         public int refund;
         public boolean ready;
 
-        NbtCompound toNbt() {
-            NbtCompound nbt = new NbtCompound();
-            nbt.putUuid("player", player);
+        CompoundTag toNbt() {
+            CompoundTag nbt = new CompoundTag();
+            nbt.putUUID("player", player);
             nbt.putString("name", playerName);
             nbt.putString("item", item);
             nbt.putInt("lots", lots);
@@ -131,9 +130,9 @@ public final class VillageState {
             return nbt;
         }
 
-        static Order fromNbt(NbtCompound nbt) {
+        static Order fromNbt(CompoundTag nbt) {
             Order order = new Order();
-            order.player = nbt.getUuid("player");
+            order.player = nbt.getUUID("player");
             order.playerName = nbt.getString("name");
             order.item = nbt.getString("item");
             order.lots = nbt.getInt("lots");
@@ -150,8 +149,8 @@ public final class VillageState {
     }
 
     public record WeekRecord(long week, long income, long upkeep, long decrees, long withdrawn, long balance, double nature, long deposited) {
-        NbtCompound toNbt() {
-            NbtCompound nbt = new NbtCompound();
+        CompoundTag toNbt() {
+            CompoundTag nbt = new CompoundTag();
             nbt.putLong("week", week);
             nbt.putLong("income", income);
             nbt.putLong("upkeep", upkeep);
@@ -163,15 +162,15 @@ public final class VillageState {
             return nbt;
         }
 
-        static WeekRecord fromNbt(NbtCompound nbt) {
+        static WeekRecord fromNbt(CompoundTag nbt) {
             return new WeekRecord(nbt.getLong("week"), nbt.getLong("income"), nbt.getLong("upkeep"), nbt.getLong("decrees"), nbt.getLong("withdrawn"), nbt.getLong("balance"),
                     nbt.getDouble("nature"), nbt.getLong("deposited"));
         }
     }
 
     public record Withdrawal(long day, String player, long amount, boolean deposit) {
-        NbtCompound toNbt() {
-            NbtCompound nbt = new NbtCompound();
+        CompoundTag toNbt() {
+            CompoundTag nbt = new CompoundTag();
             nbt.putLong("day", day);
             nbt.putString("player", player);
             nbt.putLong("amount", amount);
@@ -179,7 +178,7 @@ public final class VillageState {
             return nbt;
         }
 
-        static Withdrawal fromNbt(NbtCompound nbt) {
+        static Withdrawal fromNbt(CompoundTag nbt) {
             return new Withdrawal(nbt.getLong("day"), nbt.getString("player"), nbt.getLong("amount"), nbt.getBoolean("deposit"));
         }
     }
@@ -191,14 +190,14 @@ public final class VillageState {
     public Set<Integer> decayedIds(Village village) {
         Set<Integer> ids = new HashSet<>();
         for (long packed : decayed) {
-            owner(village, BlockPos.fromLong(packed)).ifPresent(b -> ids.add(b.getId()));
+            owner(village, BlockPos.of(packed)).ifPresent(b -> ids.add(b.getId()));
         }
         return ids;
     }
 
     public boolean isDecayed(Village village, Building building) {
         for (long packed : decayed) {
-            BlockPos pos = BlockPos.fromLong(packed);
+            BlockPos pos = BlockPos.of(packed);
             if (building.containsPos(pos) && owner(village, pos).map(b -> b.getId() == building.getId()).orElse(false)) {
                 return true;
             }
@@ -207,7 +206,7 @@ public final class VillageState {
     }
 
     public boolean clearDecay(Village village, Building building) {
-        return decayed.removeIf(packed -> owner(village, BlockPos.fromLong(packed)).map(b -> b.getId() == building.getId()).orElse(false));
+        return decayed.removeIf(packed -> owner(village, BlockPos.of(packed)).map(b -> b.getId() == building.getId()).orElse(false));
     }
 
     private static java.util.Optional<Building> owner(Village village, BlockPos pos) {
@@ -297,8 +296,8 @@ public final class VillageState {
         }
     }
 
-    public NbtCompound toNbt() {
-        NbtCompound nbt = new NbtCompound();
+    public CompoundTag toNbt() {
+        CompoundTag nbt = new CompoundTag();
         nbt.putInt("rank", rank.ordinal());
         nbt.putInt("descentDaysLeft", descentDaysLeft);
         if (hasLastDay()) {
@@ -322,35 +321,35 @@ public final class VillageState {
         nbt.putInt("natureShare", natureShare);
         nbt.putLong("depositPool", depositPool);
         nbt.putLong("depositedThisWeek", depositedThisWeek);
-        NbtList historyList = new NbtList();
+        ListTag historyList = new ListTag();
         history.forEach(r -> historyList.add(r.toNbt()));
         nbt.put("history", historyList);
-        NbtList journalList = new NbtList();
+        ListTag journalList = new ListTag();
         journal.forEach(w -> journalList.add(w.toNbt()));
         nbt.put("journal", journalList);
 
         nbt.putIntArray("activeDecrees", activeDecrees.stream().mapToInt(Enum::ordinal).toArray());
-        NbtCompound launches = new NbtCompound();
+        CompoundTag launches = new CompoundTag();
         lastLaunch.forEach((decree, period) -> launches.putLong(decree.id(), period));
         nbt.put("lastLaunch", launches);
-        NbtCompound paid = new NbtCompound();
+        CompoundTag paid = new CompoundTag();
         paidWeek.forEach((decree, week) -> paid.putLong(decree.id(), week));
         nbt.put("paidWeek", paid);
         nbt.putLong("decreeSpending", decreeSpending);
         nbt.putDouble("immigrationProgress", immigrationProgress);
         nbt.putInt("pendingFamilies", pendingFamilies);
         nbt.putLong("lastArrivalDay", lastArrivalDay);
-        NbtCompound roll = new NbtCompound();
+        CompoundTag roll = new CompoundTag();
         taxRoll.forEach((uuid, entry) -> {
-            NbtCompound e = new NbtCompound();
+            CompoundTag e = new CompoundTag();
             e.putInt("job", entry.job());
             e.putInt("level", entry.level());
             e.putDouble("amount", entry.amount());
             roll.put(uuid.toString(), e);
         });
         nbt.put("taxRoll", roll);
-        NbtList dead = new NbtList();
-        deadResidents.forEach(uuid -> dead.add(net.minecraft.nbt.NbtString.of(uuid.toString())));
+        ListTag dead = new ListTag();
+        deadResidents.forEach(uuid -> dead.add(net.minecraft.nbt.StringTag.valueOf(uuid.toString())));
         nbt.put("deadResidents", dead);
 
         nbt.putBoolean("marketActive", marketActive);
@@ -361,37 +360,37 @@ public final class VillageState {
         nbt.putDouble("marketRemainder", marketRemainder);
         nbt.putLong("lastMarketSales", lastMarketSales);
         nbt.putLong("lastMarketOrders", lastMarketOrders);
-        NbtCompound stockNbt = new NbtCompound();
+        CompoundTag stockNbt = new CompoundTag();
         stock.forEach(stockNbt::putInt);
         nbt.put("stock", stockNbt);
-        NbtList orderList = new NbtList();
+        ListTag orderList = new ListTag();
         orders.forEach(o -> orderList.add(o.toNbt()));
         nbt.put("orders", orderList);
-        NbtList registryList = new NbtList();
+        ListTag registryList = new ListTag();
         registry.forEach(e -> registryList.add(e.toNbt()));
         nbt.put("registry", registryList);
-        NbtList caseList = new NbtList();
+        ListTag caseList = new ListTag();
         cases.forEach(c -> caseList.add(c.toNbt()));
         nbt.put("cases", caseList);
         nbt.putBoolean("prisonActive", prisonActive);
-        NbtList releaseList = new NbtList();
-        pendingRelease.forEach(uuid -> releaseList.add(net.minecraft.nbt.NbtHelper.fromUuid(uuid)));
+        ListTag releaseList = new ListTag();
+        pendingRelease.forEach(uuid -> releaseList.add(net.minecraft.nbt.NbtUtils.createUUID(uuid)));
         nbt.put("pendingRelease", releaseList);
-        NbtCompound prisonerNbt = new NbtCompound();
+        CompoundTag prisonerNbt = new CompoundTag();
         prisoners.forEach((uuid, p) -> {
-            NbtCompound e = new NbtCompound();
+            CompoundTag e = new CompoundTag();
             e.putString("name", p.name);
             e.putLong("release", p.releaseDay);
             prisonerNbt.put(uuid.toString(), e);
         });
         nbt.put("prisoners", prisonerNbt);
-        NbtCompound titleNbt = new NbtCompound();
+        CompoundTag titleNbt = new CompoundTag();
         forcedTitles.forEach((uuid, title) -> titleNbt.putString(uuid.toString(), title.name()));
         nbt.put("forcedTitles", titleNbt);
         return nbt;
     }
 
-    public void readNbt(NbtCompound nbt) {
+    public void readNbt(CompoundTag nbt) {
         rank = VillageRank.byIndex(nbt.getInt("rank"));
         descentDaysLeft = nbt.contains("descentDaysLeft") ? nbt.getInt("descentDaysLeft") : -1;
         lastDay = nbt.contains("lastDay") ? nbt.getLong("lastDay") : NONE;
@@ -415,9 +414,9 @@ public final class VillageState {
         depositPool = nbt.getLong("depositPool");
         depositedThisWeek = nbt.getLong("depositedThisWeek");
         history.clear();
-        nbt.getList("history", NbtElement.COMPOUND_TYPE).forEach(e -> history.add(WeekRecord.fromNbt((NbtCompound) e)));
+        nbt.getList("history", Tag.TAG_COMPOUND).forEach(e -> history.add(WeekRecord.fromNbt((CompoundTag) e)));
         journal.clear();
-        nbt.getList("journal", NbtElement.COMPOUND_TYPE).forEach(e -> journal.add(Withdrawal.fromNbt((NbtCompound) e)));
+        nbt.getList("journal", Tag.TAG_COMPOUND).forEach(e -> journal.add(Withdrawal.fromNbt((CompoundTag) e)));
 
         activeDecrees.clear();
         for (int index : nbt.getIntArray("activeDecrees")) {
@@ -428,8 +427,8 @@ public final class VillageState {
         }
         lastLaunch.clear();
         paidWeek.clear();
-        NbtCompound launches = nbt.getCompound("lastLaunch");
-        NbtCompound paid = nbt.getCompound("paidWeek");
+        CompoundTag launches = nbt.getCompound("lastLaunch");
+        CompoundTag paid = nbt.getCompound("paidWeek");
         for (Decree decree : Decree.values()) {
             if (launches.contains(decree.id())) {
                 lastLaunch.put(decree, launches.getLong(decree.id()));
@@ -443,18 +442,18 @@ public final class VillageState {
         pendingFamilies = nbt.getInt("pendingFamilies");
         lastArrivalDay = nbt.contains("lastArrivalDay") ? nbt.getLong("lastArrivalDay") : NONE;
         taxRoll.clear();
-        NbtCompound roll = nbt.getCompound("taxRoll");
-        for (String key : roll.getKeys()) {
+        CompoundTag roll = nbt.getCompound("taxRoll");
+        for (String key : roll.getAllKeys()) {
             try {
-                NbtCompound e = roll.getCompound(key);
+                CompoundTag e = roll.getCompound(key);
                 taxRoll.put(UUID.fromString(key), new TaxEntry(e.getInt("job"), e.getInt("level"), e.getDouble("amount")));
             } catch (IllegalArgumentException ignored) {
             }
         }
         deadResidents.clear();
-        for (NbtElement e : nbt.getList("deadResidents", NbtElement.STRING_TYPE)) {
+        for (Tag e : nbt.getList("deadResidents", Tag.TAG_STRING)) {
             try {
-                deadResidents.add(UUID.fromString(e.asString()));
+                deadResidents.add(UUID.fromString(e.getAsString()));
             } catch (IllegalArgumentException ignored) {
             }
         }
@@ -466,41 +465,41 @@ public final class VillageState {
         lastMarketSales = nbt.getLong("lastMarketSales");
         lastMarketOrders = nbt.getLong("lastMarketOrders");
         stock.clear();
-        NbtCompound stockNbt = nbt.getCompound("stock");
-        for (String key : stockNbt.getKeys()) {
+        CompoundTag stockNbt = nbt.getCompound("stock");
+        for (String key : stockNbt.getAllKeys()) {
             stock.put(key, stockNbt.getInt(key));
         }
         orders.clear();
-        nbt.getList("orders", NbtElement.COMPOUND_TYPE).forEach(e -> {
-            NbtCompound o = (NbtCompound) e;
-            if (o.containsUuid("player")) {
+        nbt.getList("orders", Tag.TAG_COMPOUND).forEach(e -> {
+            CompoundTag o = (CompoundTag) e;
+            if (o.hasUUID("player")) {
                 orders.add(Order.fromNbt(o));
             }
         });
         registry.clear();
-        nbt.getList("registry", NbtElement.COMPOUND_TYPE).forEach(e -> registry.add(CivilRegistry.Entry.fromNbt((NbtCompound) e)));
+        nbt.getList("registry", Tag.TAG_COMPOUND).forEach(e -> registry.add(CivilRegistry.Entry.fromNbt((CompoundTag) e)));
         trimRegistry();
         prisonActive = nbt.getBoolean("prisonActive");
         forcedTitles.clear();
-        NbtCompound titleNbt = nbt.getCompound("forcedTitles");
-        for (String key : titleNbt.getKeys()) {
+        CompoundTag titleNbt = nbt.getCompound("forcedTitles");
+        for (String key : titleNbt.getAllKeys()) {
             try {
                 forcedTitles.put(UUID.fromString(key), net.mca.resources.Rank.valueOf(titleNbt.getString(key)));
             } catch (IllegalArgumentException ignored) {
             }
         }
         pendingRelease.clear();
-        nbt.getList("pendingRelease", NbtElement.INT_ARRAY_TYPE).forEach(e -> pendingRelease.add(net.minecraft.nbt.NbtHelper.toUuid(e)));
+        nbt.getList("pendingRelease", Tag.TAG_INT_ARRAY).forEach(e -> pendingRelease.add(net.minecraft.nbt.NbtUtils.loadUUID(e)));
         cases.clear();
-        nbt.getList("cases", NbtElement.COMPOUND_TYPE).forEach(e -> {
-            NbtCompound c = (NbtCompound) e;
-            if (c.containsUuid("suspect")) {
+        nbt.getList("cases", Tag.TAG_COMPOUND).forEach(e -> {
+            CompoundTag c = (CompoundTag) e;
+            if (c.hasUUID("suspect")) {
                 cases.add(Case.fromNbt(c));
             }
         });
         prisoners.clear();
-        NbtCompound prisonerNbt = nbt.getCompound("prisoners");
-        for (String key : prisonerNbt.getKeys()) {
+        CompoundTag prisonerNbt = nbt.getCompound("prisoners");
+        for (String key : prisonerNbt.getAllKeys()) {
             try {
                 Prisoner p = new Prisoner();
                 p.name = prisonerNbt.getCompound(key).getString("name");

@@ -12,10 +12,10 @@ import net.mca.entity.VillagerEntityMCA;
 import net.mca.entity.ai.relationship.Gender;
 import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -26,8 +26,8 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class SocialNetwork {
-    public static final Identifier RELATIONS_REQUEST = MCAVie.id("relations_request");
-    public static final Identifier RELATIONS = MCAVie.id("relations");
+    public static final ResourceLocation RELATIONS_REQUEST = MCAVie.id("relations_request");
+    public static final ResourceLocation RELATIONS = MCAVie.id("relations");
 
     public static final int TAG_NONE = 0;
     public static final int TAG_SPOUSE = 1;
@@ -47,26 +47,26 @@ public final class SocialNetwork {
 
     public static void register() {
         ServerPlayNetworking.registerGlobalReceiver(RELATIONS_REQUEST, (server, player, handler, buf, responseSender) -> {
-            UUID uuid = buf.readUuid();
+            UUID uuid = buf.readUUID();
             server.execute(() -> {
-                long time = player.getServerWorld().getTime();
-                Long last = LAST_REQUEST.get(player.getUuid());
+                long time = player.serverLevel().getGameTime();
+                Long last = LAST_REQUEST.get(player.getUUID());
                 if (last != null && time - last >= 0 && time - last < REQUEST_COOLDOWN) {
                     return;
                 }
-                LAST_REQUEST.put(player.getUuid(), time);
-                VillagerEntityMCA villager = player.getServerWorld().getEntity(uuid) instanceof VillagerEntityMCA v ? v : null;
-                if (villager != null && villager.squaredDistanceTo(player) <= MAX_DISTANCE_SQ) {
-                    REACHABLE.remove(player.getUuid());
+                LAST_REQUEST.put(player.getUUID(), time);
+                VillagerEntityMCA villager = player.serverLevel().getEntity(uuid) instanceof VillagerEntityMCA v ? v : null;
+                if (villager != null && villager.distanceToSqr(player) <= MAX_DISTANCE_SQ) {
+                    REACHABLE.remove(player.getUUID());
                     send(player, uuid, villager);
-                } else if (REACHABLE.getOrDefault(player.getUuid(), Set.of()).contains(uuid)) {
+                } else if (REACHABLE.getOrDefault(player.getUUID(), Set.of()).contains(uuid)) {
                     send(player, uuid, villager);
                 }
             });
         });
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> server.execute(() -> {
-            LAST_REQUEST.remove(handler.player.getUuid());
-            REACHABLE.remove(handler.player.getUuid());
+            LAST_REQUEST.remove(handler.player.getUUID());
+            REACHABLE.remove(handler.player.getUUID());
         }));
         SocialConversation.register();
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> {
@@ -77,31 +77,31 @@ public final class SocialNetwork {
     }
 
     /** {@code villager} peut être null : villageois non chargé ou mort, ses liens restent dans le registre. */
-    private static void send(ServerPlayerEntity player, UUID owner, @Nullable VillagerEntityMCA villager) {
-        ServerWorld world = player.getServerWorld();
+    private static void send(ServerPlayer player, UUID owner, @Nullable VillagerEntityMCA villager) {
+        ServerLevel world = player.serverLevel();
         Map<UUID, Link> links = SocialRegistry.get(world.getServer()).links(owner);
         FamilyTree tree = FamilyTree.get(world);
         Optional<FamilyTreeNode> node = tree.getOrEmpty(owner);
         Optional<Social.House> house = villager == null ? Optional.empty() : Social.house(villager);
         WorkRegistry work = WorkRegistry.get(world.getServer());
         WorkRegistry.Record ownWork = work.get(owner);
-        Set<UUID> reachable = REACHABLE.computeIfAbsent(player.getUuid(), k -> new HashSet<>());
+        Set<UUID> reachable = REACHABLE.computeIfAbsent(player.getUUID(), k -> new HashSet<>());
         if (reachable.size() > MAX_REACHABLE) {
             reachable.clear();
         }
 
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeUuid(owner);
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUUID(owner);
         buf.writeVarLong(WorldCalendar.now(world).dayIndex());
         buf.writeVarInt(links.size());
         links.forEach((other, link) -> {
-            buf.writeUuid(other);
-            buf.writeString(Social.displayName(world, other));
+            buf.writeUUID(other);
+            buf.writeUtf(Social.displayName(world, other));
             buf.writeBoolean(tree.getOrEmpty(other).map(n -> n.gender() == Gender.FEMALE).orElse(false));
             buf.writeVarInt(link.score);
             buf.writeVarLong(link.lastSeen);
             buf.writeVarInt(tag(world, node, house, ownWork, work, other, link));
-            boolean villagerOther = world.getServer().getPlayerManager().getPlayer(other) == null
+            boolean villagerOther = world.getServer().getPlayerList().getPlayer(other) == null
                     && tree.getOrEmpty(other).map(n -> !n.isPlayer()).orElse(true);
             if (villagerOther) {
                 reachable.add(other);
@@ -111,7 +111,7 @@ public final class SocialNetwork {
         ServerPlayNetworking.send(player, RELATIONS, buf);
     }
 
-    private static int tag(ServerWorld world, Optional<FamilyTreeNode> node, Optional<Social.House> house,
+    private static int tag(ServerLevel world, Optional<FamilyTreeNode> node, Optional<Social.House> house,
                            WorkRegistry.Record ownWork, WorkRegistry work, UUID other, Link link) {
         if (node.isPresent() && other.equals(node.get().partner())) {
             return TAG_SPOUSE;

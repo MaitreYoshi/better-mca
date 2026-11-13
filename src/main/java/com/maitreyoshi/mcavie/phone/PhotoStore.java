@@ -2,7 +2,7 @@ package com.maitreyoshi.mcavie.phone;
 
 import com.maitreyoshi.mcavie.MCAVie;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.WorldSavePath;
+import net.minecraft.world.level.storage.LevelResource;
 import org.jetbrains.annotations.Nullable;
 
 import javax.imageio.ImageIO;
@@ -30,7 +30,7 @@ public final class PhotoStore {
     }
 
     private static Path file(MinecraftServer server, UUID id, String extension) {
-        return server.getSavePath(WorldSavePath.ROOT).resolve("mca_vie_photos").resolve(id + extension);
+        return server.getWorldPath(LevelResource.ROOT).resolve("mca_vie_photos").resolve(id + extension);
     }
 
     public static boolean validThumbnail(byte[] data) {

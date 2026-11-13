@@ -7,16 +7,15 @@ import net.mca.client.book.Book;
 import net.mca.client.book.pages.TextPage;
 import net.mca.client.book.pages.TitlePage;
 import net.mca.item.ExtendedWrittenBookItem;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.village.TradeOffer;
-import net.minecraft.village.TradeOffers;
-import net.minecraft.village.VillagerProfession;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.npc.VillagerProfession;
+import net.minecraft.world.entity.npc.VillagerTrades;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.trading.MerchantOffer;
 import java.util.function.Supplier;
 
 public final class GuideBooks {
@@ -30,22 +29,22 @@ public final class GuideBooks {
     }
 
     public static void register() {
-        Registration.register(RegistryKeys.ITEM, "memory_book",
-                () -> new ExtendedWrittenBookItem(new Item.Settings().maxCount(1), memoryBook()), item -> MEMORY_BOOK = item);
-        Registration.register(RegistryKeys.ITEM, "tombs_book",
-                () -> new ExtendedWrittenBookItem(new Item.Settings().maxCount(1), tombsBook()), item -> TOMBS_BOOK = item);
-        TradeOffers.Factory memory = sell(() -> MEMORY_BOOK);
-        TradeOffers.Factory tombs = sell(() -> TOMBS_BOOK);
+        Registration.register(Registries.ITEM, "memory_book",
+                () -> new ExtendedWrittenBookItem(new Item.Properties().stacksTo(1), memoryBook()), item -> MEMORY_BOOK = item);
+        Registration.register(Registries.ITEM, "tombs_book",
+                () -> new ExtendedWrittenBookItem(new Item.Properties().stacksTo(1), tombsBook()), item -> TOMBS_BOOK = item);
+        VillagerTrades.ItemListing memory = sell(() -> MEMORY_BOOK);
+        VillagerTrades.ItemListing tombs = sell(() -> TOMBS_BOOK);
         TradeRegistry.registerVillagerTrade(VillagerProfession.CLERIC, 1, memory, tombs);
         TradeRegistry.registerVillagerTrade(VillagerProfession.LIBRARIAN, 1, memory, tombs);
     }
 
-    private static TradeOffers.Factory sell(Supplier<Item> book) {
-        return (entity, random) -> new TradeOffer(new ItemStack(Items.EMERALD, 2), new ItemStack(book.get()), 12, 2, 0.05F);
+    private static VillagerTrades.ItemListing sell(Supplier<Item> book) {
+        return (entity, random) -> new MerchantOffer(new ItemStack(Items.EMERALD, 2), new ItemStack(book.get()), 12, 2, 0.05F);
     }
 
     private static Book memoryBook() {
-        return new Book("memory", Text.translatable(M + "author").formatted(Formatting.GRAY))
+        return new Book("memory", Component.translatable(M + "author").withStyle(ChatFormatting.GRAY))
                 .setBackground(MCAVie.id("textures/gui/books/happiness.png"))
                 .addPage(new TitlePage("item.mca_vie.memory_book", M + "author"))
                 .addPage(new TextPage("{\"translate\":\"" + M + "intro\"}"))
@@ -72,7 +71,7 @@ public final class GuideBooks {
     }
 
     private static Book tombsBook() {
-        return new Book("tombs", Text.translatable(T + "author").formatted(Formatting.GRAY))
+        return new Book("tombs", Component.translatable(T + "author").withStyle(ChatFormatting.GRAY))
                 .setBackground(MCAVie.id("textures/gui/books/happiness.png"))
                 .addPage(new TitlePage("item.mca_vie.tombs_book", T + "author"))
                 .addPage(new TextPage("{\"translate\":\"" + T + "intro\"}"))

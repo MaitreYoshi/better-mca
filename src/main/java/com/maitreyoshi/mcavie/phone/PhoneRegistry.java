@@ -1,12 +1,12 @@
 package com.maitreyoshi.mcavie.phone;
 
 import com.maitreyoshi.mcavie.MCAVie;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.PersistentState;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -18,20 +18,20 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public class PhoneRegistry extends PersistentState {
+public class PhoneRegistry extends SavedData {
     private static final String DATA_ID = "mca_vie_phones";
     public static final int NUMBERS = 1000;
 
     private final Map<Integer, Phone> phones = new HashMap<>();
 
     public static PhoneRegistry get(MinecraftServer server) {
-        return server.getOverworld().getPersistentStateManager().getOrCreate(PhoneRegistry::fromNbt, PhoneRegistry::new, DATA_ID);
+        return server.overworld().getDataStorage().computeIfAbsent(PhoneRegistry::fromNbt, PhoneRegistry::new, DATA_ID);
     }
 
-    private static PhoneRegistry fromNbt(NbtCompound nbt) {
+    private static PhoneRegistry fromNbt(CompoundTag nbt) {
         PhoneRegistry registry = new PhoneRegistry();
-        NbtCompound all = nbt.getCompound("phones");
-        for (String key : all.getKeys()) {
+        CompoundTag all = nbt.getCompound("phones");
+        for (String key : all.getAllKeys()) {
             try {
                 int number = Integer.parseInt(key);
                 if (number >= 0 && number < NUMBERS) {
@@ -45,8 +45,8 @@ public class PhoneRegistry extends PersistentState {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
-        NbtCompound all = new NbtCompound();
+    public CompoundTag save(CompoundTag nbt) {
+        CompoundTag all = new CompoundTag();
         phones.forEach((number, phone) -> all.put(String.valueOf(number), phone.toNbt()));
         nbt.put("phones", all);
         return nbt;
@@ -61,7 +61,7 @@ public class PhoneRegistry extends PersistentState {
         return phones;
     }
 
-    public int allocate(Random random) {
+    public int allocate(RandomSource random) {
         List<Integer> free = new ArrayList<>();
         for (int i = 0; i < NUMBERS; i++) {
             if (!phones.containsKey(i)) {
@@ -73,7 +73,7 @@ public class PhoneRegistry extends PersistentState {
         }
         int number = free.get(random.nextInt(free.size()));
         phones.put(number, new Phone());
-        markDirty();
+        setDirty();
         return number;
     }
 
@@ -122,34 +122,34 @@ public class PhoneRegistry extends PersistentState {
             return total;
         }
 
-        NbtCompound toNbt() {
-            NbtCompound nbt = new NbtCompound();
+        CompoundTag toNbt() {
+            CompoundTag nbt = new CompoundTag();
             if (owner != null) {
-                nbt.putUuid("owner", owner);
+                nbt.putUUID("owner", owner);
             }
             nbt.putString("ownerName", ownerName);
             nbt.putString("ownerSkin", ownerSkin);
             if (code != null) {
                 nbt.putString("code", code);
             }
-            NbtList contactList = new NbtList();
+            ListTag contactList = new ListTag();
             for (int number : contacts) {
-                NbtCompound contact = new NbtCompound();
+                CompoundTag contact = new CompoundTag();
                 contact.putInt("number", number);
                 contactList.add(contact);
             }
             nbt.put("contacts", contactList);
-            NbtList conversationList = new NbtList();
+            ListTag conversationList = new ListTag();
             conversations.forEach((number, conversation) -> {
-                NbtCompound entry = conversation.toNbt();
+                CompoundTag entry = conversation.toNbt();
                 entry.putInt("number", number);
                 conversationList.add(entry);
             });
             nbt.put("conversations", conversationList);
-            NbtList galleryList = new NbtList();
+            ListTag galleryList = new ListTag();
             for (Photo photo : gallery) {
-                NbtCompound entry = new NbtCompound();
-                entry.putUuid("id", photo.id());
+                CompoundTag entry = new CompoundTag();
+                entry.putUUID("id", photo.id());
                 entry.putLong("time", photo.time());
                 if (photo.folder() != 0) {
                     entry.putInt("folder", photo.folder());
@@ -157,9 +157,9 @@ public class PhoneRegistry extends PersistentState {
                 galleryList.add(entry);
             }
             nbt.put("gallery", galleryList);
-            NbtList folderList = new NbtList();
+            ListTag folderList = new ListTag();
             folders.forEach((id, name) -> {
-                NbtCompound entry = new NbtCompound();
+                CompoundTag entry = new CompoundTag();
                 entry.putInt("id", id);
                 entry.putString("name", name);
                 folderList.add(entry);
@@ -169,9 +169,9 @@ public class PhoneRegistry extends PersistentState {
             if (!wallpaper.isEmpty()) {
                 nbt.putString("wallpaper", wallpaper);
             }
-            NbtList agendaList = new NbtList();
+            ListTag agendaList = new ListTag();
             for (AgendaEvent event : agenda) {
-                NbtCompound entry = new NbtCompound();
+                CompoundTag entry = new CompoundTag();
                 entry.putInt("id", event.id());
                 entry.putLong("day", event.day());
                 entry.putBoolean("yearly", event.yearly());
@@ -184,41 +184,41 @@ public class PhoneRegistry extends PersistentState {
             return nbt;
         }
 
-        static Phone fromNbt(NbtCompound nbt) {
+        static Phone fromNbt(CompoundTag nbt) {
             Phone phone = new Phone();
-            if (nbt.containsUuid("owner")) {
-                phone.owner = nbt.getUuid("owner");
+            if (nbt.hasUUID("owner")) {
+                phone.owner = nbt.getUUID("owner");
             }
             phone.ownerName = nbt.getString("ownerName");
             phone.ownerSkin = nbt.getString("ownerSkin");
             if (nbt.contains("code")) {
                 phone.code = nbt.getString("code");
             }
-            for (NbtElement element : nbt.getList("contacts", NbtElement.COMPOUND_TYPE)) {
-                NbtCompound contact = (NbtCompound) element;
+            for (Tag element : nbt.getList("contacts", Tag.TAG_COMPOUND)) {
+                CompoundTag contact = (CompoundTag) element;
                 phone.contacts.add(contact.getInt("number"));
             }
-            for (NbtElement element : nbt.getList("conversations", NbtElement.COMPOUND_TYPE)) {
-                NbtCompound entry = (NbtCompound) element;
+            for (Tag element : nbt.getList("conversations", Tag.TAG_COMPOUND)) {
+                CompoundTag entry = (CompoundTag) element;
                 phone.conversations.put(entry.getInt("number"), Conversation.fromNbt(entry));
             }
-            for (NbtElement element : nbt.getList("folders", NbtElement.COMPOUND_TYPE)) {
-                NbtCompound entry = (NbtCompound) element;
+            for (Tag element : nbt.getList("folders", Tag.TAG_COMPOUND)) {
+                CompoundTag entry = (CompoundTag) element;
                 phone.folders.put(entry.getInt("id"), entry.getString("name"));
             }
             phone.nextFolder = Math.max(1, nbt.getInt("nextFolder"));
             phone.wallpaper = nbt.getString("wallpaper");
-            for (NbtElement element : nbt.getList("agenda", NbtElement.COMPOUND_TYPE)) {
-                NbtCompound entry = (NbtCompound) element;
+            for (Tag element : nbt.getList("agenda", Tag.TAG_COMPOUND)) {
+                CompoundTag entry = (CompoundTag) element;
                 phone.agenda.add(new AgendaEvent(entry.getInt("id"), entry.getLong("day"), entry.getBoolean("yearly"), entry.getString("title")));
             }
             phone.nextEvent = Math.max(1, nbt.getInt("nextEvent"));
             phone.agendaDay = nbt.contains("agendaDay") ? nbt.getLong("agendaDay") : -1;
-            for (NbtElement element : nbt.getList("gallery", NbtElement.COMPOUND_TYPE)) {
-                NbtCompound entry = (NbtCompound) element;
-                if (entry.containsUuid("id")) {
+            for (Tag element : nbt.getList("gallery", Tag.TAG_COMPOUND)) {
+                CompoundTag entry = (CompoundTag) element;
+                if (entry.hasUUID("id")) {
                     int folder = entry.getInt("folder");
-                    phone.gallery.add(new Photo(entry.getUuid("id"), entry.getLong("time"), phone.folders.containsKey(folder) ? folder : 0));
+                    phone.gallery.add(new Photo(entry.getUUID("id"), entry.getLong("time"), phone.folders.containsKey(folder) ? folder : 0));
                 }
             }
             return phone;
@@ -230,18 +230,18 @@ public class PhoneRegistry extends PersistentState {
         public int unread;
         public long lastTime;
 
-        NbtCompound toNbt() {
-            NbtCompound nbt = new NbtCompound();
+        CompoundTag toNbt() {
+            CompoundTag nbt = new CompoundTag();
             nbt.putInt("unread", unread);
             nbt.putLong("lastTime", lastTime);
-            NbtList list = new NbtList();
+            ListTag list = new ListTag();
             for (Message message : messages) {
-                NbtCompound entry = new NbtCompound();
+                CompoundTag entry = new CompoundTag();
                 entry.putBoolean("out", message.outgoing());
                 entry.putString("text", message.text());
                 entry.putLong("time", message.time());
                 if (message.photo() != null) {
-                    entry.putUuid("photo", message.photo());
+                    entry.putUUID("photo", message.photo());
                 }
                 list.add(entry);
             }
@@ -249,13 +249,13 @@ public class PhoneRegistry extends PersistentState {
             return nbt;
         }
 
-        static Conversation fromNbt(NbtCompound nbt) {
+        static Conversation fromNbt(CompoundTag nbt) {
             Conversation conversation = new Conversation();
             conversation.unread = nbt.getInt("unread");
             conversation.lastTime = nbt.getLong("lastTime");
-            for (NbtElement element : nbt.getList("messages", NbtElement.COMPOUND_TYPE)) {
-                NbtCompound entry = (NbtCompound) element;
-                conversation.messages.add(new Message(entry.getBoolean("out"), entry.getString("text"), entry.getLong("time"), entry.containsUuid("photo") ? entry.getUuid("photo") : null));
+            for (Tag element : nbt.getList("messages", Tag.TAG_COMPOUND)) {
+                CompoundTag entry = (CompoundTag) element;
+                conversation.messages.add(new Message(entry.getBoolean("out"), entry.getString("text"), entry.getLong("time"), entry.hasUUID("photo") ? entry.getUUID("photo") : null));
             }
             return conversation;
         }

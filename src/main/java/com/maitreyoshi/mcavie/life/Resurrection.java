@@ -3,10 +3,9 @@ package com.maitreyoshi.mcavie.life;
 import com.maitreyoshi.mcavie.social.SocialConversation;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.server.world.data.FamilyTreeNode;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.random.Random;
-
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -29,38 +28,38 @@ public final class Resurrection {
     private Resurrection() {
     }
 
-    public static void returned(VillagerEntityMCA villager, ServerWorld world) {
-        SEEN.remove(villager.getUuid());
-        LAST_REMARK.put(villager.getUuid(), world.getTime());
-        SocialConversation.witness(world, villager, "resurrection", villager.getName(), villager.getUuid());
-        Set<UUID> seen = SEEN.computeIfAbsent(villager.getUuid(), k -> new HashSet<>());
-        world.getEntitiesByClass(VillagerEntityMCA.class, villager.getBoundingBox().expand(10), v -> v != villager)
-                .forEach(v -> seen.add(v.getUuid()));
+    public static void returned(VillagerEntityMCA villager, ServerLevel world) {
+        SEEN.remove(villager.getUUID());
+        LAST_REMARK.put(villager.getUUID(), world.getGameTime());
+        SocialConversation.witness(world, villager, "resurrection", villager.getName(), villager.getUUID());
+        Set<UUID> seen = SEEN.computeIfAbsent(villager.getUUID(), k -> new HashSet<>());
+        world.getEntitiesOfClass(VillagerEntityMCA.class, villager.getBoundingBox().inflate(10), v -> v != villager)
+                .forEach(v -> seen.add(v.getUUID()));
     }
 
-    public static void update(VillagerEntityMCA villager, ServerWorld world) {
-        UUID uuid = villager.getUuid();
+    public static void update(VillagerEntityMCA villager, ServerLevel world) {
+        UUID uuid = villager.getUUID();
         Long since = LifeRegistry.get(world.getServer()).resurrectedAt(uuid);
-        long time = world.getTime();
+        long time = world.getGameTime();
         if (since == null || time - since >= FADE_TICKS || time < since) {
             SEEN.remove(uuid);
             LAST_REMARK.remove(uuid);
             return;
         }
-        List<VillagerEntityMCA> nearby = world.getEntitiesByClass(VillagerEntityMCA.class,
-                villager.getBoundingBox().expand(MEET_RADIUS), v -> v != villager && v.isAlive() && !v.isBaby());
+        List<VillagerEntityMCA> nearby = world.getEntitiesOfClass(VillagerEntityMCA.class,
+                villager.getBoundingBox().inflate(MEET_RADIUS), v -> v != villager && v.isAlive() && !v.isBaby());
         if (nearby.isEmpty()) {
             return;
         }
         Set<UUID> seen = SEEN.computeIfAbsent(uuid, k -> new HashSet<>());
         double elapsed = (double) (time - since) / FADE_TICKS;
-        Random random = world.getRandom();
+        RandomSource random = world.getRandom();
         Set<UUID> family = family(villager);
         for (VillagerEntityMCA other : nearby) {
-            if (!seen.add(other.getUuid())) {
+            if (!seen.add(other.getUUID())) {
                 continue;
             }
-            boolean relative = family.contains(other.getUuid());
+            boolean relative = family.contains(other.getUUID());
             if (!relative && random.nextDouble() > 1 - elapsed) {
                 continue;
             }
@@ -71,7 +70,7 @@ public final class Resurrection {
             String key = relative ? "family." + random.nextInt(FAMILY_VARIANTS)
                     : elapsed < SHOCK_PART ? "shock." + random.nextInt(SHOCK_VARIANTS)
                     : "rumor." + random.nextInt(RUMOR_VARIANTS);
-            SocialConversation.remark(world, other, Text.translatable("chat.mca_vie.resurrection." + key, villager.getName()));
+            SocialConversation.remark(world, other, Component.translatable("chat.mca_vie.resurrection." + key, villager.getName()));
         }
     }
 

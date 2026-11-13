@@ -1,10 +1,9 @@
 package com.maitreyoshi.mcavie.social;
 
 import com.maitreyoshi.mcavie.MCAVie;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.world.PersistentState;
-
+import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collections;
@@ -16,7 +15,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-public class SocialRegistry extends PersistentState {
+public class SocialRegistry extends SavedData {
     private static final String DATA_ID = "mca_vie_social";
 
     private final Map<UUID, Map<UUID, Link>> links = new HashMap<>();
@@ -24,21 +23,21 @@ public class SocialRegistry extends PersistentState {
     private long lastForgetDay = Long.MIN_VALUE / 2;
 
     public static SocialRegistry get(MinecraftServer server) {
-        return server.getOverworld().getPersistentStateManager().getOrCreate(SocialRegistry::fromNbt, SocialRegistry::new, DATA_ID);
+        return server.overworld().getDataStorage().computeIfAbsent(SocialRegistry::fromNbt, SocialRegistry::new, DATA_ID);
     }
 
-    private static SocialRegistry fromNbt(NbtCompound nbt) {
+    private static SocialRegistry fromNbt(CompoundTag nbt) {
         SocialRegistry registry = new SocialRegistry();
         if (nbt.contains("lastForgetDay")) {
             registry.lastForgetDay = nbt.getLong("lastForgetDay");
         }
-        NbtCompound owners = nbt.getCompound("villagers");
-        for (String key : owners.getKeys()) {
+        CompoundTag owners = nbt.getCompound("villagers");
+        for (String key : owners.getAllKeys()) {
             try {
                 UUID owner = UUID.fromString(key);
-                NbtCompound entries = owners.getCompound(key);
+                CompoundTag entries = owners.getCompound(key);
                 Map<UUID, Link> map = new HashMap<>();
-                for (String other : entries.getKeys()) {
+                for (String other : entries.getAllKeys()) {
                     map.put(UUID.fromString(other), Link.fromNbt(entries.getCompound(other)));
                 }
                 registry.links.put(owner, map);
@@ -50,10 +49,10 @@ public class SocialRegistry extends PersistentState {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
-        NbtCompound owners = new NbtCompound();
+    public CompoundTag save(CompoundTag nbt) {
+        CompoundTag owners = new CompoundTag();
         links.forEach((owner, map) -> {
-            NbtCompound entries = new NbtCompound();
+            CompoundTag entries = new CompoundTag();
             map.forEach((other, link) -> entries.put(other.toString(), link.toNbt()));
             owners.put(owner.toString(), entries);
         });
@@ -96,7 +95,7 @@ public class SocialRegistry extends PersistentState {
         link.talkDay = -1;
         link.hitDay = -1;
         map.put(other, link);
-        markDirty();
+        setDirty();
         return link;
     }
 
@@ -110,7 +109,7 @@ public class SocialRegistry extends PersistentState {
             forgetDay(day);
         }
         lastTalk.values().removeIf(t -> time - t > Social.TALK_COOLDOWN);
-        markDirty();
+        setDirty();
     }
 
     private void forgetDay(long day) {
@@ -136,7 +135,7 @@ public class SocialRegistry extends PersistentState {
         links.remove(dead);
         lastTalk.remove(dead);
         links.values().forEach(map -> map.remove(dead));
-        markDirty();
+        setDirty();
     }
 
     public long lastTalk(UUID uuid) {
@@ -155,8 +154,8 @@ public class SocialRegistry extends PersistentState {
         public int talks;
         public long hitDay;
 
-        NbtCompound toNbt() {
-            NbtCompound nbt = new NbtCompound();
+        CompoundTag toNbt() {
+            CompoundTag nbt = new CompoundTag();
             nbt.putInt("score", score);
             nbt.putLong("lastSeen", lastSeen);
             nbt.putBoolean("family", family);
@@ -166,7 +165,7 @@ public class SocialRegistry extends PersistentState {
             return nbt;
         }
 
-        static Link fromNbt(NbtCompound nbt) {
+        static Link fromNbt(CompoundTag nbt) {
             Link link = new Link();
             link.score = nbt.getInt("score");
             link.lastSeen = nbt.getLong("lastSeen");

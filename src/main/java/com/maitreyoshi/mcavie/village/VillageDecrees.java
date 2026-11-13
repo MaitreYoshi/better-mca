@@ -12,12 +12,11 @@ import net.mca.entity.ai.relationship.AgeState;
 import net.mca.server.world.data.Building;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import java.time.LocalDate;
 import java.util.Optional;
 import java.util.UUID;
@@ -55,51 +54,51 @@ public final class VillageDecrees {
         return (long) Math.ceil(rule.upkeep * rank.rule().taxMultiplier * VillageConfig.get().renovationWeeks);
     }
 
-    public static MutableText unavailable(Village village, Decree decree, long today) {
+    public static MutableComponent unavailable(Village village, Decree decree, long today) {
         VillageState state = VillageState.of(village);
         if (decree.kind == Decree.Kind.TOGGLE && state.activeDecrees.contains(decree)) {
             return null;
         }
         if (!state.rank.isAtLeast(decree.rank)) {
-            return Text.translatable("gui.mca_vie.decree.need_rank", decree.rank.getName(), state.rank.getName());
+            return Component.translatable("gui.mca_vie.decree.need_rank", decree.rank.getName(), state.rank.getName());
         }
         if (decree.kind == Decree.Kind.TOGGLE) {
             long first = weeklyCost(village, decree, null, 0);
-            return first > state.treasury ? Text.translatable("gui.mca_vie.decree.no_money", first) : null;
+            return first > state.treasury ? Component.translatable("gui.mca_vie.decree.no_money", first) : null;
         }
         if (decree == Decree.SETTLERS_CALL && !VillageImmigration.hasRoom(village, state)) {
-            return Text.translatable("gui.mca_vie.decree.no_room");
+            return Component.translatable("gui.mca_vie.decree.no_room");
         }
         Long last = state.lastLaunch.get(decree);
         if (last != null && last == period(decree, today)) {
-            return Text.translatable(decree.kind == Decree.Kind.SEASONAL ? "gui.mca_vie.decree.done_season" : "gui.mca_vie.decree.done_month");
+            return Component.translatable(decree.kind == Decree.Kind.SEASONAL ? "gui.mca_vie.decree.done_season" : "gui.mca_vie.decree.done_month");
         }
         long cost = launchCost(village, decree);
         if (cost > state.treasury) {
-            return Text.translatable("gui.mca_vie.decree.no_money", cost);
+            return Component.translatable("gui.mca_vie.decree.no_money", cost);
         }
         return null;
     }
 
     public static Optional<Village> residentVillage(VillagerEntityMCA villager) {
-        if (!(villager.getWorld() instanceof ServerWorld world)) {
+        if (!(villager.level() instanceof ServerLevel world)) {
             return Optional.empty();
         }
-        return villager.getResidency().getHomeVillage().filter(v -> v.hasResident(villager.getUuid()));
+        return villager.getResidency().getHomeVillage().filter(v -> v.hasResident(villager.getUUID()));
     }
 
-    public static void launch(ServerPlayerEntity player, int villageId, Decree decree) {
-        ServerWorld world = player.getServerWorld();
+    public static void launch(ServerPlayer player, int villageId, Decree decree) {
+        ServerLevel world = player.serverLevel();
         VillageManager.get(world).getOrEmpty(villageId).ifPresent(village -> {
             if (!VillageRights.personalRank(village, player).isAtLeast(VillageRights.DECREES)) {
-                player.sendMessage(Text.translatable("msg.mca_vie.rights.denied", Text.translatable(VillageRights.DECREES.getTranslationKey())), true);
+                player.displayClientMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.DECREES.getTranslationKey())), true);
                 return;
             }
             VillageState state = VillageState.of(village);
             long today = WorldCalendar.now(world).dayIndex();
-            MutableText reason = unavailable(village, decree, today);
+            MutableComponent reason = unavailable(village, decree, today);
             if (reason != null) {
-                player.sendMessage(reason.formatted(Formatting.RED), true);
+                player.displayClientMessage(reason.withStyle(ChatFormatting.RED), true);
                 return;
             }
 
@@ -109,7 +108,7 @@ public final class VillageDecrees {
                     long first = weeklyCost(village, decree, world, today);
                     if (first > state.treasury) {
                         state.activeDecrees.remove(decree);
-                        player.sendMessage(Text.translatable("gui.mca_vie.decree.no_money", first).formatted(Formatting.RED), true);
+                        player.displayClientMessage(Component.translatable("gui.mca_vie.decree.no_money", first).withStyle(ChatFormatting.RED), true);
                         return;
                     }
                     state.treasury -= first;
@@ -117,8 +116,8 @@ public final class VillageDecrees {
                     state.activeDecrees.add(decree);
                     state.paidWeek.put(decree, Math.floorDiv(today, 7));
                 }
-                VillageServer.notify(world, village, Text.translatable(on ? "msg.mca_vie.decree.on" : "msg.mca_vie.decree.off",
-                        village.getName(), decree.getName()).formatted(Formatting.GOLD));
+                VillageServer.notify(world, village, Component.translatable(on ? "msg.mca_vie.decree.on" : "msg.mca_vie.decree.off",
+                        village.getName(), decree.getName()).withStyle(ChatFormatting.GOLD));
                 village.markDirty();
                 return;
             }
@@ -127,16 +126,16 @@ public final class VillageDecrees {
             switch (decree) {
                 case RENOVATION -> {
                     Optional<Building> building = village.getBuildings().values().stream()
-                            .filter(b -> b.containsPos(player.getBlockPos()))
+                            .filter(b -> b.containsPos(player.blockPosition()))
                             .filter(b -> state.isDecayed(village, b))
                             .findAny();
                     if (building.isEmpty()) {
-                        player.sendMessage(Text.translatable("msg.mca_vie.decree.no_decayed").formatted(Formatting.RED), true);
+                        player.displayClientMessage(Component.translatable("msg.mca_vie.decree.no_decayed").withStyle(ChatFormatting.RED), true);
                         return;
                     }
                     cost = renovationCost(village, building.get());
                     if (cost > state.treasury) {
-                        player.sendMessage(Text.translatable("gui.mca_vie.decree.no_money", cost).formatted(Formatting.RED), true);
+                        player.displayClientMessage(Component.translatable("gui.mca_vie.decree.no_money", cost).withStyle(ChatFormatting.RED), true);
                         return;
                     }
                     state.clearDecay(village, building.get());
@@ -144,7 +143,7 @@ public final class VillageDecrees {
                 case RECRUIT_GUARD -> {
                     cost = launchCost(village, decree);
                     if (!recruitGuard(village, world, state)) {
-                        player.sendMessage(Text.translatable("msg.mca_vie.decree.no_guard").formatted(Formatting.RED), true);
+                        player.displayClientMessage(Component.translatable("msg.mca_vie.decree.no_guard").withStyle(ChatFormatting.RED), true);
                         return;
                     }
                 }
@@ -156,13 +155,13 @@ public final class VillageDecrees {
             }
             state.treasury -= cost;
             state.decreeSpending += cost;
-            VillageServer.notify(world, village, Text.translatable("msg.mca_vie.decree.launched",
-                    village.getName(), decree.getName(), cost).formatted(Formatting.GOLD));
+            VillageServer.notify(world, village, Component.translatable("msg.mca_vie.decree.launched",
+                    village.getName(), decree.getName(), cost).withStyle(ChatFormatting.GOLD));
             village.markDirty();
         });
     }
 
-    private static void applyEffect(Village village, ServerWorld world, VillageState state, Decree decree) {
+    private static void applyEffect(Village village, ServerLevel world, VillageState state, Decree decree) {
         VillageConfig config = VillageConfig.get();
         switch (decree) {
             case FEAST -> village.getResidentsUUIDs().toList().forEach(uuid -> Wellbeing.addHappiness(world, uuid, config.feastHappiness));
@@ -176,7 +175,7 @@ public final class VillageDecrees {
         }
     }
 
-    private static boolean recruitGuard(Village village, ServerWorld world, VillageState state) {
+    private static boolean recruitGuard(Village village, ServerLevel world, VillageState state) {
         Prestige.Result result = Prestige.evaluate(village, state.rank);
         long barracks = village.getBuildingsOfType("armory").filter(b -> {
             Prestige.Score score = result.score(b);
@@ -190,7 +189,7 @@ public final class VillageDecrees {
         for (UUID uuid : village.getResidentsUUIDs().toList()) {
             if (world.getEntity(uuid) instanceof VillagerEntityMCA villager && villager.isAlive()
                     && work.getJob(uuid) == Job.NONE
-                    && AgeState.byCurrentAge(villager.getBreedingAge()) == AgeState.ADULT) {
+                    && AgeState.byCurrentAge(villager.getAge()) == AgeState.ADULT) {
                 WorkManager.setJob(villager, Job.GUARD);
                 return true;
             }
@@ -198,7 +197,7 @@ public final class VillageDecrees {
         return false;
     }
 
-    public static long weeklyCharges(Village village, ServerWorld world, VillageState state, long week) {
+    public static long weeklyCharges(Village village, ServerLevel world, VillageState state, long week) {
         long total = 0;
         for (Decree decree : Decree.values()) {
             if (!state.activeDecrees.contains(decree)) {
@@ -215,7 +214,7 @@ public final class VillageDecrees {
             long cost = weeklyCost(village, decree, world, 7 * week + 6);
             if (cost > state.treasury || !state.rank.isAtLeast(decree.rank)) {
                 state.activeDecrees.remove(decree);
-                VillageServer.notify(world, village, Text.translatable("msg.mca_vie.decree.stopped", village.getName(), decree.getName()).formatted(Formatting.RED));
+                VillageServer.notify(world, village, Component.translatable("msg.mca_vie.decree.stopped", village.getName(), decree.getName()).withStyle(ChatFormatting.RED));
                 continue;
             }
             state.treasury -= cost;
@@ -225,7 +224,7 @@ public final class VillageDecrees {
         return total;
     }
 
-    public static long weeklyCost(Village village, Decree decree, ServerWorld world, long day) {
+    public static long weeklyCost(Village village, Decree decree, ServerLevel world, long day) {
         VillageConfig config = VillageConfig.get();
         return switch (decree) {
             case SCHOLARSHIP -> world == null ? 0 : (long) Math.ceil(countApprentices(village, world, day) * config.scholarshipCostPerApprentice);
@@ -234,7 +233,7 @@ public final class VillageDecrees {
         };
     }
 
-    private static int countApprentices(Village village, ServerWorld world, long day) {
+    private static int countApprentices(Village village, ServerLevel world, long day) {
         VillageConfig config = VillageConfig.get();
         WorkRegistry work = WorkRegistry.get(world.getServer());
         LifeRegistry life = LifeRegistry.get(world.getServer());
@@ -253,7 +252,7 @@ public final class VillageDecrees {
     }
 
     public static void onBirth(VillagerEntityMCA baby) {
-        if (!(baby.getWorld() instanceof ServerWorld world)) {
+        if (!(baby.level() instanceof ServerLevel world)) {
             return;
         }
         VillageManager.get(world).findNearestVillage(baby).ifPresent(village -> {
@@ -264,7 +263,7 @@ public final class VillageDecrees {
             long cost = VillageConfig.get().birthBonusCostPerBirth;
             if (cost > state.treasury || !state.rank.isAtLeast(Decree.BIRTH_BONUS.rank)) {
                 state.activeDecrees.remove(Decree.BIRTH_BONUS);
-                VillageServer.notify(world, village, Text.translatable("msg.mca_vie.decree.stopped", village.getName(), Decree.BIRTH_BONUS.getName()).formatted(Formatting.RED));
+                VillageServer.notify(world, village, Component.translatable("msg.mca_vie.decree.stopped", village.getName(), Decree.BIRTH_BONUS.getName()).withStyle(ChatFormatting.RED));
             } else {
                 state.treasury -= cost;
                 state.decreeSpending += cost;
@@ -299,10 +298,10 @@ public final class VillageDecrees {
     }
 
     public static int apprenticeXp(VillagerEntityMCA villager, int amount) {
-        if (!(villager.getWorld() instanceof ServerWorld world)) {
+        if (!(villager.level() instanceof ServerLevel world)) {
             return amount;
         }
-        Long birth = LifeRegistry.get(world.getServer()).getBirthDay(villager.getUuid());
+        Long birth = LifeRegistry.get(world.getServer()).getBirthDay(villager.getUUID());
         if (birth == null) {
             return amount;
         }

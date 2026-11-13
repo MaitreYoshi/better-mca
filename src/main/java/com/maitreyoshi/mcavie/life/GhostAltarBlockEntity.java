@@ -1,20 +1,20 @@
 package com.maitreyoshi.mcavie.life;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.listener.ClientPlayPacketListener;
-import net.minecraft.network.packet.Packet;
-import net.minecraft.network.packet.s2c.play.BlockEntityUpdateS2CPacket;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.state.property.Properties;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 public class GhostAltarBlockEntity extends BlockEntity {
     @Nullable
@@ -33,50 +33,50 @@ public class GhostAltarBlockEntity extends BlockEntity {
 
     public void setPerson(@Nullable UUID person) {
         this.person = person;
-        markDirty();
+        setChanged();
     }
 
-    public static void tick(World world, BlockPos pos, BlockState state, GhostAltarBlockEntity altar) {
-        if (!(world instanceof ServerWorld server) || (world.getTime() + pos.asLong()) % 40 != 0 || altar.person == null) {
+    public static void tick(Level world, BlockPos pos, BlockState state, GhostAltarBlockEntity altar) {
+        if (!(world instanceof ServerLevel server) || (world.getGameTime() + pos.asLong()) % 40 != 0 || altar.person == null) {
             return;
         }
         Entity current = altar.ghost == null ? null : server.getEntity(altar.ghost);
         if (current != null && current.isAlive() || !Ghosts.isNight(world) || !Ghosts.canReturn(server.getServer(), altar.person)) {
             return;
         }
-        NbtCompound look = Ghosts.get(server.getServer()).look(altar.person);
-        Direction facing = state.get(Properties.HORIZONTAL_FACING);
-        BlockPos spawn = pos.offset(facing);
+        CompoundTag look = Ghosts.get(server.getServer()).look(altar.person);
+        Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
+        BlockPos spawn = pos.relative(facing);
         GhostEntity ghost = new GhostEntity(TombstoneBlocks.GHOST, world);
         ghost.setup(look, altar.person, pos);
-        ghost.refreshPositionAndAngles(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, facing.asRotation(), 0);
-        if (server.spawnEntity(ghost)) {
-            altar.ghost = ghost.getUuid();
+        ghost.moveTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, facing.toYRot(), 0);
+        if (server.addFreshEntity(ghost)) {
+            altar.ghost = ghost.getUUID();
         }
     }
 
     @Override
-    protected void writeNbt(NbtCompound nbt) {
-        super.writeNbt(nbt);
+    protected void saveAdditional(CompoundTag nbt) {
+        super.saveAdditional(nbt);
         if (person != null) {
-            nbt.putUuid("person", person);
+            nbt.putUUID("person", person);
         }
     }
 
     @Override
-    public void readNbt(NbtCompound nbt) {
-        super.readNbt(nbt);
-        person = nbt.containsUuid("person") ? nbt.getUuid("person") : null;
+    public void load(CompoundTag nbt) {
+        super.load(nbt);
+        person = nbt.hasUUID("person") ? nbt.getUUID("person") : null;
     }
 
     @Override
-    public NbtCompound toInitialChunkDataNbt() {
-        return createNbt();
+    public CompoundTag getUpdateTag() {
+        return saveWithoutMetadata();
     }
 
     @Nullable
     @Override
-    public Packet<ClientPlayPacketListener> toUpdatePacket() {
-        return BlockEntityUpdateS2CPacket.create(this);
+    public Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
     }
 }

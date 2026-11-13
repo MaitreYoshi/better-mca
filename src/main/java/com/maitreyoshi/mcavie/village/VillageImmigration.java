@@ -10,13 +10,12 @@ import net.mca.entity.ai.relationship.AgeState;
 import net.mca.entity.ai.relationship.Gender;
 import net.mca.server.world.data.Building;
 import net.mca.server.world.data.Village;
-import net.minecraft.entity.SpawnReason;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.random.Random;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.MobSpawnType;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -49,10 +48,10 @@ public final class VillageImmigration {
         return state.pendingFamilies < MAX_PENDING && free >= VillageConfig.get().familyMinSize;
     }
 
-    public static boolean trySpawn(Village village, ServerWorld world, VillageState state, Prestige.Result result) {
+    public static boolean trySpawn(Village village, ServerLevel world, VillageState state, Prestige.Result result) {
         long today = WorldCalendar.now(world).dayIndex();
         if (state.pendingFamilies <= 0 || state.lastArrivalDay == today
-                || world.getPlayers().stream().noneMatch(village::isWithinBorder)) {
+                || world.players().stream().noneMatch(village::isWithinBorder)) {
             return false;
         }
         Optional<Building> inn = village.getBuildingsOfType("inn").filter(b -> {
@@ -72,16 +71,16 @@ public final class VillageImmigration {
             return false;
         }
 
-        Random random = world.getRandom();
+        RandomSource random = world.getRandom();
         int size = config.familyMinSize + random.nextInt(Math.max(1, config.familyMaxSize - config.familyMinSize + 1));
         size = Math.min(size, freeBeds);
 
-        VillagerEntityMCA father = VillagerFactory.newVillager(world).withGender(Gender.MALE).withAge(0).withPosition(spot).spawn(SpawnReason.EVENT);
-        VillagerEntityMCA mother = VillagerFactory.newVillager(world).withGender(Gender.FEMALE).withAge(0).withPosition(spot).spawn(SpawnReason.EVENT);
+        VillagerEntityMCA father = VillagerFactory.newVillager(world).withGender(Gender.MALE).withAge(0).withPosition(spot).spawn(MobSpawnType.EVENT);
+        VillagerEntityMCA mother = VillagerFactory.newVillager(world).withGender(Gender.FEMALE).withAge(0).withPosition(spot).spawn(MobSpawnType.EVENT);
         List<VillagerEntityMCA> children = new ArrayList<>();
         for (int i = 2; i < size; i++) {
             int age = -(int) (AgeState.getMaxAge() * (0.1 + 0.6 * random.nextFloat()));
-            children.add(VillagerFactory.newVillager(world).withAge(age).withPosition(spot).spawn(SpawnReason.EVENT));
+            children.add(VillagerFactory.newVillager(world).withAge(age).withPosition(spot).spawn(MobSpawnType.EVENT));
         }
 
         if (!Orientation.compatible(father, mother)) {
@@ -92,35 +91,35 @@ public final class VillageImmigration {
             father.getRelationships().marry(mother);
             mother.getRelationships().marry(father);
             SurnameRegistry registry = SurnameRegistry.get(world.getServer());
-            String surname = registry.get(father.getUuid());
+            String surname = registry.get(father.getUUID());
             if (surname == null) {
                 surname = Surnames.randomSurnameFor(father);
-                registry.set(father.getUuid(), surname);
+                registry.set(father.getUUID(), surname);
             }
             for (VillagerEntityMCA child : children) {
                 child.getRelationships().getFamilyEntry().replaceParents(father.getRelationships(), mother.getRelationships());
-                registry.set(child.getUuid(), surname);
+                registry.set(child.getUUID(), surname);
             }
         });
 
         state.pendingFamilies--;
         state.lastArrivalDay = today;
-        VillageServer.notify(world, village, Text.translatable("msg.mca_vie.immigration.arrived", size, village.getName()).formatted(Formatting.GREEN));
+        VillageServer.notify(world, village, Component.translatable("msg.mca_vie.immigration.arrived", size, village.getName()).withStyle(ChatFormatting.GREEN));
         return true;
     }
 
-    private static BlockPos findSpot(ServerWorld world, Building inn) {
+    private static BlockPos findSpot(ServerLevel world, Building inn) {
         List<BlockPos> candidates = new ArrayList<>(inn.getBlocks().values().stream().flatMap(Collection::stream).toList());
         candidates.add(inn.getCenter());
         Collections.shuffle(candidates);
         for (BlockPos base : candidates) {
-            if (!world.shouldTickEntity(base)) {
+            if (!world.isPositionEntityTicking(base)) {
                 continue;
             }
-            for (BlockPos p : new BlockPos[]{base.up(), base.north(), base.south(), base.east(), base.west()}) {
+            for (BlockPos p : new BlockPos[]{base.above(), base.north(), base.south(), base.east(), base.west()}) {
                 if (world.getBlockState(p).getCollisionShape(world, p).isEmpty()
-                        && world.getBlockState(p.up()).getCollisionShape(world, p.up()).isEmpty()
-                        && !world.getBlockState(p.down()).getCollisionShape(world, p.down()).isEmpty()) {
+                        && world.getBlockState(p.above()).getCollisionShape(world, p.above()).isEmpty()
+                        && !world.getBlockState(p.below()).getCollisionShape(world, p.below()).isEmpty()) {
                     return p;
                 }
             }

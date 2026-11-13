@@ -1,15 +1,14 @@
 package com.maitreyoshi.mcavie.life;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.Heightmap;
-
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 
 public final class TombstonePlacement {
     private static final int HORIZONTAL_RANGE = 8;
@@ -18,39 +17,39 @@ public final class TombstonePlacement {
     private TombstonePlacement() {
     }
 
-    public static Optional<BlockPos> findSpot(ServerWorld world, BlockPos deathPos) {
+    public static Optional<BlockPos> findSpot(ServerLevel world, BlockPos deathPos) {
         List<BlockPos> candidates = new ArrayList<>();
-        for (BlockPos pos : BlockPos.iterate(
-                deathPos.add(-HORIZONTAL_RANGE, -VERTICAL_RANGE, -HORIZONTAL_RANGE),
-                deathPos.add(HORIZONTAL_RANGE, VERTICAL_RANGE, HORIZONTAL_RANGE))) {
-            candidates.add(pos.toImmutable());
+        for (BlockPos pos : BlockPos.betweenClosed(
+                deathPos.offset(-HORIZONTAL_RANGE, -VERTICAL_RANGE, -HORIZONTAL_RANGE),
+                deathPos.offset(HORIZONTAL_RANGE, VERTICAL_RANGE, HORIZONTAL_RANGE))) {
+            candidates.add(pos.immutable());
         }
-        candidates.sort(Comparator.comparingDouble(pos -> pos.getSquaredDistance(deathPos)));
+        candidates.sort(Comparator.comparingDouble(pos -> pos.distSqr(deathPos)));
 
         Optional<BlockPos> grounded = candidates.stream().filter(pos -> isFree(world, pos) && hasFloor(world, pos)).findFirst();
         return grounded.isPresent() ? grounded : candidates.stream().filter(pos -> isFree(world, pos)).findFirst();
     }
 
-    public static Optional<BlockPos> surface(ServerWorld world, BlockPos deathPos) {
-        BlockPos top = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING, deathPos);
-        for (int dy = 0; dy < 16 && world.isInBuildLimit(top.up(dy)); dy++) {
-            if (isFree(world, top.up(dy))) {
-                return Optional.of(top.up(dy));
+    public static Optional<BlockPos> surface(ServerLevel world, BlockPos deathPos) {
+        BlockPos top = world.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING, deathPos);
+        for (int dy = 0; dy < 16 && world.isInWorldBounds(top.above(dy)); dy++) {
+            if (isFree(world, top.above(dy))) {
+                return Optional.of(top.above(dy));
             }
         }
         return Optional.empty();
     }
 
-    private static boolean isFree(ServerWorld world, BlockPos pos) {
-        if (!world.isInBuildLimit(pos)) {
+    private static boolean isFree(ServerLevel world, BlockPos pos) {
+        if (!world.isInWorldBounds(pos)) {
             return false;
         }
         BlockState state = world.getBlockState(pos);
-        return (state.isAir() || state.isReplaceable()) && state.getFluidState().isEmpty();
+        return (state.isAir() || state.canBeReplaced()) && state.getFluidState().isEmpty();
     }
 
-    private static boolean hasFloor(ServerWorld world, BlockPos pos) {
-        BlockPos below = pos.down();
-        return world.getBlockState(below).isSideSolidFullSquare(world, below, Direction.UP);
+    private static boolean hasFloor(ServerLevel world, BlockPos pos) {
+        BlockPos below = pos.below();
+        return world.getBlockState(below).isFaceSturdy(world, below, Direction.UP);
     }
 }

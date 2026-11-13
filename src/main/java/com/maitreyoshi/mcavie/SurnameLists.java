@@ -3,30 +3,29 @@ package com.maitreyoshi.mcavie;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import net.minecraft.resource.JsonDataLoader;
-import net.minecraft.resource.ResourceManager;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.util.profiler.Profiler;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
+import net.minecraft.util.RandomSource;
+import net.minecraft.util.profiling.ProfilerFiller;
 
-public class SurnameLists extends JsonDataLoader {
+public class SurnameLists extends SimpleJsonResourceReloadListener {
     public static final String DEFAULT_REGION = "default";
-    public static final Identifier ID = MCAVie.id("surname_lists");
+    public static final ResourceLocation ID = MCAVie.id("surname_lists");
 
     private static final Map<String, Pool> POOLS = new HashMap<>();
-    private static final Random RANDOM = Random.create();
+    private static final RandomSource RANDOM = RandomSource.create();
 
     public SurnameLists() {
         super(new Gson(), "mca_surnames");
     }
 
     @Override
-    protected void apply(Map<Identifier, JsonElement> prepared, ResourceManager manager, Profiler profiler) {
+    protected void apply(Map<ResourceLocation, JsonElement> prepared, ResourceManager manager, ProfilerFiller profiler) {
         POOLS.clear();
         prepared.forEach((id, json) -> {
             Pool pool = POOLS.computeIfAbsent(id.getPath(), r -> new Pool());
@@ -69,7 +68,7 @@ public class SurnameLists extends JsonDataLoader {
             return names.isEmpty();
         }
 
-        String pick(Random random) {
+        String pick(RandomSource random) {
             float r = random.nextFloat() * total;
             for (int i = 0; i < names.size(); i++) {
                 if (r < cumulative.get(i)) {

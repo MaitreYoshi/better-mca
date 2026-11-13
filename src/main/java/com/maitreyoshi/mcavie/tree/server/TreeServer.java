@@ -12,11 +12,11 @@ import com.maitreyoshi.mcavie.compat.ServerPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
 import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.Util;
+import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Util;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -52,17 +52,17 @@ public final class TreeServer {
                 return;
             }
             server.execute(() -> {
-                Throttle throttle = THROTTLES.computeIfAbsent(player.getUuid(), id -> new Throttle());
-                if (server.getTicks() - throttle.lastTick < REQUEST_INTERVAL) {
+                Throttle throttle = THROTTLES.computeIfAbsent(player.getUUID(), id -> new Throttle());
+                if (server.getTickCount() - throttle.lastTick < REQUEST_INTERVAL) {
                     throttle.pending.put(request.mode(), request);
                     return;
                 }
-                throttle.lastTick = server.getTicks();
+                throttle.lastTick = server.getTickCount();
                 respond(server, player, request);
             });
         });
         ServerTickEvents.END_SERVER_TICK.register(TreeServer::flushThrottled);
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> THROTTLES.remove(handler.player.getUuid()));
+        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> THROTTLES.remove(handler.player.getUUID()));
         ServerLifecycleEvents.SERVER_STOPPED.register(server -> THROTTLES.clear());
 
         ServerTickEvents.END_SERVER_TICK.register(SpouseRegistry::flush);
@@ -83,10 +83,10 @@ public final class TreeServer {
         while (it.hasNext()) {
             Map.Entry<UUID, Throttle> entry = it.next();
             Throttle throttle = entry.getValue();
-            if (throttle.pending.isEmpty() || server.getTicks() - throttle.lastTick < REQUEST_INTERVAL) {
+            if (throttle.pending.isEmpty() || server.getTickCount() - throttle.lastTick < REQUEST_INTERVAL) {
                 continue;
             }
-            ServerPlayerEntity player = server.getPlayerManager().getPlayer(entry.getKey());
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
             if (player == null) {
                 it.remove();
                 continue;
@@ -94,15 +94,15 @@ public final class TreeServer {
             Iterator<TreeProtocol.Request> requests = throttle.pending.values().iterator();
             TreeProtocol.Request request = requests.next();
             requests.remove();
-            throttle.lastTick = server.getTicks();
+            throttle.lastTick = server.getTickCount();
             respond(server, player, request);
         }
     }
 
-    private static void respond(MinecraftServer server, ServerPlayerEntity player, TreeProtocol.Request request) {
+    private static void respond(MinecraftServer server, ServerPlayer player, TreeProtocol.Request request) {
         try {
             TreeProtocol.Response response = handle(server, player, request);
-            PacketByteBuf out = PacketByteBufs.create();
+            FriendlyByteBuf out = PacketByteBufs.create();
             response.write(out);
             // Un paquet serveur vers client est limité à 1 Mio : on retire les personnes les plus éloignées.
             while (out.readableBytes() > MAX_PAYLOAD_BYTES && response.persons().size() > 1) {
@@ -118,12 +118,12 @@ public final class TreeServer {
         }
     }
 
-    private static TreeProtocol.Response handle(MinecraftServer server, ServerPlayerEntity player, TreeProtocol.Request request) {
-        FamilyTree.get(player.getServerWorld()).getOrCreate(player);
-        return handle(server, player.getServerWorld(), player.getUuid(), request);
+    private static TreeProtocol.Response handle(MinecraftServer server, ServerPlayer player, TreeProtocol.Request request) {
+        FamilyTree.get(player.serverLevel()).getOrCreate(player);
+        return handle(server, player.serverLevel(), player.getUUID(), request);
     }
 
-    public static TreeProtocol.Response handle(MinecraftServer server, ServerWorld world, UUID viewerId, TreeProtocol.Request request) {
+    public static TreeProtocol.Response handle(MinecraftServer server, ServerLevel world, UUID viewerId, TreeProtocol.Request request) {
         SpouseRegistry.flush(server);
         FamilyGraph graph = new FamilyGraph(server, FamilyTree.get(world));
         Viewer viewer = new Viewer(graph, viewerId);

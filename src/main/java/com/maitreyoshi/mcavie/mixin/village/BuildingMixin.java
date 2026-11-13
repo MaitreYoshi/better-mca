@@ -2,9 +2,9 @@ package com.maitreyoshi.mcavie.mixin.village;
 
 import com.maitreyoshi.mcavie.village.BuildingQuality;
 import net.mca.server.world.data.Building;
-import net.minecraft.block.BlockState;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.world.World;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -33,29 +33,29 @@ public abstract class BuildingMixin implements BuildingQuality.Holder {
         mcavie$measure = measure;
     }
 
-    @Inject(method = "<init>(Lnet/minecraft/nbt/NbtCompound;)V", at = @At("TAIL"), remap = true)
-    private void mcavie$load(NbtCompound nbt, CallbackInfo ci) {
+    @Inject(method = "<init>(Lnet/minecraft/nbt/CompoundTag;)V", at = @At("TAIL"), remap = true)
+    private void mcavie$load(CompoundTag nbt, CallbackInfo ci) {
         if (nbt.contains(MCAVIE$KEY)) {
             mcavie$measure = BuildingQuality.Measure.fromNbt(nbt.getCompound(MCAVIE$KEY));
         }
     }
 
     @Inject(method = "save", at = @At("RETURN"))
-    private void mcavie$save(CallbackInfoReturnable<NbtCompound> cir) {
+    private void mcavie$save(CallbackInfoReturnable<CompoundTag> cir) {
         if (mcavie$measure != null) {
             cir.getReturnValue().put(MCAVIE$KEY, mcavie$measure.toNbt());
         }
     }
 
-    @Redirect(method = "validateBuilding", at = @At(value = "INVOKE", target = "Lnet/minecraft/block/BlockState;isAir()Z", remap = true))
+    @Redirect(method = "validateBuilding", at = @At(value = "INVOKE", target = "Lnet/minecraft/world/level/block/state/BlockState;isAir()Z", remap = true))
     private boolean mcavie$passable(BlockState state) {
         return BuildingQuality.isPassable(state);
     }
 
     @Inject(method = "validateBuilding", at = @At("RETURN"))
-    private void mcavie$measure(World world, Set<?> blocked, CallbackInfoReturnable<Building.validationResult> cir) {
+    private void mcavie$measure(Level world, Set<?> blocked, CallbackInfoReturnable<Building.validationResult> cir) {
         Building self = (Building) (Object) this;
-        if (cir.getReturnValue() != Building.validationResult.SUCCESS || world == null || world.isClient) {
+        if (cir.getReturnValue() != Building.validationResult.SUCCESS || world == null || world.isClientSide) {
             return;
         }
         if (self.getBuildingType().grouped()) {

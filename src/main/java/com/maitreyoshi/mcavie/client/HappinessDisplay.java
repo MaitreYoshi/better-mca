@@ -1,13 +1,13 @@
 package com.maitreyoshi.mcavie.client;
 
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 
 public final class HappinessDisplay {
     private static final int BAR_LENGTH = 20;
@@ -45,31 +45,31 @@ public final class HappinessDisplay {
         return (red << 16) | (green << 8) | 0x20;
     }
 
-    private static final Text[] BARS = new Text[101];
+    private static final Component[] BARS = new Component[101];
 
-    public static Text bar(int happiness) {
+    public static Component bar(int happiness) {
         int clamped = Math.max(0, Math.min(100, happiness));
-        Text bar = BARS[clamped];
+        Component bar = BARS[clamped];
         if (bar == null) {
             bar = BARS[clamped] = createBar(clamped);
         }
         return bar;
     }
 
-    private static MutableText createBar(int happiness) {
+    private static MutableComponent createBar(int happiness) {
         int filled = Math.round(Math.max(0, Math.min(100, happiness)) / 100f * BAR_LENGTH);
-        return Text.literal(BAR_CHAR.repeat(filled)).setStyle(Style.EMPTY.withColor(color(happiness)))
-                .append(Text.literal(BAR_CHAR.repeat(BAR_LENGTH - filled)).formatted(Formatting.DARK_GRAY));
+        return Component.literal(BAR_CHAR.repeat(filled)).setStyle(Style.EMPTY.withColor(color(happiness)))
+                .append(Component.literal(BAR_CHAR.repeat(BAR_LENGTH - filled)).withStyle(ChatFormatting.DARK_GRAY));
     }
 
-    public static Text menuLine(Entry entry) {
-        MutableText text = Text.translatable("gui.mca_vie.happiness").formatted(Formatting.WHITE)
-                .append(Text.literal(" "))
+    public static Component menuLine(Entry entry) {
+        MutableComponent text = Component.translatable("gui.mca_vie.happiness").withStyle(ChatFormatting.WHITE)
+                .append(Component.literal(" "))
                 .append(bar(entry.happiness()))
-                .append(Text.literal(" " + entry.happiness() + " %").formatted(Formatting.WHITE));
+                .append(Component.literal(" " + entry.happiness() + " %").withStyle(ChatFormatting.WHITE));
         if (entry.sick()) {
-            text.append(Text.literal(" "))
-                    .append(Text.translatable("gui.mca_vie.sick").formatted(Formatting.RED));
+            text.append(Component.literal(" "))
+                    .append(Component.translatable("gui.mca_vie.sick").withStyle(ChatFormatting.RED));
         }
         return text;
     }

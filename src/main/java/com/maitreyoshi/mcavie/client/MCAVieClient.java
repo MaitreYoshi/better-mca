@@ -11,9 +11,8 @@ import com.maitreyoshi.mcavie.compat.client.ClientPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import dev.architectury.platform.Platform;
-import net.minecraft.network.PacketByteBuf;
-
 import java.util.UUID;
+import net.minecraft.network.FriendlyByteBuf;
 
 public final class MCAVieClient {
     private static String ownSurname = "";
@@ -22,8 +21,8 @@ public final class MCAVieClient {
     }
 
     public static void init() {
-        dev.architectury.registry.client.rendering.RenderTypeRegistry.register(net.minecraft.client.render.RenderLayer.getCutout(),
-                com.maitreyoshi.mcavie.work.block.WorkBlocks.all().toArray(new net.minecraft.block.Block[0]));
+        dev.architectury.registry.client.rendering.RenderTypeRegistry.register(net.minecraft.client.renderer.RenderType.cutout(),
+                com.maitreyoshi.mcavie.work.block.WorkBlocks.all().toArray(new net.minecraft.world.level.block.Block[0]));
         CalendarHud.register();
         TreeClient.register();
         WorkClient.register();
@@ -36,7 +35,7 @@ public final class MCAVieClient {
         com.maitreyoshi.mcavie.life.client.GhostAltarClient.register();
         com.maitreyoshi.mcavie.aging.client.AgingClient.register();
         ClientPlayNetworking.registerGlobalReceiver(VillageNetwork.CONFIG, (client, handler, buf, responseSender) -> {
-            String json = buf.readString(1 << 20);
+            String json = buf.readUtf(1 << 20);
             client.execute(() -> VillageConfig.applyRemote(json));
         });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> VillageConfig.load());
@@ -53,7 +52,7 @@ public final class MCAVieClient {
         }
 
         ClientPlayNetworking.registerGlobalReceiver(SurnameNetwork.OWN_SURNAME, (client, handler, buf, responseSender) -> {
-            String surname = buf.readString();
+            String surname = buf.readUtf();
             client.execute(() -> ownSurname = surname);
         });
 
@@ -72,19 +71,19 @@ public final class MCAVieClient {
         com.maitreyoshi.mcavie.compat.client.ClientEntityEvents.ENTITY_UNLOAD.register((entity, world) -> HappinessDisplay.remove(entity.getId()));
 
         ClientPlayNetworking.registerGlobalReceiver(SurnameNetwork.BIRTH_DAY_RESULT, (client, handler, buf, responseSender) -> {
-            UUID villager = buf.readUuid();
+            UUID villager = buf.readUUID();
             long birthDay = buf.readLong();
             client.execute(() -> {
-                if (client.currentScreen instanceof BirthDayHolder holder && holder.mcavie$getVillagerUuid().equals(villager)) {
+                if (client.screen instanceof BirthDayHolder holder && holder.mcavie$getVillagerUuid().equals(villager)) {
                     holder.mcavie$setBirthDay(birthDay);
                 }
             });
         });
 
         ClientPlayNetworking.registerGlobalReceiver(SurnameNetwork.RANDOM_SURNAME_RESULT, (client, handler, buf, responseSender) -> {
-            String surname = buf.readString();
+            String surname = buf.readUtf();
             client.execute(() -> {
-                if (client.currentScreen instanceof SurnameFieldHolder holder) {
+                if (client.screen instanceof SurnameFieldHolder holder) {
                     holder.mcavie$setSurname(surname);
                 }
             });
@@ -92,8 +91,8 @@ public final class MCAVieClient {
     }
 
     public static void requestBirthDay(UUID villager) {
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeUuid(villager);
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUUID(villager);
         ClientPlayNetworking.send(SurnameNetwork.BIRTH_DAY_REQUEST, buf);
     }
 
@@ -103,8 +102,8 @@ public final class MCAVieClient {
 
     public static void sendSurname(String surname) {
         ownSurname = surname;
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeString(surname);
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUtf(surname);
         ClientPlayNetworking.send(SurnameNetwork.SET_SURNAME, buf);
     }
 
@@ -113,7 +112,7 @@ public final class MCAVieClient {
     }
 
     public static void requestBabySurname(int slot) {
-        PacketByteBuf buf = PacketByteBufs.create();
+        FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeVarInt(slot);
         ClientPlayNetworking.send(SurnameNetwork.BABY_SURNAME, buf);
     }

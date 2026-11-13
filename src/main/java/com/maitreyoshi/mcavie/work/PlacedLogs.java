@@ -3,23 +3,22 @@ package com.maitreyoshi.mcavie.work;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import dev.architectury.event.EventResult;
 import dev.architectury.event.events.common.BlockEvent;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.PersistentState;
-
 import java.util.function.LongPredicate;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.saveddata.SavedData;
 
-public class PlacedLogs extends PersistentState {
+public class PlacedLogs extends SavedData {
     private static final String DATA_ID = "mca_vie_placed_logs";
 
     private final LongOpenHashSet positions = new LongOpenHashSet();
 
-    public static PlacedLogs get(ServerWorld world) {
-        return world.getPersistentStateManager().getOrCreate(PlacedLogs::fromNbt, PlacedLogs::new, DATA_ID);
+    public static PlacedLogs get(ServerLevel world) {
+        return world.getDataStorage().computeIfAbsent(PlacedLogs::fromNbt, PlacedLogs::new, DATA_ID);
     }
 
-    private static PlacedLogs fromNbt(NbtCompound nbt) {
+    private static PlacedLogs fromNbt(CompoundTag nbt) {
         PlacedLogs registry = new PlacedLogs();
         for (long pos : nbt.getLongArray("positions")) {
             registry.positions.add(pos);
@@ -28,7 +27,7 @@ public class PlacedLogs extends PersistentState {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
+    public CompoundTag save(CompoundTag nbt) {
         nbt.putLongArray("positions", positions.toLongArray());
         return nbt;
     }
@@ -39,23 +38,23 @@ public class PlacedLogs extends PersistentState {
 
     public void add(BlockPos pos) {
         if (positions.add(pos.asLong())) {
-            markDirty();
+            setDirty();
         }
     }
 
     public void remove(BlockPos pos) {
         if (positions.remove(pos.asLong())) {
-            markDirty();
+            setDirty();
         }
     }
 
     public void removeIf(LongPredicate filter) {
         if (positions.removeIf(filter)) {
-            markDirty();
+            setDirty();
         }
     }
 
-    public static void placed(ServerWorld world, BlockPos pos) {
+    public static void placed(ServerLevel world, BlockPos pos) {
         if (com.maitreyoshi.mcavie.work.tasks.LumberjackTask.isLog(world.getBlockState(pos))) {
             get(world).add(pos);
         }
@@ -63,7 +62,7 @@ public class PlacedLogs extends PersistentState {
 
     public static void register() {
         BlockEvent.BREAK.register((world, pos, state, player, xp) -> {
-            if (world instanceof ServerWorld serverWorld && com.maitreyoshi.mcavie.work.tasks.LumberjackTask.isLog(state)) {
+            if (world instanceof ServerLevel serverWorld && com.maitreyoshi.mcavie.work.tasks.LumberjackTask.isLog(state)) {
                 get(serverWorld).remove(pos);
             }
             return EventResult.pass();

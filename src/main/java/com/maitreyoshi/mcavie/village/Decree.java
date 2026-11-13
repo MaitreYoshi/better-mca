@@ -1,9 +1,8 @@
 package com.maitreyoshi.mcavie.village;
 
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-
 import java.util.Locale;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 // ordinal sauvegardé : ne jamais réordonner, seulement ajouter à la fin
 public enum Decree {
@@ -41,11 +40,11 @@ public enum Decree {
         return name().toLowerCase(Locale.ROOT);
     }
 
-    public MutableText getName() {
-        return Text.translatable("decree.mca_vie." + id());
+    public MutableComponent getName() {
+        return Component.translatable("decree.mca_vie." + id());
     }
 
-    public MutableText getDescription() {
-        return Text.translatable("decree.mca_vie." + id() + ".description");
+    public MutableComponent getDescription() {
+        return Component.translatable("decree.mca_vie." + id() + ".description");
     }
 }

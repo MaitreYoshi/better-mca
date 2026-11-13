@@ -3,19 +3,19 @@ package com.maitreyoshi.mcavie.work.tasks;
 import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkGesture;
 import net.mca.entity.VillagerEntityMCA;
-import net.minecraft.inventory.Inventory;
-import net.minecraft.inventory.SimpleInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.recipe.RecipeType;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.Container;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.crafting.RecipeType;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -50,8 +50,8 @@ public class CookTask extends AbstractJobTask {
     }
 
     @Override
-    protected boolean canWork(ServerWorld world, VillagerEntityMCA villager) {
-        long now = world.getTime();
+    protected boolean canWork(ServerLevel world, VillagerEntityMCA villager) {
+        long now = world.getGameTime();
         if (now < nextScan) {
             return lastScan;
         }
@@ -61,7 +61,7 @@ public class CookTask extends AbstractJobTask {
     }
 
     @Override
-    protected boolean keepWorking(ServerWorld world, VillagerEntityMCA villager) {
+    protected boolean keepWorking(ServerLevel world, VillagerEntityMCA villager) {
         if (dishes >= MAX_DISHES) {
             return false;
         }
@@ -69,14 +69,14 @@ public class CookTask extends AbstractJobTask {
     }
 
     @Nullable
-    private Inventory pot(ServerWorld world, VillagerEntityMCA villager) {
+    private Container pot(ServerLevel world, VillagerEntityMCA villager) {
         BlockPos depot = depotPos(villager);
-        Inventory pot = depot == null || reach.isBlacklisted(world, depot) ? null : depotInventory(world, villager);
+        Container pot = depot == null || reach.isBlacklisted(world, depot) ? null : depotInventory(world, villager);
         return pot != null && findDish(world, pot) != null ? pot : null;
     }
 
     @Override
-    protected void run(ServerWorld world, VillagerEntityMCA villager, long time) {
+    protected void start(ServerLevel world, VillagerEntityMCA villager, long time) {
         cookTicks = 0;
         dishes = 0;
         cooking = null;
@@ -85,12 +85,12 @@ public class CookTask extends AbstractJobTask {
     }
 
     @Override
-    protected void keepRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
+    protected void tick(ServerLevel world, VillagerEntityMCA villager, long time) {
         BlockPos depot = depotPos(villager);
         if (depot == null) {
             return;
         }
-        if (villager.squaredDistanceTo(Vec3d.ofCenter(depot)) > REACH_SQ) {
+        if (villager.distanceToSqr(Vec3.atCenterOf(depot)) > REACH_SQ) {
             walkTo(villager, depot);
             if (reach.giveUp(world, depot)) {
                 lastScan = false;
@@ -102,7 +102,7 @@ public class CookTask extends AbstractJobTask {
         villager.lookAt(depot);
         holdTool(villager);
         if (cooking == null) {
-            Inventory pot = depotInventory(world, villager);
+            Container pot = depotInventory(world, villager);
             Dish dish = pot == null ? null : findDish(world, pot);
             if (dish == null || !take(pot, dish.inputs())) {
                 return;
@@ -112,12 +112,12 @@ public class CookTask extends AbstractJobTask {
         }
         cookTicks++;
         if (cookTicks % 10 == 1) {
-            villager.swingHand(Hand.MAIN_HAND);
-            world.spawnParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, depot.getX() + 0.5, depot.getY() + 1.0, depot.getZ() + 0.5, 1, 0.1, 0.05, 0.1, 0.01);
-            world.spawnParticles(ParticleTypes.BUBBLE_POP, depot.getX() + 0.5, depot.getY() + 0.9, depot.getZ() + 0.5, 3, 0.2, 0.02, 0.2, 0.01);
+            villager.swing(InteractionHand.MAIN_HAND);
+            world.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, depot.getX() + 0.5, depot.getY() + 1.0, depot.getZ() + 0.5, 1, 0.1, 0.05, 0.1, 0.01);
+            world.sendParticles(ParticleTypes.BUBBLE_POP, depot.getX() + 0.5, depot.getY() + 0.9, depot.getZ() + 0.5, 3, 0.2, 0.02, 0.2, 0.01);
         }
         if (cookTicks % 30 == 1) {
-            world.playSound(null, depot, SoundEvents.BLOCK_BUBBLE_COLUMN_BUBBLE_POP, SoundCategory.BLOCKS, 0.6F, 0.8F);
+            world.playSound(null, depot, SoundEvents.BUBBLE_COLUMN_BUBBLE_POP, SoundSource.BLOCKS, 0.6F, 0.8F);
         }
         if (cookTicks < COOK_TICKS) {
             return;
@@ -130,15 +130,15 @@ public class CookTask extends AbstractJobTask {
     }
 
     @Override
-    protected void finishRunning(ServerWorld world, VillagerEntityMCA villager, long time) {
-        super.finishRunning(world, villager, time);
+    protected void stop(ServerLevel world, VillagerEntityMCA villager, long time) {
+        super.stop(world, villager, time);
         if (cooking != null) {
-            Inventory pot = depotInventory(world, villager);
+            Container pot = depotInventory(world, villager);
             for (ItemStack input : cooking.inputs()) {
                 ItemStack back = input.copy();
                 if (pot != null) {
                     back = DepositTask.insert(pot, back);
-                    pot.markDirty();
+                    pot.setChanged();
                 }
                 if (!back.isEmpty()) {
                     store(villager, back, false);
@@ -152,20 +152,20 @@ public class CookTask extends AbstractJobTask {
     }
 
     @Nullable
-    private static Dish findDish(ServerWorld world, Inventory pot) {
+    private static Dish findDish(ServerLevel world, Container pot) {
         for (Dish soup : SOUPS) {
             if (has(pot, soup.inputs())) {
                 return soup;
             }
         }
-        for (int i = 0; i < pot.size(); i++) {
-            ItemStack stack = pot.getStack(i);
+        for (int i = 0; i < pot.getContainerSize(); i++) {
+            ItemStack stack = pot.getItem(i);
             if (stack.isEmpty()) {
                 continue;
             }
-            SimpleInventory single = new SimpleInventory(stack.copyWithCount(1));
-            ItemStack result = world.getRecipeManager().getFirstMatch(RecipeType.SMOKING, single, world)
-                    .map(recipe -> recipe.getOutput(world.getRegistryManager()).copy())
+            SimpleContainer single = new SimpleContainer(stack.copyWithCount(1));
+            ItemStack result = world.getRecipeManager().getRecipeFor(RecipeType.SMOKING, single, world)
+                    .map(recipe -> recipe.getResultItem(world.registryAccess()).copy())
                     .orElse(ItemStack.EMPTY);
             if (!result.isEmpty()) {
                 return new Dish(List.of(stack.copyWithCount(1)), result);
@@ -174,17 +174,17 @@ public class CookTask extends AbstractJobTask {
         return null;
     }
 
-    private static int count(Inventory pot, Item item) {
+    private static int count(Container pot, Item item) {
         int total = 0;
-        for (int i = 0; i < pot.size(); i++) {
-            if (pot.getStack(i).isOf(item)) {
-                total += pot.getStack(i).getCount();
+        for (int i = 0; i < pot.getContainerSize(); i++) {
+            if (pot.getItem(i).is(item)) {
+                total += pot.getItem(i).getCount();
             }
         }
         return total;
     }
 
-    private static boolean has(Inventory pot, List<ItemStack> inputs) {
+    private static boolean has(Container pot, List<ItemStack> inputs) {
         for (ItemStack input : inputs) {
             if (count(pot, input.getItem()) < input.getCount()) {
                 return false;
@@ -193,22 +193,22 @@ public class CookTask extends AbstractJobTask {
         return true;
     }
 
-    private static boolean take(Inventory pot, List<ItemStack> inputs) {
+    private static boolean take(Container pot, List<ItemStack> inputs) {
         if (!has(pot, inputs)) {
             return false;
         }
         for (ItemStack input : inputs) {
             int left = input.getCount();
-            for (int i = 0; i < pot.size() && left > 0; i++) {
-                ItemStack stack = pot.getStack(i);
-                if (stack.isOf(input.getItem())) {
+            for (int i = 0; i < pot.getContainerSize() && left > 0; i++) {
+                ItemStack stack = pot.getItem(i);
+                if (stack.is(input.getItem())) {
                     int take = Math.min(left, stack.getCount());
-                    stack.decrement(take);
+                    stack.shrink(take);
                     left -= take;
                 }
             }
         }
-        pot.markDirty();
+        pot.setChanged();
         return true;
     }
 }

@@ -1,19 +1,19 @@
 package com.maitreyoshi.mcavie.work;
 
 import com.maitreyoshi.mcavie.MCAVie;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtHelper;
+import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.PersistentState;
+import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class WorkRegistry extends PersistentState {
+public class WorkRegistry extends SavedData {
     private static final String DATA_ID = "mca_surnames_work";
     public static final int DEFAULT_RADIUS = 24;
     public static final String RETIRED_PREFIX = "mca_vie.retired:";
@@ -21,13 +21,13 @@ public class WorkRegistry extends PersistentState {
     private final Map<UUID, Record> records = new HashMap<>();
 
     public static WorkRegistry get(MinecraftServer server) {
-        return server.getOverworld().getPersistentStateManager().getOrCreate(WorkRegistry::fromNbt, WorkRegistry::new, DATA_ID);
+        return server.overworld().getDataStorage().computeIfAbsent(WorkRegistry::fromNbt, WorkRegistry::new, DATA_ID);
     }
 
-    private static WorkRegistry fromNbt(NbtCompound nbt) {
+    private static WorkRegistry fromNbt(CompoundTag nbt) {
         WorkRegistry registry = new WorkRegistry();
-        NbtCompound entries = nbt.getCompound("villagers");
-        for (String key : entries.getKeys()) {
+        CompoundTag entries = nbt.getCompound("villagers");
+        for (String key : entries.getAllKeys()) {
             try {
                 registry.records.put(UUID.fromString(key), Record.fromNbt(entries.getCompound(key)));
             } catch (IllegalArgumentException e) {
@@ -38,8 +38,8 @@ public class WorkRegistry extends PersistentState {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
-        NbtCompound entries = new NbtCompound();
+    public CompoundTag save(CompoundTag nbt) {
+        CompoundTag entries = new CompoundTag();
         records.forEach((uuid, record) -> entries.put(uuid.toString(), record.toNbt()));
         nbt.put("villagers", entries);
         return nbt;
@@ -59,7 +59,7 @@ public class WorkRegistry extends PersistentState {
         return deceased ? former : RETIRED_PREFIX + former;
     }
 
-    public boolean isClaimed(Identifier dimension, BlockPos pos, UUID except) {
+    public boolean isClaimed(ResourceLocation dimension, BlockPos pos, UUID except) {
         for (Map.Entry<UUID, Record> entry : records.entrySet()) {
             Record record = entry.getValue();
             if (!entry.getKey().equals(except) && pos.equals(record.depot)
@@ -102,21 +102,21 @@ public class WorkRegistry extends PersistentState {
         @Nullable
         public UUID employer;
         @Nullable
-        public Identifier depotDimension;
+        public ResourceLocation depotDimension;
         // appli Employés : dernier état connu (PNJ hors chunk chargé) et ordre en attente
         @Nullable
         public String lastName;
         @Nullable
         public BlockPos lastPos;
         @Nullable
-        public Identifier lastDimension;
+        public ResourceLocation lastDimension;
         public float lastHealth;
         public float lastMaxHealth = 20;
         public int lastStatus = -1;
         public long lastSeen;
         // apparence MCA compacte (PhoneEmployees.look) pour afficher le PNJ dans l'appli même hors chunk chargé
         @Nullable
-        public NbtCompound look;
+        public CompoundTag look;
         @Nullable
         public String pendingOrder;
         // ordre actif donné depuis l'appli (follow/stay/home/work), alertes courantes, rapport du jour
@@ -125,23 +125,23 @@ public class WorkRegistry extends PersistentState {
         public int alerts;
         public long alertCooldown;
         public long reportDay = -1;
-        public NbtCompound report = new NbtCompound();
+        public CompoundTag report = new CompoundTag();
         // conséquences de la messagerie à appliquer au rechargement du PNJ (cœurs envers l'employeur, humeur)
         public int pendingHearts;
         public int pendingMood;
         // messagerie de l'appli Employés (géré par EmployeeChat)
         @Nullable
-        public NbtCompound chat;
+        public CompoundTag chat;
 
-        NbtCompound toNbt() {
-            NbtCompound nbt = new NbtCompound();
+        CompoundTag toNbt() {
+            CompoundTag nbt = new CompoundTag();
             nbt.putInt("job", job.ordinal());
             if (center != null) {
-                nbt.put("center", NbtHelper.fromBlockPos(center));
+                nbt.put("center", NbtUtils.writeBlockPos(center));
             }
             nbt.putInt("radius", radius);
             if (depot != null) {
-                nbt.put("depot", NbtHelper.fromBlockPos(depot));
+                nbt.put("depot", NbtUtils.writeBlockPos(depot));
             }
             nbt.putInt("level", level);
             nbt.putInt("experience", experience);
@@ -150,7 +150,7 @@ public class WorkRegistry extends PersistentState {
                 nbt.putString("formerJob", formerJob);
             }
             if (employer != null) {
-                nbt.putUuid("employer", employer);
+                nbt.putUUID("employer", employer);
             }
             if (depotDimension != null) {
                 nbt.putString("depotDimension", depotDimension.toString());
@@ -159,7 +159,7 @@ public class WorkRegistry extends PersistentState {
                 nbt.putString("lastName", lastName);
             }
             if (lastPos != null) {
-                nbt.put("lastPos", NbtHelper.fromBlockPos(lastPos));
+                nbt.put("lastPos", NbtUtils.writeBlockPos(lastPos));
             }
             if (lastDimension != null) {
                 nbt.putString("lastDimension", lastDimension.toString());
@@ -188,21 +188,21 @@ public class WorkRegistry extends PersistentState {
             return nbt;
         }
 
-        static Record fromNbt(NbtCompound nbt) {
+        static Record fromNbt(CompoundTag nbt) {
             Record record = new Record();
             record.job = Job.byId(nbt.getInt("job"));
-            record.center = nbt.contains("center") ? NbtHelper.toBlockPos(nbt.getCompound("center")) : null;
+            record.center = nbt.contains("center") ? NbtUtils.readBlockPos(nbt.getCompound("center")) : null;
             record.radius = nbt.contains("radius") ? nbt.getInt("radius") : DEFAULT_RADIUS;
-            record.depot = nbt.contains("depot") ? NbtHelper.toBlockPos(nbt.getCompound("depot")) : null;
+            record.depot = nbt.contains("depot") ? NbtUtils.readBlockPos(nbt.getCompound("depot")) : null;
             record.level = Math.max(1, nbt.getInt("level"));
             record.experience = nbt.getInt("experience");
             record.apprenticeChosen = nbt.getBoolean("apprenticeChosen");
             record.formerJob = nbt.contains("formerJob") ? nbt.getString("formerJob") : null;
-            record.employer = nbt.containsUuid("employer") ? nbt.getUuid("employer") : null;
-            record.depotDimension = nbt.contains("depotDimension") ? Identifier.tryParse(nbt.getString("depotDimension")) : null;
+            record.employer = nbt.hasUUID("employer") ? nbt.getUUID("employer") : null;
+            record.depotDimension = nbt.contains("depotDimension") ? ResourceLocation.tryParse(nbt.getString("depotDimension")) : null;
             record.lastName = nbt.contains("lastName") ? nbt.getString("lastName") : null;
-            record.lastPos = nbt.contains("lastPos") ? NbtHelper.toBlockPos(nbt.getCompound("lastPos")) : null;
-            record.lastDimension = nbt.contains("lastDimension") ? Identifier.tryParse(nbt.getString("lastDimension")) : null;
+            record.lastPos = nbt.contains("lastPos") ? NbtUtils.readBlockPos(nbt.getCompound("lastPos")) : null;
+            record.lastDimension = nbt.contains("lastDimension") ? ResourceLocation.tryParse(nbt.getString("lastDimension")) : null;
             record.lastHealth = nbt.getFloat("lastHealth");
             record.lastMaxHealth = nbt.contains("lastMaxHealth") ? nbt.getFloat("lastMaxHealth") : 20;
             record.lastStatus = nbt.contains("lastStatus") ? nbt.getInt("lastStatus") : -1;

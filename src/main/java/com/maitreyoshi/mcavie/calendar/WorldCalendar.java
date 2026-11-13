@@ -6,14 +6,11 @@ import com.maitreyoshi.mcavie.compat.ServerWorldEvents;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
-import net.minecraft.network.PacketByteBuf;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.world.GameRules;
-import net.minecraft.world.World;
-
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -22,7 +19,7 @@ import java.util.List;
 public final class WorldCalendar {
     public static final long TICKS_PER_DAY = 24000L;
     public static final double DAYS_PER_YEAR = 365.2425;
-    public static final Identifier SEGMENTS_PACKET = MCAVie.id("calendar_segments");
+    public static final ResourceLocation SEGMENTS_PACKET = MCAVie.id("calendar_segments");
     private static final long TICKS_OFFSET = 6000L;
     private static final LocalDate FIRST_DAY = LocalDate.of(1, 1, 1);
     private static final List<Segment> DEFAULT = List.of(new Segment(0, 0, 1));
@@ -39,7 +36,7 @@ public final class WorldCalendar {
     public static void register() {
         TIME_SPEED.register(TimeSpeed.DAY, WorldCalendar::onSpeedChanged);
         ServerWorldEvents.LOAD.register((s, world) -> {
-            if (world.getRegistryKey() == World.OVERWORLD) {
+            if (world.dimension() == Level.OVERWORLD) {
                 server = s;
                 CalendarState state = CalendarState.get(s);
                 if (state.segments().isEmpty()) {
@@ -64,7 +61,7 @@ public final class WorldCalendar {
     }
 
     private static void onSpeedChanged(MinecraftServer s, TimeSpeed value) {
-        if (s == null || s.getOverworld() == null) {
+        if (s == null || s.overworld() == null) {
             return;
         }
         CalendarState state = CalendarState.get(s);
@@ -74,10 +71,10 @@ public final class WorldCalendar {
         if (last.speed() == speed) {
             return;
         }
-        state.setSegments(withSpeed(segments, s.getOverworld().getTimeOfDay(), speed));
+        state.setSegments(withSpeed(segments, s.overworld().getDayTime(), speed));
         server = s;
         serverSegments = state.segments();
-        s.getPlayerManager().getPlayerList().forEach(WorldCalendar::sendSegments);
+        s.getPlayerList().getPlayers().forEach(WorldCalendar::sendSegments);
     }
 
     // ancrage à l'instant exact : la date affichée et les âges ne bougent pas, seul le rythme change ensuite
@@ -95,9 +92,9 @@ public final class WorldCalendar {
         return segments;
     }
 
-    private static void sendSegments(ServerPlayerEntity player) {
+    private static void sendSegments(ServerPlayer player) {
         List<Segment> segments = serverSegments;
-        PacketByteBuf buf = PacketByteBufs.create();
+        FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeVarInt(segments.size());
         for (Segment segment : segments) {
             buf.writeLong(segment.gameStart());
@@ -107,7 +104,7 @@ public final class WorldCalendar {
         ServerPlayNetworking.send(player, SEGMENTS_PACKET, buf);
     }
 
-    public static List<Segment> readSegments(PacketByteBuf buf) {
+    public static List<Segment> readSegments(FriendlyByteBuf buf) {
         int size = Math.min(buf.readVarInt(), 4096);
         List<Segment> segments = new ArrayList<>();
         for (int i = 0; i < size; i++) {
@@ -131,7 +128,7 @@ public final class WorldCalendar {
 
     private static List<Segment> active() {
         MinecraftServer s = server;
-        return s != null && (s.isDedicated() || s.isOnThread()) ? serverSegments : clientSegments;
+        return s != null && (s.isDedicatedServer() || s.isSameThread()) ? serverSegments : clientSegments;
     }
 
     // segments en ticks (jeu décalé de TICKS_OFFSET → calendrier) : un changement de vitesse en cours de journée reste exact
@@ -197,16 +194,16 @@ public final class WorldCalendar {
         return FIRST_DAY.getDayOfWeek().plus(date.dayIndex());
     }
 
-    public static CalendarDate now(World world) {
-        return fromTicks(world.getTimeOfDay());
+    public static CalendarDate now(Level world) {
+        return fromTicks(world.getDayTime());
     }
 
     public static CalendarDate fromTicks(long ticks) {
         return fromTicks(ticks, false);
     }
 
-    public static CalendarDate flowingNow(World world) {
-        return fromTicks(world.getTimeOfDay(), true);
+    public static CalendarDate flowingNow(Level world) {
+        return fromTicks(world.getDayTime(), true);
     }
 
     public static CalendarDate flowingFromTicks(long ticks) {
@@ -237,8 +234,8 @@ public final class WorldCalendar {
         );
     }
 
-    public static long exactCalendarDay(World world) {
-        long shifted = Math.max(0, world.getTimeOfDay() + TICKS_OFFSET);
+    public static long exactCalendarDay(Level world) {
+        long shifted = Math.max(0, world.getDayTime() + TICKS_OFFSET);
         return Math.floorDiv(flowingCalendarTicks(shifted / TICKS_PER_DAY, shifted % TICKS_PER_DAY), TICKS_PER_DAY);
     }
 

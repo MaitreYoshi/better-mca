@@ -10,9 +10,8 @@ import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.world.ServerWorld;
-
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerLevel;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -49,8 +48,8 @@ public final class CivilRegistry {
             return new Entry(kind, day, name, other, age, calendarDay);
         }
 
-        NbtCompound toNbt() {
-            NbtCompound nbt = new NbtCompound();
+        CompoundTag toNbt() {
+            CompoundTag nbt = new CompoundTag();
             nbt.putInt("kind", kind);
             nbt.putLong("day", day);
             nbt.putString("name", name);
@@ -62,13 +61,13 @@ public final class CivilRegistry {
             return nbt;
         }
 
-        static Entry fromNbt(NbtCompound nbt) {
+        static Entry fromNbt(CompoundTag nbt) {
             return new Entry(nbt.getInt("kind"), nbt.getLong("day"), nbt.getString("name"), nbt.getString("other"), nbt.getInt("age"),
                     nbt.contains("exact") ? nbt.getLong("exact") : NO_EXACT);
         }
     }
 
-    public static void birth(VillagerEntityMCA baby, ServerWorld world) {
+    public static void birth(VillagerEntityMCA baby, ServerLevel world) {
         Surnames.update(baby);
         FamilyTreeNode node = baby.getRelationships().getFamilyEntry();
         String parents = node.getParents().map(FamilyTreeNode::getName).filter(n -> n != null && !n.isBlank())
@@ -78,11 +77,11 @@ public final class CivilRegistry {
                 .flatMap(Optional::stream)
                 .findFirst();
         add(village.isPresent() ? village : village(baby, world), exact(new Entry(BIRTH, today(world), name(baby), parents, 0),
-                LifeRegistry.get(world.getServer()).exactBirth(baby.getUuid())));
-        com.maitreyoshi.mcavie.social.SocialConversation.witness(world, baby, "birth", net.minecraft.text.Text.literal(name(baby)), baby.getUuid());
+                LifeRegistry.get(world.getServer()).exactBirth(baby.getUUID())));
+        com.maitreyoshi.mcavie.social.SocialConversation.witness(world, baby, "birth", net.minecraft.network.chat.Component.literal(name(baby)), baby.getUUID());
     }
 
-    public static void marriage(VillagerEntityMCA villager, ServerWorld world, FamilyTreeNode node) {
+    public static void marriage(VillagerEntityMCA villager, ServerLevel world, FamilyTreeNode node) {
         Optional<Village> village = village(villager, world);
         if (village.isEmpty() || !FamilyTreeNode.isValid(node.partner())) {
             return;
@@ -98,15 +97,15 @@ public final class CivilRegistry {
         }
     }
 
-    public static void death(VillagerEntityMCA villager, ServerWorld world) {
-        Long birth = LifeRegistry.get(world.getServer()).getBirthDay(villager.getUuid());
+    public static void death(VillagerEntityMCA villager, ServerLevel world) {
+        Long birth = LifeRegistry.get(world.getServer()).getBirthDay(villager.getUUID());
         long today = today(world);
         int age = birth == null ? -1 : LifeCycle.ageInYears(birth, today);
         add(village(villager, world), exact(new Entry(DEATH, today, name(villager), "", age),
-                LifeRegistry.get(world.getServer()).exactDeath(villager.getUuid())));
+                LifeRegistry.get(world.getServer()).exactDeath(villager.getUUID())));
     }
 
-    public static void zombified(VillagerEntityMCA villager, ServerWorld world) {
+    public static void zombified(VillagerEntityMCA villager, ServerLevel world) {
         add(village(villager, world), new Entry(DEATH, today(world), name(villager), ZOMBIE, -1));
     }
 
@@ -123,7 +122,7 @@ public final class CivilRegistry {
     }
 
     /** Anciennes entrées : reprend la date exacte de l'arbre (même villageois, même jour de jeu). */
-    public static void fillExactDates(ServerWorld world) {
+    public static void fillExactDates(ServerLevel world) {
         LifeRegistry life = LifeRegistry.get(world.getServer());
         Map<String, List<UUID>> byName = new HashMap<>();
         ((com.maitreyoshi.mcavie.tree.server.mixin.FamilyTreeAccessor) FamilyTree.get(world)).mcavie$getEntries().values()
@@ -163,11 +162,11 @@ public final class CivilRegistry {
         return name == null || name.isBlank() ? villager.getName().getString() : name;
     }
 
-    private static long today(ServerWorld world) {
+    private static long today(ServerLevel world) {
         return WorldCalendar.now(world).dayIndex();
     }
 
-    private static Optional<Village> village(VillagerEntityMCA villager, ServerWorld world) {
+    private static Optional<Village> village(VillagerEntityMCA villager, ServerLevel world) {
         Optional<Village> home = villager.getResidency().getHomeVillage();
         return home.isPresent() ? home : VillageManager.get(world).findNearestVillage(villager);
     }

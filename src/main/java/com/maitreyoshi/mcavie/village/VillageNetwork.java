@@ -5,18 +5,18 @@ import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
 import net.mca.network.c2s.GetVillageRequest;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 
 public final class VillageNetwork {
-    public static final Identifier WITHDRAW = MCAVie.id("treasury_withdraw");
-    public static final Identifier CONFIG = MCAVie.id("village_config");
-    public static final Identifier DECREE = MCAVie.id("village_decree");
-    public static final Identifier DEPOSIT = MCAVie.id("treasury_deposit");
-    public static final Identifier NATURE = MCAVie.id("tax_nature");
-    public static final Identifier ORDER = MCAVie.id("market_order");
-    public static final Identifier COLLECT = MCAVie.id("market_collect");
-    public static final Identifier JUDGE = MCAVie.id("justice_judge");
+    public static final ResourceLocation WITHDRAW = MCAVie.id("treasury_withdraw");
+    public static final ResourceLocation CONFIG = MCAVie.id("village_config");
+    public static final ResourceLocation DECREE = MCAVie.id("village_decree");
+    public static final ResourceLocation DEPOSIT = MCAVie.id("treasury_deposit");
+    public static final ResourceLocation NATURE = MCAVie.id("tax_nature");
+    public static final ResourceLocation ORDER = MCAVie.id("market_order");
+    public static final ResourceLocation COLLECT = MCAVie.id("market_collect");
+    public static final ResourceLocation JUDGE = MCAVie.id("justice_judge");
 
     private VillageNetwork() {
     }
@@ -48,7 +48,7 @@ public final class VillageNetwork {
         });
         ServerPlayNetworking.registerGlobalReceiver(ORDER, (server, player, handler, buf, responseSender) -> {
             int villageId = buf.readInt();
-            String item = buf.readString(128);
+            String item = buf.readUtf(128);
             int lots = buf.readInt();
             server.execute(() -> {
                 VillageMarket.order(player, villageId, item, lots);
@@ -64,7 +64,7 @@ public final class VillageNetwork {
         });
         ServerPlayNetworking.registerGlobalReceiver(JUDGE, (server, player, handler, buf, responseSender) -> {
             int villageId = buf.readInt();
-            java.util.UUID suspect = buf.readUuid();
+            java.util.UUID suspect = buf.readUUID();
             int verdict = buf.readInt();
             server.execute(() -> {
                 VillageJustice.judge(player, villageId, suspect, verdict);
@@ -83,8 +83,8 @@ public final class VillageNetwork {
             });
         });
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            PacketByteBuf buf = PacketByteBufs.create();
-            buf.writeString(VillageConfig.get().toJson(), 1 << 20);
+            FriendlyByteBuf buf = PacketByteBufs.create();
+            buf.writeUtf(VillageConfig.get().toJson(), 1 << 20);
             sender.sendPacket(CONFIG, buf);
         });
     }

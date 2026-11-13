@@ -1,46 +1,46 @@
 package com.maitreyoshi.mcavie.life;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.EntityType;
-import net.minecraft.entity.ai.goal.LookAroundGoal;
-import net.minecraft.entity.ai.goal.LookAtEntityGoal;
-import net.minecraft.entity.attribute.DefaultAttributeContainer;
-import net.minecraft.entity.attribute.EntityAttributes;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.data.DataTracker;
-import net.minecraft.entity.data.TrackedData;
-import net.minecraft.entity.data.TrackedDataHandlerRegistry;
-import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.mob.PathAwareEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.sound.SoundCategory;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.syncher.EntityDataAccessor;
+import net.minecraft.network.syncher.EntityDataSerializers;
+import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.PathfinderMob;
+import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ai.goal.LookAtPlayerGoal;
+import net.minecraft.world.entity.ai.goal.RandomLookAroundGoal;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.Vec3;
 
 /** Fantôme d'un défunt : se promène la nuit autour de son autel, intouchable, et s'efface à l'aube. */
-public class GhostEntity extends PathAwareEntity {
-    private static final TrackedData<NbtCompound> LOOK = DataTracker.registerData(GhostEntity.class, TrackedDataHandlerRegistry.NBT_COMPOUND);
+public class GhostEntity extends PathfinderMob {
+    private static final EntityDataAccessor<CompoundTag> LOOK = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.COMPOUND_TAG);
     public static final int RANGE = 48;
     private static final int TALKS = 10;
     private static final int ALONE = 6;
-    private static final SoundEvent[] WHISPERS = {SoundEvents.ENTITY_VILLAGER_AMBIENT, SoundEvents.ENTITY_ALLAY_AMBIENT_WITHOUT_ITEM,
-            SoundEvents.ENTITY_WANDERING_TRADER_AMBIENT, SoundEvents.PARTICLE_SOUL_ESCAPE};
+    private static final SoundEvent[] WHISPERS = {SoundEvents.VILLAGER_AMBIENT, SoundEvents.ALLAY_AMBIENT_WITHOUT_ITEM,
+            SoundEvents.WANDERING_TRADER_AMBIENT, SoundEvents.SOUL_ESCAPE};
 
     @Nullable
-    private Vec3d drift;
+    private Vec3 drift;
     @Nullable
     private String reply;
     private int replyAt;
@@ -54,61 +54,61 @@ public class GhostEntity extends PathAwareEntity {
     @Nullable
     public Object clientBody;
     @Nullable
-    public NbtCompound clientLook;
+    public CompoundTag clientLook;
 
-    public GhostEntity(EntityType<? extends GhostEntity> type, World world) {
+    public GhostEntity(EntityType<? extends GhostEntity> type, Level world) {
         super(type, world);
         setInvulnerable(true);
         setSilent(true);
     }
 
-    public static DefaultAttributeContainer.Builder createAttributes() {
-        return MobEntity.createMobAttributes().add(EntityAttributes.GENERIC_MOVEMENT_SPEED, 0.5).add(EntityAttributes.GENERIC_MAX_HEALTH, 20);
+    public static AttributeSupplier.Builder createAttributes() {
+        return Mob.createMobAttributes().add(Attributes.MOVEMENT_SPEED, 0.5).add(Attributes.MAX_HEALTH, 20);
     }
 
-    void setup(NbtCompound look, UUID person, BlockPos altar) {
+    void setup(CompoundTag look, UUID person, BlockPos altar) {
         this.person = person;
         this.altar = altar;
-        dataTracker.set(LOOK, look);
-        setPositionTarget(altar, RANGE);
+        entityData.set(LOOK, look);
+        restrictTo(altar, RANGE);
     }
 
-    public NbtCompound look() {
-        return dataTracker.get(LOOK);
-    }
-
-    @Override
-    protected void initDataTracker() {
-        super.initDataTracker();
-        dataTracker.startTracking(LOOK, new NbtCompound());
+    public CompoundTag look() {
+        return entityData.get(LOOK);
     }
 
     @Override
-    protected void initGoals() {
-        goalSelector.add(3, new LookAtEntityGoal(this, PlayerEntity.class, 6));
-        goalSelector.add(4, new LookAroundGoal(this));
+    protected void defineSynchedData() {
+        super.defineSynchedData();
+        entityData.define(LOOK, new CompoundTag());
+    }
+
+    @Override
+    protected void registerGoals() {
+        goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 6));
+        goalSelector.addGoal(4, new RandomLookAroundGoal(this));
     }
 
     @Override
     public void tick() {
         super.tick();
-        World world = getWorld();
-        if (world.isClient) {
+        Level world = level();
+        if (world.isClientSide) {
             if (random.nextInt(12) == 0) {
-                world.addParticle(ParticleTypes.WHITE_ASH, getParticleX(0.6), getRandomBodyY(), getParticleZ(0.6), 0, 0.02, 0);
+                world.addParticle(ParticleTypes.WHITE_ASH, getRandomX(0.6), getRandomY(), getRandomZ(0.6), 0, 0.02, 0);
             }
             return;
         }
-        ServerWorld server = (ServerWorld) world;
-        if (age == 1) {
-            server.spawnParticles(ParticleTypes.SOUL, getX(), getBodyY(0.5), getZ(), 12, 0.3, 0.6, 0.3, 0.02);
+        ServerLevel server = (ServerLevel) world;
+        if (tickCount == 1) {
+            server.sendParticles(ParticleTypes.SOUL, getX(), getY(0.5), getZ(), 12, 0.3, 0.6, 0.3, 0.02);
         }
         hover();
         if (random.nextInt(240) == 0) {
-            server.playSound(null, getX(), getEyeY(), getZ(), WHISPERS[random.nextInt(WHISPERS.length)], SoundCategory.NEUTRAL,
+            server.playSound(null, getX(), getEyeY(), getZ(), WHISPERS[random.nextInt(WHISPERS.length)], SoundSource.NEUTRAL,
                     0.35f, 0.45f + random.nextFloat() * 0.2f);
         }
-        if (reply != null && age >= replyAt) {
+        if (reply != null && tickCount >= replyAt) {
             say(server, reply);
             reply = null;
         }
@@ -117,13 +117,13 @@ public class GhostEntity extends PathAwareEntity {
         } else if (random.nextInt(200) == 0) {
             talk(server);
         }
-        if (age % 20 != 0) {
+        if (tickCount % 20 != 0) {
             return;
         }
-        boolean altarGone = altar == null || person == null || world.isChunkLoaded(altar)
+        boolean altarGone = altar == null || person == null || world.hasChunkAt(altar)
                 && !(world.getBlockEntity(altar) instanceof GhostAltarBlockEntity be && person.equals(be.person()));
         if (altarGone || !Ghosts.isNight(world)) {
-            ((ServerWorld) world).spawnParticles(ParticleTypes.SOUL, getX(), getBodyY(0.5), getZ(), 12, 0.3, 0.6, 0.3, 0.02);
+            ((ServerLevel) world).sendParticles(ParticleTypes.SOUL, getX(), getY(0.5), getZ(), 12, 0.3, 0.6, 0.3, 0.02);
             discard();
         }
     }
@@ -132,37 +132,37 @@ public class GhostEntity extends PathAwareEntity {
         if (altar == null) {
             return;
         }
-        if (drift == null || drift.squaredDistanceTo(getX(), drift.y, getZ()) < 1.5 || random.nextInt(600) == 0) {
-            drift = random.nextInt(3) == 0 ? null : Vec3d.ofBottomCenter(altar).add(random.nextInt(RANGE / 2 + 1) - RANGE / 4, 0, random.nextInt(RANGE / 2 + 1) - RANGE / 4);
+        if (drift == null || drift.distanceToSqr(getX(), drift.y, getZ()) < 1.5 || random.nextInt(600) == 0) {
+            drift = random.nextInt(3) == 0 ? null : Vec3.atBottomCenterOf(altar).add(random.nextInt(RANGE / 2 + 1) - RANGE / 4, 0, random.nextInt(RANGE / 2 + 1) - RANGE / 4);
             if (drift == null) {
-                getMoveControl().moveTo(getX(), getY(), getZ(), 0);
+                getMoveControl().setWantedPosition(getX(), getY(), getZ(), 0);
                 return;
             }
         }
-        if (age % 20 == 0 || !getMoveControl().isMoving()) {
-            getMoveControl().moveTo(drift.x, getY(), drift.z, 0.6);
+        if (tickCount % 20 == 0 || !getMoveControl().hasWanted()) {
+            getMoveControl().setWantedPosition(drift.x, getY(), drift.z, 0.6);
         }
     }
 
-    private Text name() {
+    private Component name() {
         String json = look().getString("CustomName");
-        Text name = json.isEmpty() ? null : Text.Serializer.fromJson(json);
-        return name == null ? Text.translatable("entity.mca_vie.ghost") : name;
+        Component name = json.isEmpty() ? null : Component.Serializer.fromJson(json);
+        return name == null ? Component.translatable("entity.mca_vie.ghost") : name;
     }
 
-    private void say(ServerWorld world, String key) {
-        Text line = Text.empty().append(Text.literal("   ").styled(st -> st.withInsertion(com.maitreyoshi.mcavie.social.SocialConversation.HEAD_MARKER + getId() + ":" + getUuid())))
-                .append(Text.translatable("mca_vie.ghost.line", name(), Text.translatable(key)).formatted(Formatting.GRAY, Formatting.ITALIC));
-        world.getPlayers(p -> p.squaredDistanceTo(this) < 16 * 16).forEach(p -> p.sendMessage(line));
-        world.playSound(null, getX(), getEyeY(), getZ(), WHISPERS[random.nextInt(WHISPERS.length)], SoundCategory.NEUTRAL, 0.3f, 0.5f);
+    private void say(ServerLevel world, String key) {
+        Component line = Component.empty().append(Component.literal("   ").withStyle(st -> st.withInsertion(com.maitreyoshi.mcavie.social.SocialConversation.HEAD_MARKER + getId() + ":" + getUUID())))
+                .append(Component.translatable("mca_vie.ghost.line", name(), Component.translatable(key)).withStyle(ChatFormatting.GRAY, ChatFormatting.ITALIC));
+        world.getPlayers(p -> p.distanceToSqr(this) < 16 * 16).forEach(p -> p.sendSystemMessage(line));
+        world.playSound(null, getX(), getEyeY(), getZ(), WHISPERS[random.nextInt(WHISPERS.length)], SoundSource.NEUTRAL, 0.3f, 0.5f);
     }
 
-    private void talk(ServerWorld world) {
+    private void talk(ServerLevel world) {
         talkCooldown = 600 + random.nextInt(900);
-        if (world.getPlayers(p -> p.squaredDistanceTo(this) < 16 * 16).isEmpty()) {
+        if (world.getPlayers(p -> p.distanceToSqr(this) < 16 * 16).isEmpty()) {
             return;
         }
-        GhostEntity other = world.getEntitiesByClass(GhostEntity.class, getBoundingBox().expand(10), g -> g != this && g.reply == null)
+        GhostEntity other = world.getEntitiesOfClass(GhostEntity.class, getBoundingBox().inflate(10), g -> g != this && g.reply == null)
                 .stream().findAny().orElse(null);
         if (other == null) {
             say(world, "mca_vie.ghost.alone." + random.nextInt(ALONE));
@@ -170,37 +170,37 @@ public class GhostEntity extends PathAwareEntity {
         }
         int n = random.nextInt(TALKS);
         say(world, "mca_vie.ghost.talk." + n + ".a");
-        getLookControl().lookAt(other);
-        other.getLookControl().lookAt(this);
+        getLookControl().setLookAt(other);
+        other.getLookControl().setLookAt(this);
         other.reply = "mca_vie.ghost.talk." + n + ".b";
-        other.replyAt = other.age + 50 + random.nextInt(30);
+        other.replyAt = other.tickCount + 50 + random.nextInt(30);
         other.talkCooldown = Math.max(other.talkCooldown, 400);
     }
 
-    public static boolean natural(net.minecraft.block.BlockState state) {
-        return state.isIn(net.minecraft.registry.tag.BlockTags.BASE_STONE_OVERWORLD) || state.isIn(net.minecraft.registry.tag.BlockTags.DIRT)
-                || state.isIn(net.minecraft.registry.tag.BlockTags.SAND) || state.isIn(net.minecraft.registry.tag.BlockTags.BASE_STONE_NETHER)
-                || state.isIn(net.minecraft.registry.tag.BlockTags.NYLIUM) || state.isIn(net.minecraft.registry.tag.BlockTags.SNOW)
-                || state.isIn(net.minecraft.registry.tag.BlockTags.ICE) || state.isIn(net.minecraft.registry.tag.BlockTags.TERRACOTTA)
-                || state.isOf(net.minecraft.block.Blocks.GRAVEL) || state.isOf(net.minecraft.block.Blocks.CLAY) || state.isOf(net.minecraft.block.Blocks.BEDROCK)
-                || state.isOf(net.minecraft.block.Blocks.SANDSTONE) || state.isOf(net.minecraft.block.Blocks.RED_SANDSTONE)
-                || state.isIn(net.minecraft.registry.tag.BlockTags.COAL_ORES) || state.isIn(net.minecraft.registry.tag.BlockTags.IRON_ORES)
-                || state.isIn(net.minecraft.registry.tag.BlockTags.COPPER_ORES);
+    public static boolean natural(net.minecraft.world.level.block.state.BlockState state) {
+        return state.is(net.minecraft.tags.BlockTags.BASE_STONE_OVERWORLD) || state.is(net.minecraft.tags.BlockTags.DIRT)
+                || state.is(net.minecraft.tags.BlockTags.SAND) || state.is(net.minecraft.tags.BlockTags.BASE_STONE_NETHER)
+                || state.is(net.minecraft.tags.BlockTags.NYLIUM) || state.is(net.minecraft.tags.BlockTags.SNOW)
+                || state.is(net.minecraft.tags.BlockTags.ICE) || state.is(net.minecraft.tags.BlockTags.TERRACOTTA)
+                || state.is(net.minecraft.world.level.block.Blocks.GRAVEL) || state.is(net.minecraft.world.level.block.Blocks.CLAY) || state.is(net.minecraft.world.level.block.Blocks.BEDROCK)
+                || state.is(net.minecraft.world.level.block.Blocks.SANDSTONE) || state.is(net.minecraft.world.level.block.Blocks.RED_SANDSTONE)
+                || state.is(net.minecraft.tags.BlockTags.COAL_ORES) || state.is(net.minecraft.tags.BlockTags.IRON_ORES)
+                || state.is(net.minecraft.tags.BlockTags.COPPER_ORES);
     }
 
     /** Murs des bâtiments traversables ; le sol sous ses pieds et le décor naturel restent solides. */
-    public boolean passesThrough(net.minecraft.block.BlockState state, BlockPos pos) {
+    public boolean passesThrough(net.minecraft.world.level.block.state.BlockState state, BlockPos pos) {
         return pos.getY() + 0.5 > getY() && !natural(state);
     }
 
     @Override
-    public boolean isInsideWall() {
+    public boolean isInWall() {
         return false;
     }
 
     // Intouchable : on le traverse, on ne peut ni le frapper ni lui parler.
     @Override
-    public boolean canHit() {
+    public boolean isPickable() {
         return false;
     }
 
@@ -210,11 +210,11 @@ public class GhostEntity extends PathAwareEntity {
     }
 
     @Override
-    protected void pushAway(Entity entity) {
+    protected void doPush(Entity entity) {
     }
 
     @Override
-    protected void tickCramming() {
+    protected void pushEntities() {
     }
 
     @Override
@@ -223,38 +223,38 @@ public class GhostEntity extends PathAwareEntity {
     }
 
     @Override
-    public boolean damage(DamageSource source, float amount) {
-        return source.isOf(net.minecraft.entity.damage.DamageTypes.OUT_OF_WORLD) && super.damage(source, amount);
+    public boolean hurt(DamageSource source, float amount) {
+        return source.is(net.minecraft.world.damagesource.DamageTypes.FELL_OUT_OF_WORLD) && super.hurt(source, amount);
     }
 
     @Override
-    protected ActionResult interactMob(PlayerEntity player, Hand hand) {
-        return ActionResult.PASS;
+    protected InteractionResult mobInteract(Player player, InteractionHand hand) {
+        return InteractionResult.PASS;
     }
 
     @Override
-    public boolean canBeLeashedBy(PlayerEntity player) {
+    public boolean canBeLeashed(Player player) {
         return false;
     }
 
     @Override
-    public boolean canImmediatelyDespawn(double distanceSquared) {
+    public boolean removeWhenFarAway(double distanceSquared) {
         return false;
     }
 
     @Override
-    public boolean handleFallDamage(float fallDistance, float damageMultiplier, DamageSource source) {
+    public boolean causeFallDamage(float fallDistance, float damageMultiplier, DamageSource source) {
         return false;
     }
 
     // Jamais sauvegardé : l'autel le fait revenir chaque nuit.
     @Override
-    public boolean saveNbt(NbtCompound nbt) {
+    public boolean save(CompoundTag nbt) {
         return false;
     }
 
     @Override
-    public boolean saveSelfNbt(NbtCompound nbt) {
+    public boolean saveAsPassenger(CompoundTag nbt) {
         return false;
     }
 }

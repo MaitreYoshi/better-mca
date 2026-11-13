@@ -8,15 +8,15 @@ import com.maitreyoshi.mcavie.compat.client.ClientEntityEvents;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 
 public final class WorkClient {
     private static final Map<Integer, Info> BY_ENTITY_ID = new HashMap<>();
@@ -34,12 +34,12 @@ public final class WorkClient {
             client.execute(() -> BY_ENTITY_ID.put(entityId, info));
         });
         ClientPlayNetworking.registerGlobalReceiver(WorkNetwork.JOB_REFUSED, (client, handler, buf, responseSender) -> {
-            Text message = buf.readText();
+            Component message = buf.readComponent();
             client.execute(() -> {
-                if (client.currentScreen instanceof JobScreen screen) {
+                if (client.screen instanceof JobScreen screen) {
                     screen.showRefusal(message);
                 } else if (client.player != null) {
-                    client.player.sendMessage(message, true);
+                    client.player.displayClientMessage(message, true);
                 }
             });
         });
@@ -52,55 +52,55 @@ public final class WorkClient {
         return BY_ENTITY_ID.get(entityId);
     }
 
-    public static Text menuLine(Info info) {
-        return Text.translatable("job.mca_vie.menu_line", jobLine(info)).formatted(Formatting.WHITE);
+    public static Component menuLine(Info info) {
+        return Component.translatable("job.mca_vie.menu_line", jobLine(info)).withStyle(ChatFormatting.WHITE);
     }
 
-    public static MutableText jobLine(Info info) {
-        MutableText text = info.job().getName().copy().formatted(Formatting.WHITE);
+    public static MutableComponent jobLine(Info info) {
+        MutableComponent text = info.job().getName().copy().withStyle(ChatFormatting.WHITE);
         if (info.job().isCraft()) {
-            text.append(Text.literal(" (").formatted(Formatting.GRAY))
-                    .append(Text.translatable("job.mca_vie.level." + Math.max(1, Math.min(5, info.level()))).formatted(Formatting.GOLD))
-                    .append(Text.literal(")").formatted(Formatting.GRAY))
-                    .append(Text.literal(" — ").formatted(Formatting.GRAY))
+            text.append(Component.literal(" (").withStyle(ChatFormatting.GRAY))
+                    .append(Component.translatable("job.mca_vie.level." + Math.max(1, Math.min(5, info.level()))).withStyle(ChatFormatting.GOLD))
+                    .append(Component.literal(")").withStyle(ChatFormatting.GRAY))
+                    .append(Component.literal(" — ").withStyle(ChatFormatting.GRAY))
                     .append(statusText(info));
         }
         return text;
     }
 
-    public static MutableText statusText(Info info) {
+    public static MutableComponent statusText(Info info) {
         if (info.status() == WorkStatus.INVENTORY_FULL || info.status() == WorkStatus.NO_GRIEFING || info.status() == WorkStatus.NO_WORKSTATION
                 || info.status() == WorkStatus.NO_TOOL) {
-            return info.status().getText().copy().formatted(Formatting.RED);
+            return info.status().getText().copy().withStyle(ChatFormatting.RED);
         }
         if (!info.working()) {
-            return Text.translatable("job.mca_vie.resting").formatted(Formatting.GRAY);
+            return Component.translatable("job.mca_vie.resting").withStyle(ChatFormatting.GRAY);
         }
-        return info.status().getText().copy().formatted(info.status() == WorkStatus.NOTHING_TO_DO ? Formatting.YELLOW : Formatting.GREEN);
+        return info.status().getText().copy().withStyle(info.status() == WorkStatus.NOTHING_TO_DO ? ChatFormatting.YELLOW : ChatFormatting.GREEN);
     }
 
     public static void setJob(UUID villager, Job job) {
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeUuid(villager);
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUUID(villager);
         buf.writeVarInt(job.ordinal());
         ClientPlayNetworking.send(WorkNetwork.SET_JOB, buf);
     }
 
     public static void pickDepot(UUID villager) {
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeUuid(villager);
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUUID(villager);
         ClientPlayNetworking.send(WorkNetwork.PICK_DEPOT, buf);
     }
 
     public static void showWorkstation(UUID villager) {
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeUuid(villager);
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUUID(villager);
         ClientPlayNetworking.send(WorkNetwork.SHOW_WORKSTATION, buf);
     }
 
     public static void zoneHere(UUID villager) {
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeUuid(villager);
+        FriendlyByteBuf buf = PacketByteBufs.create();
+        buf.writeUUID(villager);
         ClientPlayNetworking.send(WorkNetwork.ZONE_HERE, buf);
     }
 }

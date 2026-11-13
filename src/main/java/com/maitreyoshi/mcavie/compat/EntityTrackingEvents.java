@@ -1,12 +1,11 @@
 package com.maitreyoshi.mcavie.compat;
 
-import net.minecraft.entity.Entity;
-import net.minecraft.server.network.ServerPlayerEntity;
-
 import java.util.function.BiConsumer;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 
 public final class EntityTrackingEvents {
-    public static final Callbacks<BiConsumer<Entity, ServerPlayerEntity>> START_TRACKING = new Callbacks<>();
+    public static final Callbacks<BiConsumer<Entity, ServerPlayer>> START_TRACKING = new Callbacks<>();
 
     private EntityTrackingEvents() {
     }

@@ -1,17 +1,17 @@
 package com.maitreyoshi.mcavie.compat;
 
-import net.minecraft.network.PacketByteBuf;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
 
 public final class PacketSender {
-    private final ServerPlayerEntity player;
+    private final ServerPlayer player;
 
-    PacketSender(ServerPlayerEntity player) {
+    PacketSender(ServerPlayer player) {
         this.player = player;
     }
 
-    public void sendPacket(Identifier id, PacketByteBuf buf) {
+    public void sendPacket(ResourceLocation id, FriendlyByteBuf buf) {
         ServerPlayNetworking.send(player, id, buf);
     }
 }

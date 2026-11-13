@@ -10,11 +10,10 @@ import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
-import net.minecraft.entity.Entity;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.random.Random;
-
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.entity.Entity;
 import java.time.Period;
 import java.util.UUID;
 
@@ -37,7 +36,7 @@ public final class LifeCycle {
     }
 
     public static void update(VillagerEntityMCA villager) {
-        if (!(villager.getWorld() instanceof ServerWorld world)) {
+        if (!(villager.level() instanceof ServerLevel world)) {
             return;
         }
         syncTreeGender(villager, world);
@@ -47,41 +46,41 @@ public final class LifeCycle {
         LifeRegistry registry = LifeRegistry.get(world.getServer());
         long today = WorldCalendar.now(world).dayIndex();
 
-        if (registry.isZombie(villager.getUuid())) {
-            registry.cured(villager.getUuid(), today);
-            Wellbeing.resume(world, villager.getUuid(), today);
+        if (registry.isZombie(villager.getUUID())) {
+            registry.cured(villager.getUUID(), today);
+            Wellbeing.resume(world, villager.getUUID(), today);
         }
-        Long birth = registry.getBirthDay(villager.getUuid());
+        Long birth = registry.getBirthDay(villager.getUUID());
         if (birth == null) {
             boolean newborn = isNewborn(villager, world);
             birth = newborn ? today : initialBirthDay(villager, world, today);
             if (newborn) {
-                registry.recordBirth(villager.getUuid(), birth, WorldCalendar.exactCalendarDay(world));
+                registry.recordBirth(villager.getUUID(), birth, WorldCalendar.exactCalendarDay(world));
             } else {
-                registry.setBirthDay(villager.getUuid(), birth);
+                registry.setBirthDay(villager.getUUID(), birth);
             }
             if (newborn) {
                 VillageDecrees.onBirth(villager);
-                if (villager.getBreedingAge() <= -net.mca.entity.ai.relationship.AgeState.getMaxAge() + 2400) {
+                if (villager.getAge() <= -net.mca.entity.ai.relationship.AgeState.getMaxAge() + 2400) {
                     com.maitreyoshi.mcavie.village.CivilRegistry.birth(villager, world);
                 }
             }
         }
-        Long death = registry.getDeathDay(villager.getUuid());
+        Long death = registry.getDeathDay(villager.getUUID());
         if (death != null) {
-            registry.resurrected(villager.getUuid(), WorldCalendar.exactCalendarDay(world), world.getTime());
+            registry.resurrected(villager.getUUID(), WorldCalendar.exactCalendarDay(world), world.getGameTime());
             Resurrection.returned(villager, world);
         }
         Resurrection.update(villager, world);
 
-        long body = registry.getBodyBirthDay(villager.getUuid());
+        long body = registry.getBodyBirthDay(villager.getUUID());
         applyGrowth(villager, WorldCalendar.yearsBetween(body, today));
         Aging.update(villager, world, ageInYears(body, today));
     }
 
-    public static boolean setAge(VillagerEntityMCA villager, ServerWorld world, int years) {
+    public static boolean setAge(VillagerEntityMCA villager, ServerLevel world, int years) {
         LifeRegistry registry = LifeRegistry.get(world.getServer());
-        UUID uuid = villager.getUuid();
+        UUID uuid = villager.getUUID();
         long today = WorldCalendar.now(world).dayIndex();
         Long birth = registry.getBirthDay(uuid);
         Long body = registry.getBodyBirthDay(uuid);
@@ -97,7 +96,7 @@ public final class LifeCycle {
         return true;
     }
 
-    public static void forgetDead(ServerWorld world, UUID uuid) {
+    public static void forgetDead(ServerLevel world, UUID uuid) {
         MinecraftServer server = world.getServer();
         WellbeingRegistry.get(server).remove(uuid);
         LifeRegistry.get(server).clearZombie(uuid);
@@ -107,13 +106,13 @@ public final class LifeCycle {
             record.center = null;
             record.depot = null;
             record.depotDimension = null;
-            work.markDirty();
+            work.setDirty();
         }
         WorkManager.forget(uuid);
     }
 
     // l'arbre MCA fige le genre à la création de la fiche : chez d'anciens villageois il peut différer du genre réel
-    private static void syncTreeGender(VillagerEntityMCA villager, ServerWorld world) {
+    private static void syncTreeGender(VillagerEntityMCA villager, ServerLevel world) {
         Gender gender = villager.getGenetics().getGender();
         if (gender != Gender.MALE && gender != Gender.FEMALE) {
             return;
@@ -121,16 +120,16 @@ public final class LifeCycle {
         FamilyTreeNode node = villager.getRelationships().getFamilyEntry();
         if (node.gender() != gender) {
             node.setGender(gender);
-            FamilyTree.get(world).markDirty();
+            FamilyTree.get(world).setDirty();
         }
     }
 
     public static boolean isMenopausal(Entity entity) {
         if (!(entity instanceof VillagerEntityMCA villager) || villager.getGenetics().getGender() != Gender.FEMALE
-                || !(villager.getWorld() instanceof ServerWorld world)) {
+                || !(villager.level() instanceof ServerLevel world)) {
             return false;
         }
-        Long birth = LifeRegistry.get(world.getServer()).getBodyBirthDay(villager.getUuid());
+        Long birth = LifeRegistry.get(world.getServer()).getBodyBirthDay(villager.getUUID());
         return birth != null && ageInYears(birth, WorldCalendar.now(world).dayIndex()) >= MENOPAUSE_AGE;
     }
 
@@ -142,19 +141,19 @@ public final class LifeCycle {
         return Period.between(WorldCalendar.dateOfDay(birthDay), WorldCalendar.dateOfCalendarDay(reference)).getYears();
     }
 
-    private static boolean isNewborn(VillagerEntityMCA villager, ServerWorld world) {
-        return stageIndex(AgeState.byCurrentAge(villager.getBreedingAge())) == 0 && hasLivingParent(villager, world);
+    private static boolean isNewborn(VillagerEntityMCA villager, ServerLevel world) {
+        return stageIndex(AgeState.byCurrentAge(villager.getAge())) == 0 && hasLivingParent(villager, world);
     }
 
-    private static long initialBirthDay(VillagerEntityMCA villager, ServerWorld world, long today) {
-        int stage = stageIndex(AgeState.byCurrentAge(villager.getBreedingAge()));
-        Random random = world.getRandom();
+    private static long initialBirthDay(VillagerEntityMCA villager, ServerLevel world, long today) {
+        int stage = stageIndex(AgeState.byCurrentAge(villager.getAge()));
+        RandomSource random = world.getRandom();
         int[] range = INITIAL_AGE_RANGES[stage];
-        int years = FamilyAges.initialYears(world, villager.getUuid(), range[0], range[1], random);
+        int years = FamilyAges.initialYears(world, villager.getUUID(), range[0], range[1], random);
         return WorldCalendar.gameDayOf(WorldCalendar.calendarDay(today) - (long) (years * DAYS_PER_YEAR) - random.nextInt(365));
     }
 
-    private static boolean hasLivingParent(VillagerEntityMCA villager, ServerWorld world) {
+    private static boolean hasLivingParent(VillagerEntityMCA villager, ServerLevel world) {
         FamilyTree tree = FamilyTree.get(world);
         FamilyTreeNode node = villager.getRelationships().getFamilyEntry();
         return tree.getOrEmpty(node.father()).filter(p -> !p.isDeceased()).isPresent()
@@ -172,17 +171,17 @@ public final class LifeCycle {
     }
 
     private static void applyGrowth(VillagerEntityMCA villager, double years) {
-        int current = villager.getBreedingAge();
+        int current = villager.getAge();
         if (years >= STAGE_START_YEARS[4]) {
             if (current < 0) {
-                villager.setBreedingAge(0);
+                villager.setAge(0);
             }
             return;
         }
 
         int target = targetBreedingAge(years);
         if (Math.abs(current - target) > GROWTH_TOLERANCE) {
-            villager.setBreedingAge(target);
+            villager.setAge(target);
         }
     }
 

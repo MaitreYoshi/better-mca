@@ -3,26 +3,26 @@ package com.maitreyoshi.mcavie.life;
 import net.mca.entity.VillagerEntityMCA;
 import net.mca.server.world.data.Village;
 import net.mca.server.world.data.VillageManager;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.mob.Monster;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
-import net.minecraft.nbt.NbtHelper;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.registry.RegistryKey;
-import net.minecraft.registry.RegistryKeys;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.GlobalPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.GlobalPos;
-import net.minecraft.world.PersistentState;
-import net.minecraft.world.World;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -34,19 +34,19 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-public class MemorialRegistry extends PersistentState {
+public class MemorialRegistry extends SavedData {
     private static final String DATA_ID = "mca_vie_war_memorials";
 
     public record Fallen(TombstoneDetails details, String killer) {
-        NbtCompound write() {
-            NbtCompound nbt = new NbtCompound();
+        CompoundTag write() {
+            CompoundTag nbt = new CompoundTag();
             details.write(nbt);
             nbt.putString("killer", killer);
             return nbt;
         }
 
         @Nullable
-        static Fallen read(NbtCompound nbt) {
+        static Fallen read(CompoundTag nbt) {
             TombstoneDetails details = TombstoneDetails.read(nbt);
             return details == null ? null : new Fallen(details, nbt.getString("killer"));
         }
@@ -56,13 +56,13 @@ public class MemorialRegistry extends PersistentState {
     private final Map<Integer, Set<GlobalPos>> monuments = new HashMap<>();
 
     public static MemorialRegistry get(MinecraftServer server) {
-        return server.getOverworld().getPersistentStateManager().getOrCreate(MemorialRegistry::fromNbt, MemorialRegistry::new, DATA_ID);
+        return server.overworld().getDataStorage().computeIfAbsent(MemorialRegistry::fromNbt, MemorialRegistry::new, DATA_ID);
     }
 
-    private static List<Fallen> readList(NbtCompound nbt) {
+    private static List<Fallen> readList(CompoundTag nbt) {
         List<Fallen> list = new ArrayList<>();
-        for (NbtElement element : nbt.getList("fallen", NbtElement.COMPOUND_TYPE)) {
-            Fallen entry = Fallen.read((NbtCompound) element);
+        for (Tag element : nbt.getList("fallen", Tag.TAG_COMPOUND)) {
+            Fallen entry = Fallen.read((CompoundTag) element);
             if (entry != null) {
                 list.add(entry);
             }
@@ -70,17 +70,17 @@ public class MemorialRegistry extends PersistentState {
         return list;
     }
 
-    private static MemorialRegistry fromNbt(NbtCompound nbt) {
+    private static MemorialRegistry fromNbt(CompoundTag nbt) {
         MemorialRegistry registry = new MemorialRegistry();
-        NbtCompound villages = nbt.getCompound("villages");
-        for (String key : villages.getKeys()) {
+        CompoundTag villages = nbt.getCompound("villages");
+        for (String key : villages.getAllKeys()) {
             int id = Integer.parseInt(key);
-            NbtCompound village = villages.getCompound(key);
+            CompoundTag village = villages.getCompound(key);
             List<Fallen> list = readList(village);
             Set<GlobalPos> set = new LinkedHashSet<>();
-            for (NbtElement element : village.getList("monuments", NbtElement.COMPOUND_TYPE)) {
-                NbtCompound pos = (NbtCompound) element;
-                set.add(GlobalPos.create(RegistryKey.of(RegistryKeys.WORLD, new Identifier(pos.getString("dim"))), NbtHelper.toBlockPos(pos)));
+            for (Tag element : village.getList("monuments", Tag.TAG_COMPOUND)) {
+                CompoundTag pos = (CompoundTag) element;
+                set.add(GlobalPos.of(ResourceKey.create(Registries.DIMENSION, new ResourceLocation(pos.getString("dim"))), NbtUtils.readBlockPos(pos)));
                 list.addAll(readList(pos));
             }
             registry.fallen.put(id, list);
@@ -90,19 +90,19 @@ public class MemorialRegistry extends PersistentState {
     }
 
     @Override
-    public NbtCompound writeNbt(NbtCompound nbt) {
-        NbtCompound villages = new NbtCompound();
+    public CompoundTag save(CompoundTag nbt) {
+        CompoundTag villages = new CompoundTag();
         Set<Integer> ids = new java.util.HashSet<>(fallen.keySet());
         ids.addAll(monuments.keySet());
         for (int id : ids) {
-            NbtCompound village = new NbtCompound();
-            NbtList list = new NbtList();
+            CompoundTag village = new CompoundTag();
+            ListTag list = new ListTag();
             fallen.getOrDefault(id, List.of()).forEach(entry -> list.add(entry.write()));
             village.put("fallen", list);
-            NbtList positions = new NbtList();
+            ListTag positions = new ListTag();
             for (GlobalPos pos : monuments.getOrDefault(id, Set.of())) {
-                NbtCompound tag = NbtHelper.fromBlockPos(pos.getPos());
-                tag.putString("dim", pos.getDimension().getValue().toString());
+                CompoundTag tag = NbtUtils.writeBlockPos(pos.pos());
+                tag.putString("dim", pos.dimension().location().toString());
                 positions.add(tag);
             }
             village.put("monuments", positions);
@@ -112,10 +112,10 @@ public class MemorialRegistry extends PersistentState {
         return nbt;
     }
 
-    public List<Fallen> fallen(int village, World world, BlockPos pos, int capacity) {
+    public List<Fallen> fallen(int village, Level world, BlockPos pos, int capacity) {
         List<Fallen> all = fallen.getOrDefault(village, List.of());
         Set<GlobalPos> set = monuments.getOrDefault(village, Set.of());
-        GlobalPos target = GlobalPos.create(world.getRegistryKey(), pos);
+        GlobalPos target = GlobalPos.of(world.dimension(), pos);
         int i = 0;
         for (GlobalPos p : set) {
             if (p.equals(target)) {
@@ -127,43 +127,43 @@ public class MemorialRegistry extends PersistentState {
         return List.of();
     }
 
-    public void addMonument(int village, World world, BlockPos pos) {
-        if (monuments.computeIfAbsent(village, k -> new LinkedHashSet<>()).add(GlobalPos.create(world.getRegistryKey(), pos))) {
-            markDirty();
+    public void addMonument(int village, Level world, BlockPos pos) {
+        if (monuments.computeIfAbsent(village, k -> new LinkedHashSet<>()).add(GlobalPos.of(world.dimension(), pos))) {
+            setDirty();
         }
     }
 
     public void refresh(MinecraftServer server, int village) {
         for (GlobalPos pos : monuments.getOrDefault(village, Set.of())) {
-            ServerWorld target = server.getWorld(pos.getDimension());
-            if (target != null && target.isChunkLoaded(pos.getPos())) {
-                BlockState state = target.getBlockState(pos.getPos());
-                target.updateListeners(pos.getPos(), state, state, Block.NOTIFY_ALL);
+            ServerLevel target = server.getLevel(pos.dimension());
+            if (target != null && target.hasChunkAt(pos.pos())) {
+                BlockState state = target.getBlockState(pos.pos());
+                target.sendBlockUpdated(pos.pos(), state, state, Block.UPDATE_ALL);
             }
         }
     }
 
-    public void removeMonument(int village, World world, BlockPos pos) {
+    public void removeMonument(int village, Level world, BlockPos pos) {
         Set<GlobalPos> set = monuments.get(village);
-        if (set != null && set.remove(GlobalPos.create(world.getRegistryKey(), pos))) {
-            markDirty();
+        if (set != null && set.remove(GlobalPos.of(world.dimension(), pos))) {
+            setDirty();
         }
     }
 
     @Nullable
-    public static Text killer(DamageSource cause) {
-        Entity attacker = cause.getAttacker();
-        if (attacker instanceof PlayerEntity player) {
-            return Text.literal(player.getGameProfile().getName());
+    public static Component killer(DamageSource cause) {
+        Entity attacker = cause.getEntity();
+        if (attacker instanceof Player player) {
+            return Component.literal(player.getGameProfile().getName());
         }
-        if (attacker instanceof Monster) {
-            return attacker.getType().getName();
+        if (attacker instanceof Enemy) {
+            return attacker.getType().getDescription();
         }
         return null;
     }
 
-    public static boolean died(VillagerEntityMCA villager, ServerWorld world, DamageSource cause) {
-        Text killer = killer(cause);
+    public static boolean died(VillagerEntityMCA villager, ServerLevel world, DamageSource cause) {
+        Component killer = killer(cause);
         if (killer == null) {
             return false;
         }
@@ -174,7 +174,7 @@ public class MemorialRegistry extends PersistentState {
         }
         MinecraftServer server = world.getServer();
         LifeRegistry life = LifeRegistry.get(server);
-        TombstoneDetails details = TombstoneDetails.of(villager, world, life.getBirthDay(villager.getUuid()),
+        TombstoneDetails details = TombstoneDetails.of(villager, world, life.getBirthDay(villager.getUUID()),
                 com.maitreyoshi.mcavie.calendar.WorldCalendar.now(world).dayIndex());
         int id = village.get().getId();
         MemorialRegistry registry = get(server);
@@ -182,21 +182,21 @@ public class MemorialRegistry extends PersistentState {
             return false;
         }
         List<Fallen> list = registry.fallen.computeIfAbsent(id, k -> new ArrayList<>());
-        list.removeIf(entry -> entry.details().person().equals(villager.getUuid()));
-        list.add(new Fallen(details, Text.Serializer.toJson(killer)));
-        registry.markDirty();
-        Text message = Text.translatable("block.mca_vie.war_memorial.added", details.firstName()
+        list.removeIf(entry -> entry.details().person().equals(villager.getUUID()));
+        list.add(new Fallen(details, Component.Serializer.toJson(killer)));
+        registry.setDirty();
+        Component message = Component.translatable("block.mca_vie.war_memorial.added", details.firstName()
                 + (details.lastName().isEmpty() ? "" : " " + details.lastName()), village.get().getName());
         registry.refresh(server, id);
-        Set<net.minecraft.server.network.ServerPlayerEntity> told = new HashSet<>();
+        Set<net.minecraft.server.level.ServerPlayer> told = new HashSet<>();
         for (GlobalPos pos : registry.monuments.getOrDefault(id, Set.of())) {
-            ServerWorld target = server.getWorld(pos.getDimension());
-            if (target != null && target.isChunkLoaded(pos.getPos())) {
-                target.playSound(null, pos.getPos(), net.minecraft.sound.SoundEvents.BLOCK_BELL_USE, net.minecraft.sound.SoundCategory.BLOCKS, 1.5f, 0.6f);
-                told.addAll(target.getPlayers(p -> p.squaredDistanceTo(pos.getPos().toCenterPos()) < 64 * 64));
+            ServerLevel target = server.getLevel(pos.dimension());
+            if (target != null && target.hasChunkAt(pos.pos())) {
+                target.playSound(null, pos.pos(), net.minecraft.sounds.SoundEvents.BELL_BLOCK, net.minecraft.sounds.SoundSource.BLOCKS, 1.5f, 0.6f);
+                told.addAll(target.getPlayers(p -> p.distanceToSqr(pos.pos().getCenter()) < 64 * 64));
             }
         }
-        told.forEach(p -> p.sendMessage(message.copy().formatted(net.minecraft.util.Formatting.GRAY, net.minecraft.util.Formatting.ITALIC)));
+        told.forEach(p -> p.sendSystemMessage(message.copy().withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC)));
         return true;
     }
 }

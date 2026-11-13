@@ -4,13 +4,13 @@ import com.maitreyoshi.mcavie.SurnameText;
 import com.maitreyoshi.mcavie.client.MCAVieClient;
 import com.maitreyoshi.mcavie.client.SurnameFieldHolder;
 import net.mca.client.gui.NameBabyScreen;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.Element;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.AbstractWidget;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.components.events.GuiEventListener;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -29,43 +29,43 @@ public abstract class NameBabyScreenMixin extends Screen implements SurnameField
     private static final int ROW = 24;
 
     @Shadow(remap = false)
-    private TextFieldWidget babyNameTextField;
+    private EditBox babyNameTextField;
 
     @Shadow(remap = false)
     @Final
-    private PlayerEntity player;
+    private Player player;
 
     @Unique
     @Nullable
-    private TextFieldWidget mcavie$surnameField;
+    private EditBox mcavie$surnameField;
 
     @Unique
     private boolean mcavie$surnameFocused;
 
-    protected NameBabyScreenMixin(Text title) {
+    protected NameBabyScreenMixin(Component title) {
         super(title);
     }
 
     @Inject(method = "init", at = @At("TAIL"))
     private void mcavie$addSurnameField(CallbackInfo ci) {
-        babyNameTextField.setPlaceholder(Text.translatable("gui.mca_vie.first_name"));
+        babyNameTextField.setHint(Component.translatable("gui.mca_vie.first_name"));
         int x = width / 2 - 100;
         int y = height / 2 - 20 + ROW;
-        for (Element element : new ArrayList<>(children())) {
-            if (element instanceof ClickableWidget widget && widget.getY() >= y) {
+        for (GuiEventListener element : new ArrayList<>(children())) {
+            if (element instanceof AbstractWidget widget && widget.getY() >= y) {
                 widget.setY(widget.getY() + ROW);
             }
         }
-        String previous = mcavie$surnameField == null ? "" : mcavie$surnameField.getText();
-        TextFieldWidget field = new TextFieldWidget(textRenderer, x, y, 200, 20, Text.translatable("gui.mca_vie.surname"));
+        String previous = mcavie$surnameField == null ? "" : mcavie$surnameField.getValue();
+        EditBox field = new EditBox(font, x, y, 200, 20, Component.translatable("gui.mca_vie.surname"));
         field.setMaxLength(SurnameText.MAX_LENGTH);
-        field.setPlaceholder(Text.translatable("gui.mca_vie.surname"));
-        field.setText(previous);
+        field.setHint(Component.translatable("gui.mca_vie.surname"));
+        field.setValue(previous);
         mcavie$surnameField = field;
         mcavie$surnameFocused = false;
-        addDrawableChild(field);
+        addRenderableWidget(field);
         if (previous.isEmpty()) {
-            MCAVieClient.requestBabySurname(player.getInventory().selectedSlot);
+            MCAVieClient.requestBabySurname(player.getInventory().selected);
         }
     }
 
@@ -92,7 +92,7 @@ public abstract class NameBabyScreenMixin extends Screen implements SurnameField
     }
 
     @Inject(method = "render", at = @At("TAIL"))
-    private void mcavie$keepSurnameFocus(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    private void mcavie$keepSurnameFocus(GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         mcavie$applyFocus();
     }
 
@@ -113,7 +113,7 @@ public abstract class NameBabyScreenMixin extends Screen implements SurnameField
     @ModifyArg(method = "lambda$init$0", remap = false, index = 1,
             at = @At(value = "INVOKE", target = "Lnet/mca/network/c2s/BabyNamingVillagerMessage;<init>(ILjava/lang/String;)V"))
     private String mcavie$appendSurname(String firstName) {
-        String surname = mcavie$surnameField == null ? "" : SurnameText.sanitize(mcavie$surnameField.getText());
+        String surname = mcavie$surnameField == null ? "" : SurnameText.sanitize(mcavie$surnameField.getValue());
         if (firstName.isBlank() || surname.isEmpty()) {
             return firstName;
         }
@@ -123,13 +123,13 @@ public abstract class NameBabyScreenMixin extends Screen implements SurnameField
     @Override
     @Nullable
     public String mcavie$getSurname() {
-        return mcavie$surnameField == null ? null : mcavie$surnameField.getText();
+        return mcavie$surnameField == null ? null : mcavie$surnameField.getValue();
     }
 
     @Override
     public void mcavie$setSurname(String surname) {
-        if (mcavie$surnameField != null && mcavie$surnameField.getText().isBlank()) {
-            mcavie$surnameField.setText(surname);
+        if (mcavie$surnameField != null && mcavie$surnameField.getValue().isBlank()) {
+            mcavie$surnameField.setValue(surname);
         }
     }
 }

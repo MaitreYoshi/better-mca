@@ -1,11 +1,6 @@
 package com.maitreyoshi.mcavie.phone.client;
 
 import dev.architectury.platform.Platform;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.sound.SoundEvent;
-import net.minecraft.sound.SoundEvents;
-
 import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
@@ -17,6 +12,10 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.sounds.SoundEvent;
+import net.minecraft.sounds.SoundEvents;
 
 /** Préférences locales du téléphone (côté client, partagées par tous les téléphones du joueur). */
 public final class PhoneSettings {
@@ -124,12 +123,12 @@ public final class PhoneSettings {
 
     private static SoundEvent sound(int index) {
         return switch (index) {
-            case 1 -> SoundEvents.BLOCK_NOTE_BLOCK_CHIME.value();
-            case 2 -> SoundEvents.BLOCK_NOTE_BLOCK_HARP.value();
-            case 3 -> SoundEvents.BLOCK_NOTE_BLOCK_XYLOPHONE.value();
-            case 4 -> SoundEvents.BLOCK_NOTE_BLOCK_PLING.value();
-            case 5 -> SoundEvents.BLOCK_AMETHYST_BLOCK_CHIME;
-            default -> SoundEvents.BLOCK_NOTE_BLOCK_BELL.value();
+            case 1 -> SoundEvents.NOTE_BLOCK_CHIME.value();
+            case 2 -> SoundEvents.NOTE_BLOCK_HARP.value();
+            case 3 -> SoundEvents.NOTE_BLOCK_XYLOPHONE.value();
+            case 4 -> SoundEvents.NOTE_BLOCK_PLING.value();
+            case 5 -> SoundEvents.AMETHYST_BLOCK_CHIME;
+            default -> SoundEvents.NOTE_BLOCK_BELL.value();
         };
     }
 
@@ -139,9 +138,9 @@ public final class PhoneSettings {
         if (mode == MODE_SILENT) {
             return;
         }
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (mode == MODE_VIBRATE) {
-            client.getSoundManager().play(PositionedSoundInstance.master(SoundEvents.BLOCK_NOTE_BLOCK_DIDGERIDOO.value(), 0.5f, 0.5f));
+            client.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_DIDGERIDOO.value(), 0.5f, 0.5f));
             return;
         }
         preview(kind == KIND_REMINDER ? reminderSound : messageSound, kind);
@@ -153,14 +152,14 @@ public final class PhoneSettings {
         if (mode == MODE_SILENT || mode == MODE_VIBRATE) {
             return;
         }
-        MinecraftClient.getInstance().getSoundManager().play(PositionedSoundInstance.master(SoundEvents.UI_BUTTON_CLICK.value(), 1.6f, 0.2f));
+        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK.value(), 1.6f, 0.2f));
     }
 
     public static void preview(int index, int kind) {
-        MinecraftClient.getInstance().getSoundManager().play(PositionedSoundInstance.master(sound(index), kind == KIND_REMINDER ? 1.2f : 1.6f, 0.8f));
+        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(sound(index), kind == KIND_REMINDER ? 1.2f : 1.6f, 0.8f));
     }
 
     public static void previewVibrate() {
-        MinecraftClient.getInstance().getSoundManager().play(PositionedSoundInstance.master(SoundEvents.BLOCK_NOTE_BLOCK_DIDGERIDOO.value(), 0.5f, 0.5f));
+        Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_DIDGERIDOO.value(), 0.5f, 0.5f));
     }
 }

@@ -13,8 +13,8 @@ import com.maitreyoshi.mcavie.work.WorkRegistry;
 import net.mca.entity.ai.relationship.RelationshipState;
 import net.mca.server.world.data.FamilyTree;
 import net.mca.server.world.data.FamilyTreeNode;
+import net.minecraft.Util;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.Util;
 import org.jetbrains.annotations.Nullable;
 
 import java.text.Normalizer;

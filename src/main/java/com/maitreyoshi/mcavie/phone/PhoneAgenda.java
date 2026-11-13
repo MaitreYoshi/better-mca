@@ -4,11 +4,10 @@ import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.compat.ServerTickEvents;
 import com.maitreyoshi.mcavie.phone.PhoneRegistry.AgendaEvent;
 import com.maitreyoshi.mcavie.phone.PhoneRegistry.Phone;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.server.level.ServerPlayer;
 import java.time.LocalDate;
 
 // Rappels de l'agenda : dès que le jour du calendrier change, prévient le propriétaire (s'il est connecté)
@@ -22,7 +21,7 @@ public final class PhoneAgenda {
 
     public static void register() {
         ServerTickEvents.END_SERVER_TICK.register(server -> {
-            if (server.getTicks() % CHECK_INTERVAL == 0 && server.getOverworld() != null) {
+            if (server.getTickCount() % CHECK_INTERVAL == 0 && server.overworld() != null) {
                 check(server);
             }
         });
@@ -52,7 +51,7 @@ public final class PhoneAgenda {
     }
 
     private static void check(MinecraftServer server) {
-        long today = WorldCalendar.exactCalendarDay(server.getOverworld());
+        long today = WorldCalendar.exactCalendarDay(server.overworld());
         PhoneRegistry registry = PhoneRegistry.get(server);
         boolean dirty = false;
         for (Phone phone : registry.all().values()) {
@@ -64,7 +63,7 @@ public final class PhoneAgenda {
                 dirty = true;
                 continue;
             }
-            ServerPlayerEntity player = server.getPlayerManager().getPlayer(phone.owner);
+            ServerPlayer player = server.getPlayerList().getPlayer(phone.owner);
             if (player == null) {
                 continue;
             }
@@ -84,17 +83,17 @@ public final class PhoneAgenda {
             dirty = true;
         }
         if (dirty) {
-            registry.markDirty();
+            registry.setDirty();
         }
     }
 
-    private static void notify(ServerPlayerEntity player, AgendaEvent event, long day, long today) {
+    private static void notify(ServerPlayer player, AgendaEvent event, long day, long today) {
         LocalDate date = date(day);
-        Text when = day == today
-                ? Text.translatable("msg.mca_vie.phone.agenda_today")
-                : Text.literal(date.getDayOfMonth() + "/" + date.getMonthValue());
+        Component when = day == today
+                ? Component.translatable("msg.mca_vie.phone.agenda_today")
+                : Component.literal(date.getDayOfMonth() + "/" + date.getMonthValue());
         String key = event.yearly() ? "msg.mca_vie.phone.agenda_reminder_yearly" : "msg.mca_vie.phone.agenda_reminder";
-        player.sendMessage(Text.translatable(key, when, Text.literal(event.title()).formatted(Formatting.WHITE)).formatted(Formatting.GOLD), false);
-        player.sendMessage(Text.translatable("msg.mca_vie.phone.agenda_overlay", event.title()), true);
+        player.displayClientMessage(Component.translatable(key, when, Component.literal(event.title()).withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.GOLD), false);
+        player.displayClientMessage(Component.translatable("msg.mca_vie.phone.agenda_overlay", event.title()), true);
     }
 }

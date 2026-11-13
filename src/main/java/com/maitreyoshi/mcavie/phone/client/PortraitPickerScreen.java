@@ -2,14 +2,13 @@ package com.maitreyoshi.mcavie.phone.client;
 
 import com.maitreyoshi.mcavie.phone.PhoneNetwork;
 import com.maitreyoshi.mcavie.tree.client.TreeScreen;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.screen.ScreenTexts;
-import net.minecraft.text.Text;
-
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.CommonComponents;
+import net.minecraft.network.chat.Component;
 
 public class PortraitPickerScreen extends Screen {
     private static final int CELL_W = 128;
@@ -25,7 +24,7 @@ public class PortraitPickerScreen extends Screen {
     private double scroll;
 
     public PortraitPickerScreen(TreeScreen parent, PhoneClient.State state, UUID person, String name) {
-        super(Text.translatable("gui.mca_vie.portrait.title", name));
+        super(Component.translatable("gui.mca_vie.portrait.title", name));
         this.parent = parent;
         this.number = state.number();
         this.gallery = state.gallery();
@@ -33,20 +32,20 @@ public class PortraitPickerScreen extends Screen {
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 
     @Override
-    public void close() {
-        assert client != null;
-        client.setScreen(parent);
+    public void onClose() {
+        assert minecraft != null;
+        minecraft.setScreen(parent);
     }
 
     @Override
     protected void init() {
-        addDrawableChild(ButtonWidget.builder(ScreenTexts.CANCEL, b -> close())
-                .dimensions(width / 2 - 50, height - BOTTOM + 7, 100, 20).build());
+        addRenderableWidget(Button.builder(CommonComponents.GUI_CANCEL, b -> onClose())
+                .bounds(width / 2 - 50, height - BOTTOM + 7, 100, 20).build());
     }
 
     private int columns() {
@@ -79,13 +78,13 @@ public class PortraitPickerScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
-        context.drawCenteredTextWithShadow(textRenderer, title, width / 2, 10, 0xFFFFFF);
+        context.drawCenteredString(font, title, width / 2, 10, 0xFFFFFF);
         if (gallery.isEmpty()) {
-            context.drawCenteredTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.phone.no_photos"), width / 2, height / 2 - 4, 0xA0A0A0);
+            context.drawCenteredString(font, Component.translatable("gui.mca_vie.phone.no_photos"), width / 2, height / 2 - 4, 0xA0A0A0);
         } else {
-            context.drawCenteredTextWithShadow(textRenderer, Text.translatable("gui.mca_vie.portrait.hint"), width / 2, 20, 0xA0A0A0);
+            context.drawCenteredString(font, Component.translatable("gui.mca_vie.portrait.hint"), width / 2, 20, 0xA0A0A0);
         }
         int columns = columns();
         int left = left();
@@ -102,11 +101,11 @@ public class PortraitPickerScreen extends Screen {
             if (picture == null) {
                 context.fill(x, y, x + CELL_W, y + CELL_H, 0xFF202030);
             } else {
-                context.drawTexture(picture.texture(), x, y, CELL_W, CELL_H, 0, 0, picture.width(), picture.height(), picture.width(), picture.height());
+                context.blit(picture.texture(), x, y, CELL_W, CELL_H, 0, 0, picture.width(), picture.height(), picture.width(), picture.height());
             }
             context.fill(x, y, x + side, y + CELL_H, 0x90000000);
             context.fill(x + CELL_W - side, y, x + CELL_W, y + CELL_H, 0x90000000);
-            context.drawBorder(x + side, y, CELL_H, CELL_H, i == hovered ? 0xFFFFFF55 : 0x80FFFFFF);
+            context.renderOutline(x + side, y, CELL_H, CELL_H, i == hovered ? 0xFFFFFF55 : 0x80FFFFFF);
         }
         context.disableScissor();
         super.render(context, mouseX, mouseY, delta);
@@ -123,10 +122,10 @@ public class PortraitPickerScreen extends Screen {
         }
         UUID photo = gallery.get(index).id();
         PhoneClient.send(number, PhoneNetwork.OP_SET_PORTRAIT, buf -> {
-            buf.writeUuid(person);
-            buf.writeUuid(photo);
+            buf.writeUUID(person);
+            buf.writeUUID(photo);
         });
-        close();
+        onClose();
         parent.refreshPortraits();
         return true;
     }
