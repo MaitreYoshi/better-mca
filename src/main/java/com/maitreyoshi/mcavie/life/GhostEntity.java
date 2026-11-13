@@ -33,12 +33,15 @@ import net.minecraft.world.phys.Vec3;
 
 /** Fantôme d'un défunt : se promène la nuit autour de son autel, intouchable, et s'efface à l'aube. */
 public class GhostEntity extends PathfinderMob {
-    private static final EntityDataAccessor<CompoundTag> LOOK = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.COMPOUND_TAG);
+    private static final EntityDataAccessor<String> LOOK = SynchedEntityData.defineId(GhostEntity.class, EntityDataSerializers.STRING);
+    @Nullable
+    private CompoundTag lookCache;
+    private String lookCacheKey = "";
     public static final int RANGE = 48;
     private static final int TALKS = 10;
     private static final int ALONE = 6;
     private static final SoundEvent[] WHISPERS = {SoundEvents.VILLAGER_AMBIENT, SoundEvents.ALLAY_AMBIENT_WITHOUT_ITEM,
-            SoundEvents.WANDERING_TRADER_AMBIENT, SoundEvents.SOUL_ESCAPE};
+            SoundEvents.WANDERING_TRADER_AMBIENT, SoundEvents.SOUL_ESCAPE.value()};
 
     @Nullable
     private Vec3 drift;
@@ -70,18 +73,27 @@ public class GhostEntity extends PathfinderMob {
     void setup(CompoundTag look, UUID person, BlockPos altar) {
         this.person = person;
         this.altar = altar;
-        entityData.set(LOOK, look);
-        restrictTo(altar, RANGE);
+        entityData.set(LOOK, look.toString());
+        setHomeTo(altar, RANGE);
     }
 
     public CompoundTag look() {
-        return entityData.get(LOOK);
+        String snbt = entityData.get(LOOK);
+        if (lookCache == null || !snbt.equals(lookCacheKey)) {
+            try {
+                lookCache = snbt.isEmpty() ? new CompoundTag() : net.minecraft.nbt.TagParser.parseCompoundFully(snbt);
+            } catch (Exception e) {
+                lookCache = new CompoundTag();
+            }
+            lookCacheKey = snbt;
+        }
+        return lookCache;
     }
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
-        builder.define(LOOK, new CompoundTag());
+        builder.define(LOOK, "");
     }
 
     @Override
@@ -146,8 +158,7 @@ public class GhostEntity extends PathfinderMob {
     }
 
     private Component name() {
-        String json = look().getStringOr("CustomName", "");
-        Component name = json.isEmpty() ? null : Component.Serializer.fromJson(json);
+        Component name = look().read("CustomName", net.minecraft.network.chat.ComponentSerialization.CODEC).orElse(null);
         return name == null ? Component.translatable("entity.mca_vie.ghost") : name;
     }
 
@@ -224,8 +235,8 @@ public class GhostEntity extends PathfinderMob {
     }
 
     @Override
-    public boolean hurt(DamageSource source, float amount) {
-        return source.is(net.minecraft.world.damagesource.DamageTypes.FELL_OUT_OF_WORLD) && super.hurt(source, amount);
+    public boolean hurtServer(net.minecraft.server.level.ServerLevel level, DamageSource source, float amount) {
+        return source.is(net.minecraft.world.damagesource.DamageTypes.FELL_OUT_OF_WORLD) && super.hurtServer(level, source, amount);
     }
 
     @Override
@@ -234,7 +245,7 @@ public class GhostEntity extends PathfinderMob {
     }
 
     @Override
-    public boolean canBeLeashed(Player player) {
+    public boolean canBeLeashed() {
         return false;
     }
 
@@ -244,18 +255,18 @@ public class GhostEntity extends PathfinderMob {
     }
 
     @Override
-    public boolean causeFallDamage(float fallDistance, float damageMultiplier, DamageSource source) {
+    public boolean causeFallDamage(double fallDistance, float damageMultiplier, DamageSource source) {
         return false;
     }
 
     // Jamais sauvegardé : l'autel le fait revenir chaque nuit.
     @Override
-    public boolean save(CompoundTag nbt) {
+    public boolean save(net.minecraft.world.level.storage.ValueOutput output) {
         return false;
     }
 
     @Override
-    public boolean saveAsPassenger(CompoundTag nbt) {
+    public boolean saveAsPassenger(net.minecraft.world.level.storage.ValueOutput output) {
         return false;
     }
 }

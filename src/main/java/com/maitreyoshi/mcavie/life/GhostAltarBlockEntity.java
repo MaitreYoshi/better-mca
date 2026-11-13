@@ -52,7 +52,7 @@ public class GhostAltarBlockEntity extends BlockEntity {
         BlockPos spawn = pos.relative(facing);
         GhostEntity ghost = new GhostEntity(TombstoneBlocks.GHOST, world);
         ghost.setup(look, altar.person, pos);
-        ghost.moveTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, facing.toYRot(), 0);
+        ghost.snapTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, facing.toYRot(), 0);
         if (server.addFreshEntity(ghost)) {
             altar.ghost = ghost.getUUID();
         }

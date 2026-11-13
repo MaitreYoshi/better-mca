@@ -274,7 +274,7 @@ public class VaultBlock extends TombstoneBlock {
     }
 
     public static boolean silkTouch(Player player) {
-        return EnchantmentHelper.getItemEnchantmentLevel(Enchantments.SILK_TOUCH, player.getMainHandItem()) > 0;
+        return EnchantmentHelper.getItemEnchantmentLevel(player.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(Enchantments.SILK_TOUCH), player.getMainHandItem()) > 0;
     }
 
     @Override
@@ -298,15 +298,15 @@ public class VaultBlock extends TombstoneBlock {
             ItemStack stack = new ItemStack(this);
             if (occupied) {
                 ListTag slots = new ListTag();
-                ListTag lore = new ListTag();
+                java.util.List<Component> lore = new java.util.ArrayList<>();
                 for (int part : SLOTS) {
                     Optional<Data> data = Data.of(world.getBlockEntity(partPos(master, facing, part)));
-                    slots.add(data.map(BlockEntity::saveWithoutMetadata).orElseGet(CompoundTag::new));
+                    slots.add(data.map(be -> be.saveWithoutMetadata(world.registryAccess())).orElseGet(CompoundTag::new));
                     data.filter(Data::hasEntity).flatMap(Data::getEntityName)
-                            .ifPresent(name -> lore.add(StringTag.valueOf(Component.Serializer.toJson(Component.literal(name.getString()).withStyle(ChatFormatting.GRAY)))));
+                            .ifPresent(name -> lore.add(Component.literal(name).withStyle(ChatFormatting.GRAY)));
                 }
-                stack.getOrCreateTag().put(SLOTS_KEY, slots);
-                stack.getOrCreateTagElement(ItemStack.TAG_DISPLAY).put(ItemStack.TAG_LORE, lore);
+                com.maitreyoshi.mcavie.compat.Nbt.update(stack, tag -> tag.put(SLOTS_KEY, slots));
+                stack.set(net.minecraft.core.component.DataComponents.LORE, new net.minecraft.world.item.component.ItemLore(lore));
             }
             Block.popResource(world, pos, stack);
         }
@@ -318,7 +318,7 @@ public class VaultBlock extends TombstoneBlock {
             BlockPos target = partPos(master, facing, SLOTS[i]);
             CompoundTag nbt = slots.getCompoundOrEmpty(i);
             Data.of(world.getBlockEntity(target)).ifPresent(data -> {
-                data.load(nbt);
+                data.loadWithComponents(com.maitreyoshi.mcavie.compat.Nbt.input(nbt, world.registryAccess()));
                 data.setChanged();
                 GraveyardManager.get(world).setTombstoneState(target,
                         data.hasEntity() ? GraveyardManager.TombstoneState.FILLED : GraveyardManager.TombstoneState.EMPTY);

@@ -79,7 +79,7 @@ final class DevTestCommand {
                             world.setBlockAndUpdate(tombPos, BlocksMCA.GRAVELLING_HEADSTONE.defaultBlockState());
                             TombstoneBlock.Data.of(world.getBlockEntity(tombPos)).ifPresent(tomb -> {
                                 tomb.setEntity(v);
-                                String name = tomb.getEntityName().map(Component::getString).orElse("(vide)");
+                                String name = tomb.getEntityName().orElse("(vide)");
                                 ctx.getSource().sendSuccess(() -> Component.literal("Tombe : " + name), false);
                             });
                             return 1;
@@ -421,7 +421,7 @@ final class DevTestCommand {
                             BlockPos center = world.getRespawnData().pos();
                             for (BlockPos p : BlockPos.betweenClosed(center.offset(-12, -4, -12), center.offset(12, 4, 12))) {
                                 TombstoneBlock.Data.of(world.getBlockEntity(p)).filter(TombstoneBlock.Data::hasEntity).ifPresent(tomb -> {
-                                    String line = "Tombe en " + p.toShortString() + " : " + tomb.getEntityName().map(Component::getString).orElse("?");
+                                    String line = "Tombe en " + p.toShortString() + " : " + tomb.getEntityName().orElse("?");
                                     ctx.getSource().sendSuccess(() -> Component.literal(line + "\n"), false);
                                 });
                             }

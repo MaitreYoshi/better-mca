@@ -78,7 +78,7 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
     }
 
     @Shadow(remap = false)
-    public abstract Optional<Component> getEntityName();
+    public abstract Optional<String> getEntityName();
 
     @Inject(method = "setEntity", at = @At("HEAD"), remap = false)
     private void mcavie$recordDates(@Nullable Entity entity, CallbackInfo ci) {
@@ -116,10 +116,10 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
     }
 
     @Inject(method = "getEntityName", at = @At("RETURN"), cancellable = true, remap = false)
-    private void mcavie$appendDates(CallbackInfoReturnable<Optional<Component>> cir) {
+    private void mcavie$appendDates(CallbackInfoReturnable<Optional<String>> cir) {
         if (mcavie$years != null) {
             String years = mcavie$years;
-            cir.setReturnValue(cir.getReturnValue().map(name -> Component.literal(name.getString() + " " + years)));
+            cir.setReturnValue(cir.getReturnValue().map(name -> name + " " + years));
         }
     }
 
@@ -127,7 +127,7 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
     private void mcavie$datesOnOwnLine(Function<Component, FlowingText> factory, CallbackInfoReturnable<FlowingText> cir) {
         if (computedName == null && mcavie$years != null) {
             String years = mcavie$years;
-            String name = getEntityName().map(Component::getString).orElse("");
+            String name = getEntityName().orElse("");
             if (name.endsWith(" " + years)) {
                 name = name.substring(0, name.length() - years.length() - 1);
             }

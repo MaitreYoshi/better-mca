@@ -85,8 +85,8 @@ public class Ghosts extends SavedData {
 
     /** Appelé à la mort d'un PNJ : on garde son apparence de ce moment-là. */
     public static void died(VillagerEntityMCA villager, ServerLevel world) {
-        CompoundTag nbt = new CompoundTag();
-        if (villager.saveAsPassenger(nbt)) {
+        CompoundTag nbt = Nbt.saveEntity(villager);
+        if (nbt != null) {
             get(world.getServer()).put(villager.getUUID(), strip(nbt));
         }
     }
@@ -119,7 +119,7 @@ public class Ghosts extends SavedData {
             if (be == null) {
                 continue;
             }
-            CompoundTag data = be.saveWithoutMetadata().getCompoundOrEmpty("entityData");
+            CompoundTag data = be.saveWithoutMetadata(world.registryAccess()).getCompoundOrEmpty("entityData");
             if (Nbt.hasUUID(data, "UUID") && missing.remove(Nbt.getUUID(data, "UUID"))) {
                 put(Nbt.getUUID(data, "UUID"), strip(data));
             }

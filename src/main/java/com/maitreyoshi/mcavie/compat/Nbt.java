@@ -109,4 +109,16 @@ public final class Nbt {
         }
         return new CompoundTag();
     }
+
+    /** Ancien entity.saveAsPassenger(nbt) : NBT complet de l'entité, ou null si elle ne se sauvegarde pas. */
+    public static CompoundTag saveEntity(net.minecraft.world.entity.Entity entity) {
+        net.minecraft.world.level.storage.TagValueOutput output = net.minecraft.world.level.storage.TagValueOutput.createWithContext(
+                net.minecraft.util.ProblemReporter.DISCARDING, entity.registryAccess());
+        return entity.saveAsPassenger(output) ? output.buildResult() : null;
+    }
+
+    /** Lecture 26.x d'un ancien CompoundTag (entity.load, blockEntity.loadWithComponents…). */
+    public static net.minecraft.world.level.storage.ValueInput input(CompoundTag tag, HolderLookup.Provider registries) {
+        return net.minecraft.world.level.storage.TagValueInput.create(net.minecraft.util.ProblemReporter.DISCARDING, registries, tag);
+    }
 }

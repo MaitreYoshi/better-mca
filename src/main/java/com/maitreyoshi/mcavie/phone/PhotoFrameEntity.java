@@ -34,7 +34,7 @@ import net.minecraft.world.phys.AABB;
 public class PhotoFrameEntity extends HangingEntity {
     public static final int MIN_SIZE = 1;
     public static final int MAX_SIZE = 64;
-    private static final EntityDataAccessor<Optional<UUID>> PHOTO = SynchedEntityData.defineId(PhotoFrameEntity.class, EntityDataSerializers.OPTIONAL_UUID);
+    private static final EntityDataAccessor<String> PHOTO = SynchedEntityData.defineId(PhotoFrameEntity.class, EntityDataSerializers.STRING);
     private static final EntityDataAccessor<Integer> WIDTH = SynchedEntityData.defineId(PhotoFrameEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> HEIGHT = SynchedEntityData.defineId(PhotoFrameEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<Integer> TOP = SynchedEntityData.defineId(PhotoFrameEntity.class, EntityDataSerializers.INT);
@@ -48,7 +48,7 @@ public class PhotoFrameEntity extends HangingEntity {
 
     public PhotoFrameEntity(Level world, BlockPos pos, Direction facing, Direction top, int width, int height, @Nullable UUID photo, String author, long date) {
         super(PhoneServer.PHOTO_FRAME, world, pos);
-        this.entityData.set(PHOTO, Optional.ofNullable(photo));
+        this.entityData.set(PHOTO, photo == null ? "" : photo.toString());
         this.entityData.set(WIDTH, clamp(width));
         this.entityData.set(HEIGHT, clamp(height));
         this.entityData.set(TOP, top.getAxis().isHorizontal() ? top.get2DDataValue() : 0);
@@ -76,7 +76,8 @@ public class PhotoFrameEntity extends HangingEntity {
 
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
-        builder.define(PHOTO, Optional.empty());
+        super.defineSynchedData(builder);
+        builder.define(PHOTO, "");
         builder.define(WIDTH, 4);
         builder.define(HEIGHT, 2);
         builder.define(TOP, 0);
@@ -84,7 +85,7 @@ public class PhotoFrameEntity extends HangingEntity {
 
     @Override
     public void onSyncedDataUpdated(EntityDataAccessor<?> data) {
-        if ((WIDTH.equals(data) || HEIGHT.equals(data) || TOP.equals(data)) && this.direction != null && this.pos != null) {
+        if ((WIDTH.equals(data) || HEIGHT.equals(data) || TOP.equals(data)) && this.pos != null) {
             recalculateBoundingBox();
         }
         super.onSyncedDataUpdated(data);
@@ -92,7 +93,8 @@ public class PhotoFrameEntity extends HangingEntity {
 
     @Nullable
     public UUID photo() {
-        return this.entityData.get(PHOTO).orElse(null);
+        String id = this.entityData.get(PHOTO);
+        return id.isEmpty() ? null : UUID.fromString(id);
     }
 
     public int widthHalves() {
@@ -104,30 +106,28 @@ public class PhotoFrameEntity extends HangingEntity {
     }
 
     public Direction facing() {
-        return this.direction;
+        return getDirection();
     }
 
     public Direction top() {
-        return this.direction.getAxis().isHorizontal() ? Direction.UP : Direction.from2DDataValue(this.entityData.get(TOP));
+        return getDirection().getAxis().isHorizontal() ? Direction.UP : Direction.from2DDataValue(this.entityData.get(TOP));
     }
 
     private Direction right() {
-        return this.direction.getAxis().isHorizontal() ? this.direction.getCounterClockWise() : top().getCounterClockWise();
+        return getDirection().getAxis().isHorizontal() ? getDirection().getCounterClockWise() : top().getCounterClockWise();
     }
 
-    @Override
     public int getWidth() {
         return 8 * widthHalves();
     }
 
-    @Override
     public int getHeight() {
         return 8 * heightHalves();
     }
 
     @Override
     protected void setDirection(Direction facing) {
-        this.direction = facing;
+        setDirectionRaw(facing);
         if (facing.getAxis().isHorizontal()) {
             setXRot(0.0f);
             setYRot(facing.get2DDataValue() * 90);
@@ -142,31 +142,37 @@ public class PhotoFrameEntity extends HangingEntity {
 
     @Override
     protected void recalculateBoundingBox() {
-        if (this.direction == null || this.pos == null) {
+        if (this.pos == null) {
             return;
         }
         Direction right = right();
         Direction up = top();
-        double x = this.pos.getX() + 0.5 - this.direction.getStepX() * 0.46875;
-        double y = this.pos.getY() + 0.5 - this.direction.getStepY() * 0.46875;
-        double z = this.pos.getZ() + 0.5 - this.direction.getStepZ() * 0.46875;
+        double x = this.pos.getX() + 0.5 - getDirection().getStepX() * 0.46875;
+        double y = this.pos.getY() + 0.5 - getDirection().getStepY() * 0.46875;
+        double z = this.pos.getZ() + 0.5 - getDirection().getStepZ() * 0.46875;
         setPosRaw(x, y, z);
         double hw = getWidth() / 32.0;
         double hh = getHeight() / 32.0;
         double depth = 1.0 / 32.0;
-        double ex = Math.abs(right.getStepX()) * hw + Math.abs(up.getStepX()) * hh + Math.abs(this.direction.getStepX()) * depth;
-        double ey = Math.abs(right.getStepY()) * hw + Math.abs(up.getStepY()) * hh + Math.abs(this.direction.getStepY()) * depth;
-        double ez = Math.abs(right.getStepZ()) * hw + Math.abs(up.getStepZ()) * hh + Math.abs(this.direction.getStepZ()) * depth;
+        double ex = Math.abs(right.getStepX()) * hw + Math.abs(up.getStepX()) * hh + Math.abs(getDirection().getStepX()) * depth;
+        double ey = Math.abs(right.getStepY()) * hw + Math.abs(up.getStepY()) * hh + Math.abs(getDirection().getStepY()) * depth;
+        double ez = Math.abs(right.getStepZ()) * hw + Math.abs(up.getStepZ()) * hh + Math.abs(getDirection().getStepZ()) * depth;
         setBoundingBox(new AABB(x - ex, y - ey, z - ez, x + ex, y + ey, z + ez));
     }
 
     @Override
-    public boolean survives() {
-        return supported(level(), this.pos, this.direction);
+    protected AABB calculateBoundingBox(BlockPos pos, Direction facing) {
+        recalculateBoundingBox();
+        return getBoundingBox();
     }
 
     @Override
-    public InteractionResult interact(Player player, InteractionHand hand) {
+    public boolean survives() {
+        return supported(level(), this.pos, getDirection());
+    }
+
+    @Override
+    public InteractionResult interact(Player player, InteractionHand hand, net.minecraft.world.phys.Vec3 location) {
         if (level().isClientSide()) {
             return InteractionResult.SUCCESS;
         }
@@ -193,15 +199,15 @@ public class PhotoFrameEntity extends HangingEntity {
     }
 
     @Override
-    public void dropItem(@Nullable Entity breaker) {
-        if (!level().getGameRules().getBoolean(GameRules.RULE_DOENTITYDROPS)) {
+    public void dropItem(net.minecraft.server.level.ServerLevel level, @Nullable Entity breaker) {
+        if (!level.getGameRules().get(GameRules.ENTITY_DROPS)) {
             return;
         }
         playSound(SoundEvents.PAINTING_BREAK, 1.0f, 1.0f);
         if (breaker instanceof Player player && player.getAbilities().instabuild) {
             return;
         }
-        spawnAtLocation(item());
+        spawnAtLocation(level, item());
     }
 
     @Override
@@ -231,7 +237,7 @@ public class PhotoFrameEntity extends HangingEntity {
         nbt.putInt("h", heightHalves());
         nbt.putString("author", author);
         nbt.putLong("date", date);
-        nbt.putByte("dir", (byte) this.direction.get3DDataValue());
+        nbt.putByte("dir", (byte) getDirection().get3DDataValue());
         nbt.putByte("top", this.entityData.get(TOP).byteValue());
     }
 
@@ -239,7 +245,7 @@ public class PhotoFrameEntity extends HangingEntity {
     public void readAdditionalSaveData(ValueInput mcavieInput) {
         CompoundTag nbt = Nbt.in(mcavieInput);
         if (Nbt.hasUUID(nbt, "photo")) {
-            this.entityData.set(PHOTO, Optional.of(Nbt.getUUID(nbt, "photo")));
+            this.entityData.set(PHOTO, Nbt.getUUID(nbt, "photo").toString());
         }
         if (nbt.contains("w")) {
             this.entityData.set(WIDTH, clamp(nbt.getIntOr("w", 0)));
@@ -257,18 +263,13 @@ public class PhotoFrameEntity extends HangingEntity {
     }
 
     @Override
-    public void moveTo(double x, double y, double z, float yaw, float pitch) {
+    public void snapTo(double x, double y, double z, float yaw, float pitch) {
         setPos(x, y, z);
     }
 
     @Override
-    public void lerpTo(double x, double y, double z, float yaw, float pitch, int interpolationSteps, boolean interpolate) {
-        setPos(x, y, z);
-    }
-
-    @Override
-    public Packet<ClientGamePacketListener> getAddEntityPacket() {
-        return new ClientboundAddEntityPacket(this, this.direction.get3DDataValue(), getPos());
+    public Packet<ClientGamePacketListener> getAddEntityPacket(net.minecraft.server.level.ServerEntity entity) {
+        return new ClientboundAddEntityPacket(this, getDirection().get3DDataValue(), getPos());
     }
 
     @Override
