@@ -171,7 +171,7 @@ public class RelationsScreen extends Screen {
         }
 
         if (hovered != null) {
-            context.renderComponentTooltip(font, tooltip(hovered, relations.today()), mouseX, mouseY);
+            context.setTooltipForNextFrame(font, tooltip(hovered, relations.today()), java.util.Optional.empty(), mouseX, mouseY);
         }
     }
 
@@ -185,11 +185,11 @@ public class RelationsScreen extends Screen {
         int full = score >= 0 ? 52 : 124;
         for (int i = 0; i < HEARTS; i++) {
             int hx = x + i * 9;
-            context.blit(ICONS, hx, y, 16, 0, 9, 9);
+            context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, ICONS, hx, y, 16, 0, 9, 9, 256, 256);
             if (halves >= i * 2 + 2) {
-                context.blit(ICONS, hx, y, full, 0, 9, 9);
+                context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, ICONS, hx, y, full, 0, 9, 9, 256, 256);
             } else if (halves == i * 2 + 1) {
-                context.blit(ICONS, hx, y, full + 9, 0, 9, 9);
+                context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, ICONS, hx, y, full + 9, 0, 9, 9, 256, 256);
             }
         }
     }

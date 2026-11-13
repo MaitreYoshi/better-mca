@@ -113,9 +113,9 @@ public class IllustratedPage extends Page {
     private static ItemStack stack(String id) {
         int at = id.indexOf('@');
         if (at < 0) {
-            return new ItemStack(BuiltInRegistries.ITEM.get(Identifier.parse(id)));
+            return new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(id)));
         }
-        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(Identifier.parse(id.substring(0, at))));
+        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(id.substring(0, at))));
         return PotionUtils.setPotion(stack, BuiltInRegistries.POTION.get(Identifier.parse(id.substring(at + 1))));
     }
 
@@ -127,7 +127,7 @@ public class IllustratedPage extends Page {
         if (image != null) {
             int h = 124;
             int w = imageWidth * h / imageHeight;
-            context.blit(image, left + (WIDTH - w) / 2, 28, w, h, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
+            context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, image, left + (WIDTH - w) / 2, 28, 0, 0, w, h, imageWidth, imageHeight, imageWidth, imageHeight);
             return;
         }
         Component title = Component.translatable(titleKey).withStyle(ChatFormatting.BOLD);
@@ -135,8 +135,8 @@ public class IllustratedPage extends Page {
         if (titleWidth > WIDTH) {
             float scale = WIDTH / (float) titleWidth;
             context.pose().pushMatrix();
-            context.pose().translate(left, 30 + 4 * (1 - scale), 0);
-            context.pose().scale(scale, scale, 1);
+            context.pose().translate(left, 30 + 4 * (1 - scale));
+            context.pose().scale(scale, scale);
             context.text(font, title, 0, 0, TITLE_COLOR, false);
             context.pose().popMatrix();
         } else {
@@ -154,8 +154,8 @@ public class IllustratedPage extends Page {
         }
         if (bigIcon != null) {
             context.pose().pushMatrix();
-            context.pose().translate(left + (WIDTH - 48) / 2f, y, 0);
-            context.pose().scale(3, 3, 1);
+            context.pose().translate(left + (WIDTH - 48) / 2f, y);
+            context.pose().scale(3, 3);
             context.item(stack(bigIcon), 0, 0);
             context.pose().popMatrix();
             y += 52;
@@ -227,7 +227,7 @@ public class IllustratedPage extends Page {
         }
 
         if (hovered != null && Language.getInstance().has(hovered.key + ".tip")) {
-            context.renderTooltip(font, font.split(Component.translatable(hovered.key + ".tip"), 170), mouseX, mouseY);
+            context.setTooltipForNextFrame(font, font.split(Component.translatable(hovered.key + ".tip"), 170), mouseX, mouseY);
         }
     }
 }

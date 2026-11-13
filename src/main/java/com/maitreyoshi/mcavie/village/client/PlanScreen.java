@@ -362,7 +362,7 @@ public class PlanScreen extends BlueprintScreen {
             send(VillageNetwork.NATURE, direction);
             return;
         }
-        int step = hasShiftDown() ? 1 : 5;
+        int step = net.minecraft.client.Minecraft.getInstance().hasShiftDown() ? 1 : 5;
         int value = ruleValues()[row] + direction * step;
         if (row == 0) {
             int max = Math.round(VillageRights.maxTaxes(VillageState.of(village).rank) * 100);
@@ -508,7 +508,7 @@ public class PlanScreen extends BlueprintScreen {
         FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeInt(village.getId());
         buf.writeUtf(item, 128);
-        buf.writeInt(hasShiftDown() ? 5 : 1);
+        buf.writeInt(net.minecraft.client.Minecraft.getInstance().hasShiftDown() ? 5 : 1);
         ClientPlayNetworking.send(VillageNetwork.ORDER, buf);
     }
 
@@ -698,7 +698,7 @@ public class PlanScreen extends BlueprintScreen {
         boolean trimmed = font.width(footer) > cw;
         context.text(font, Language.getInstance().getVisualOrder(font.substrByWidth(footer, cw)), cx, y, color);
         if (trimmed && mouseX >= cx && mouseX < cx + cw && mouseY >= y - 1 && mouseY < y + 10) {
-            context.renderTooltip(font, font.split(footer, 220), mouseX, mouseY);
+            context.setTooltipForNextFrame(font, font.split(footer, 220), mouseX, mouseY);
         }
     }
 
@@ -856,7 +856,7 @@ public class PlanScreen extends BlueprintScreen {
             }
             lines.addAll(buildingTooltip(b));
         }
-        context.renderComponentTooltip(font, lines, mouseX, mouseY);
+        context.setTooltipForNextFrame(font, lines, java.util.Optional.empty(), mouseX, mouseY);
     }
 
     private List<Component> buildingTooltip(Building building) {
@@ -1159,7 +1159,7 @@ public class PlanScreen extends BlueprintScreen {
         }
         endScroll(context, top, start, y);
         if (hovered != null) {
-            context.renderTooltip(font, font.split(hovered, 240), mouseX, mouseY);
+            context.setTooltipForNextFrame(font, font.split(hovered, 240), mouseX, mouseY);
         }
         int year = WorldCalendar.displayYearOfDay(today());
         int[] counts = new int[3];

@@ -829,7 +829,7 @@ public class TreeScreen extends Screen {
 
     private static void drawIcon(GuiGraphicsExtractor context, String key, int x, int y, int size) {
         Icon icon = MCAScreens.getInstance().getIcon(key);
-        context.blit(InteractScreen.ICON_TEXTURES, x, y, size, size, icon.u(), icon.v(), 16, 16, 256, 256);
+        context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, InteractScreen.ICON_TEXTURES, x, y, icon.u(), icon.v(), size, size, 16, 16, 256, 256);
     }
 
     private void drawCard(GuiGraphicsExtractor context, Card card, boolean hovered, boolean text) {
@@ -880,7 +880,7 @@ public class TreeScreen extends Screen {
             context.fill(x, y, x + size, y + size, 0xFF202030);
             return;
         }
-        context.blit(picture.texture(), x, y, size, size, 0, 0, picture.width(), picture.height(), picture.width(), picture.height());
+        context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, picture.texture(), x, y, 0, 0, size, size, picture.width(), picture.height(), picture.width(), picture.height());
     }
 
     @Nullable

@@ -75,7 +75,7 @@ public class PhotoSizeScreen extends Screen {
     }
 
     private static int step() {
-        return hasShiftDown() ? BIG_STEP : 1;
+        return net.minecraft.client.Minecraft.getInstance().hasShiftDown() ? BIG_STEP : 1;
     }
 
     private void setWidth(int next) {
@@ -118,7 +118,7 @@ public class PhotoSizeScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double amount) {
         int delta = amount > 0 ? 1 : -1;
-        if (hasShiftDown()) {
+        if (net.minecraft.client.Minecraft.getInstance().hasShiftDown()) {
             setHeight(heightHalves + delta);
         } else {
             setWidth(widthHalves + delta);
@@ -152,8 +152,7 @@ public class PhotoSizeScreen extends Screen {
             float[] uv = PhotoItemRenderer.cover(picture, widthHalves / (float) heightHalves);
             int tw = picture.width();
             int th = picture.height();
-            context.blit(picture.texture(), px, py, pw, ph, uv[0] * tw, uv[1] * th,
-                    Math.max(1, Math.round((uv[2] - uv[0]) * tw)), Math.max(1, Math.round((uv[3] - uv[1]) * th)), tw, th);
+            context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, picture.texture(), px, py, uv[0] * tw, uv[1] * th, pw, ph, Math.max(1, Math.round((uv[2] - uv[0]) * tw)), Math.max(1, Math.round((uv[3] - uv[1]) * th)), tw, th);
         }
         int y = height - 102;
         context.centeredText(font, Component.translatable("gui.mca_vie.photo_size.width", blocks(widthHalves)), cx, y + 6, 0xFFFFFF);

@@ -102,7 +102,7 @@ public class PortraitPickerScreen extends Screen {
             if (picture == null) {
                 context.fill(x, y, x + CELL_W, y + CELL_H, 0xFF202030);
             } else {
-                context.blit(picture.texture(), x, y, CELL_W, CELL_H, 0, 0, picture.width(), picture.height(), picture.width(), picture.height());
+                context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, picture.texture(), x, y, 0, 0, CELL_W, CELL_H, picture.width(), picture.height(), picture.width(), picture.height());
             }
             context.fill(x, y, x + side, y + CELL_H, 0x90000000);
             context.fill(x + CELL_W - side, y, x + CELL_W, y + CELL_H, 0x90000000);

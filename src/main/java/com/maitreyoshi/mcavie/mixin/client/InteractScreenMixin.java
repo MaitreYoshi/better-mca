@@ -127,7 +127,7 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
                 mcavie$menuEntry = happiness;
                 mcavie$menuLine = HappinessDisplay.menuLine(happiness);
             }
-            context.renderTooltip(font, mcavie$menuLine, 10, 30 + ROW_HEIGHT * row);
+            context.setTooltipForNextFrame(font, mcavie$menuLine, 10, 30 + ROW_HEIGHT * row);
         }
 
         RelationsClient.Entry friend = mcavie$bestFriend();
@@ -135,7 +135,7 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
             int row = 4 + (mcavie$birthDay == null ? 0 : 1) + (happiness == null ? 0 : 1);
             Component line = Component.translatable(friend.female() ? "gui.mca_vie.relations.best_friend.female" : "gui.mca_vie.relations.best_friend",
                     Component.literal(friend.name()).withStyle(ChatFormatting.GOLD)).withStyle(ChatFormatting.WHITE);
-            context.renderTooltip(font, line, 10, 30 + ROW_HEIGHT * row);
+            context.setTooltipForNextFrame(font, line, 10, 30 + ROW_HEIGHT * row);
         }
 
         if (mcavie$birthDay == null) {
@@ -148,7 +148,7 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
             mcavie$birthLineDay = birth;
             mcavie$birthLineToday = today;
         }
-        context.renderTooltip(font, mcavie$birthLine, 10, 30 + ROW_HEIGHT * 4);
+        context.setTooltipForNextFrame(font, mcavie$birthLine, 10, 30 + ROW_HEIGHT * 4);
     }
 
     @Unique

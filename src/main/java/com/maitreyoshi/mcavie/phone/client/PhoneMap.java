@@ -81,7 +81,7 @@ public final class PhoneMap {
             centerX = Integer.MIN_VALUE;
         }
         ChunkPos center = client.player.chunkPosition();
-        if (center.x != centerX || center.z != centerZ) {
+        if (center.x() != centerX || center.z() != centerZ) {
             recenter(center);
         }
 
@@ -90,14 +90,14 @@ public final class PhoneMap {
             if (computed >= NEW_PER_FRAME) {
                 break;
             }
-            if (!CACHE.containsKey(pos.toLong()) && compute(pos)) {
+            if (!CACHE.containsKey(pos.pack()) && compute(pos)) {
                 computed++;
             }
         }
         for (int i = 0; i < REFRESH_PER_FRAME && !order.isEmpty(); i++) {
             refreshIndex = (refreshIndex + 1) % order.size();
             ChunkPos pos = order.get(refreshIndex);
-            if (CACHE.containsKey(pos.toLong())) {
+            if (CACHE.containsKey(pos.pack())) {
                 compute(pos);
             }
         }
@@ -109,8 +109,8 @@ public final class PhoneMap {
     }
 
     private static void recenter(ChunkPos center) {
-        centerX = center.x;
-        centerZ = center.z;
+        centerX = center.x();
+        centerZ = center.z();
         CACHE.keySet().removeIf(key -> Math.abs(ChunkPos.getX(key) - centerX) > radius + 2
                 || Math.abs(ChunkPos.getZ(key) - centerZ) > radius + 2);
         List<ChunkPos> list = new ArrayList<>();
@@ -119,7 +119,7 @@ public final class PhoneMap {
                 list.add(new ChunkPos(centerX + dx, centerZ + dz));
             }
         }
-        list.sort(Comparator.comparingInt(p -> Math.max(Math.abs(p.x - centerX), Math.abs(p.z - centerZ))));
+        list.sort(Comparator.comparingInt(p -> Math.max(Math.abs(p.x() - centerX), Math.abs(p.z() - centerZ))));
         order = list;
         refreshIndex = 0;
         NativeImage image = texture.getPixels();
@@ -128,7 +128,7 @@ public final class PhoneMap {
         }
         image.fillRect(0, 0, size(), size(), 0);
         for (ChunkPos pos : order) {
-            int[] colors = CACHE.get(pos.toLong());
+            int[] colors = CACHE.get(pos.pack());
             if (colors != null) {
                 blit(pos, colors);
             }
@@ -142,11 +142,11 @@ public final class PhoneMap {
     }
 
     private static boolean compute(ChunkPos pos) {
-        LevelChunk chunk = loaded(pos.x, pos.z);
+        LevelChunk chunk = loaded(pos.x(), pos.z());
         if (chunk == null) {
             return false;
         }
-        LevelChunk north = loaded(pos.x, pos.z - 1);
+        LevelChunk north = loaded(pos.x(), pos.z() - 1);
         int[] colors = new int[256];
         int[] column = new int[3];
         BlockPos.MutableBlockPos mutable = new BlockPos.MutableBlockPos();
@@ -180,7 +180,7 @@ public final class PhoneMap {
                 colors[z * 16 + x] = color == MapColor.NONE ? 0 : color.calculateRGBColor(brightness);
             }
         }
-        int[] old = CACHE.put(pos.toLong(), colors);
+        int[] old = CACHE.put(pos.pack(), colors);
         if (old == null || !Arrays.equals(old, colors)) {
             blit(pos, colors);
             dirty = true;
@@ -224,8 +224,8 @@ public final class PhoneMap {
         if (image == null) {
             return;
         }
-        int baseX = (pos.x - centerX + radius) * 16;
-        int baseZ = (pos.z - centerZ + radius) * 16;
+        int baseX = (pos.x() - centerX + radius) * 16;
+        int baseZ = (pos.z() - centerZ + radius) * 16;
         if (baseX < 0 || baseZ < 0 || baseX + 16 > size() || baseZ + 16 > size()) {
             return;
         }

@@ -662,7 +662,7 @@ public class PhoneScreen extends Screen {
         drops.clear();
         extractBackground(context, realMouseX, realMouseY, delta);
         context.pose().pushMatrix();
-        context.pose().scale(ui(), ui(), 1);
+        context.pose().scale(ui(), ui());
 
         int px = phoneLeft();
         int py = phoneTop();
@@ -725,7 +725,7 @@ public class PhoneScreen extends Screen {
 
         if (dragging && pressed != null) {
             context.pose().pushMatrix();
-            context.pose().translate(0, 0, 200);
+            context.pose().translate(0, 0);
             context.fill(mouseX - 17, mouseY - 10, mouseX + 17, mouseY + 10, 0xFFFFFFFF);
             drawPhoto(context, pressed, mouseX - 16, mouseY - 9, 32, 18);
             context.pose().popMatrix();
@@ -756,7 +756,7 @@ public class PhoneScreen extends Screen {
             return;
         }
         float scale = MAP_SCALES[mapZoom];
-        float tickDelta = minecraft.getFrameTime();
+        float tickDelta = minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false);
         double px = Mth.lerp(tickDelta, minecraft.player.xo, minecraft.player.getX());
         double pz = Mth.lerp(tickDelta, minecraft.player.zo, minecraft.player.getZ());
         double viewX = px + mapPanX;
@@ -768,11 +768,11 @@ public class PhoneScreen extends Screen {
         mapAngle = PhoneSettings.mapRotate ? Mth.wrapDegrees(Mth.lerp(tickDelta, minecraft.player.yRotO, minecraft.player.getYRot()) + 180f) : 0f;
         scissor(context, sx, top, sx + sw, bottom);
         context.pose().pushMatrix();
-        context.pose().translate(cx, cy, 0);
+        context.pose().translate(cx, cy);
         context.pose().mulPose(Axis.ZP.rotationDegrees(mapAngle));
-        context.pose().scale(scale, scale, 1);
-        context.pose().translate((float) (PhoneMap.originX() - viewX), (float) (PhoneMap.originZ() - viewZ), 0);
-        context.blit(PhoneMap.TEXTURE, 0, 0, 0, 0, size, size, size, size);
+        context.pose().scale(scale, scale);
+        context.pose().translate((float) (PhoneMap.originX() - viewX), (float) (PhoneMap.originZ() - viewZ));
+        context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, PhoneMap.TEXTURE, 0, 0, 0, 0, size, size, size, size);
         context.pose().popMatrix();
 
         double rad = Math.toRadians(mapAngle);
@@ -781,7 +781,7 @@ public class PhoneScreen extends Screen {
         float hx = cx + (float) (ox * Math.cos(rad) - oz * Math.sin(rad));
         float hz = cy + (float) (ox * Math.sin(rad) + oz * Math.cos(rad));
         context.pose().pushMatrix();
-        context.pose().translate(hx, hz, 0);
+        context.pose().translate(hx, hz);
         context.fill(-7, -7, 7, 7, 0xFFFFFFFF);
         PlayerFaceExtractor.draw(context, minecraft.player.getSkinTextureLocation(), -6, -6, 12);
         context.pose().popMatrix();
@@ -789,7 +789,7 @@ public class PhoneScreen extends Screen {
 
         round(context, sx + 4, top + 4, 12, 12, 6, 0xC0000000);
         context.pose().pushMatrix();
-        context.pose().translate(sx + 10, top + 10, 0);
+        context.pose().translate(sx + 10, top + 10);
         context.pose().mulPose(Axis.ZP.rotationDegrees(mapAngle));
         centered(context, "N", 0, -4, mapAngle == 0f ? WHITE : 0xFFFF6B6B);
         context.pose().popMatrix();
@@ -853,8 +853,8 @@ public class PhoneScreen extends Screen {
         int y = sy() + STATUS + 10;
         String clock = minecraft != null && minecraft.level != null ? clock(WorldCalendar.flowingNow(minecraft.level)) : "";
         context.pose().pushMatrix();
-        context.pose().translate(sx + sw / 2f, y, 0);
-        context.pose().scale(2.5f, 2.5f, 1);
+        context.pose().translate(sx + sw / 2f, y);
+        context.pose().scale(2.5f, 2.5f);
         centered(context, clock, 0, 0, WHITE);
         context.pose().popMatrix();
         y += 30;
@@ -916,8 +916,8 @@ public class PhoneScreen extends Screen {
         CalendarDate date = minecraft != null && minecraft.level != null ? WorldCalendar.flowingNow(minecraft.level) : null;
         if (date != null) {
             context.pose().pushMatrix();
-            context.pose().translate(sx + sw / 2f, top + 8, 0);
-            context.pose().scale(2f, 2f, 1);
+            context.pose().translate(sx + sw / 2f, top + 8);
+            context.pose().scale(2f, 2f);
             centered(context, clock(date), 0, 0, WHITE);
             context.pose().popMatrix();
             Component day = Component.translatable("calendar.mca_vie.day." + date.dayOfWeek().getValue());
@@ -935,8 +935,8 @@ public class PhoneScreen extends Screen {
             drawApp(context, app, cx, cy, icon);
             String label = fit(Component.translatable("gui.mca_vie.phone.app." + app.key()).getString(), (int) ((cell - 2) / 0.75f));
             context.pose().pushMatrix();
-            context.pose().translate(cx + icon / 2f, cy + icon + 3, 0);
-            context.pose().scale(0.75f, 0.75f, 1);
+            context.pose().translate(cx + icon / 2f, cy + icon + 3);
+            context.pose().scale(0.75f, 0.75f);
             centered(context, label, 0, 0, WHITE);
             context.pose().popMatrix();
             hits.add(new Hit(cx - 2, cy - 2, icon + 4, icon + 14, () -> {
@@ -959,9 +959,7 @@ public class PhoneScreen extends Screen {
         if (hover) {
             round(context, x - 2, y - 2, size + 4, size + 4, size / 4 + 2, 0x50FFFFFF);
         }
-        RenderSystem.enableBlend();
-        context.blit(app.texture(), x, y, size, size, 0, 0, 128, 128, 128, 128);
-        RenderSystem.disableBlend();
+        context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, app.texture(), x, y, 0, 0, size, size, 128, 128, 128, 128);
         int badge = app.badge().getAsInt();
         if (badge > 0) {
             String text = badge > 99 ? "99+" : String.valueOf(badge);
@@ -1083,8 +1081,8 @@ public class PhoneScreen extends Screen {
         centered(context, fit(hint.getString(), sw - 12), sx + sw / 2, y, MUTED);
         String shown = numberInput.isEmpty() ? "_ _ _" : String.join(" ", numberInput.split(""));
         context.pose().pushMatrix();
-        context.pose().translate(sx + sw / 2f, y + 14, 0);
-        context.pose().scale(2f, 2f, 1);
+        context.pose().translate(sx + sw / 2f, y + 14);
+        context.pose().scale(2f, 2f);
         centered(context, shown, 0, 0, numberInput.isEmpty() ? MUTED : TEXT);
         context.pose().popMatrix();
         int number = parseNumber(numberInput);
@@ -1206,7 +1204,7 @@ public class PhoneScreen extends Screen {
         }
         int dx = x + (w - dw) / 2;
         int dy = y + (h - dh) / 2;
-        context.blit(picture.texture(), dx, dy, dw, dh, 0, 0, picture.width(), picture.height(), picture.width(), picture.height());
+        context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, picture.texture(), dx, dy, 0, 0, dw, dh, picture.width(), picture.height(), picture.width(), picture.height());
     }
 
     private void renderGallery(GuiGraphicsExtractor context) {
@@ -1587,9 +1585,7 @@ public class PhoneScreen extends Screen {
             boolean locked = app.key().equals("settings");
             boolean visible = locked || !PhoneSettings.hidden.contains(app.key());
             round(context, x, y, w, 22, 6, CARD);
-            RenderSystem.enableBlend();
-            context.blit(app.texture(), x + 4, y + 3, 16, 16, 0, 0, 128, 128, 128, 128);
-            RenderSystem.disableBlend();
+            context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, app.texture(), x + 4, y + 3, 0, 0, 16, 16, 128, 128, 128, 128);
             int controls = 54;
             context.text(font, fit(Component.translatable("gui.mca_vie.phone.app." + app.key()).getString(), w - 26 - controls), x + 24, y + 7, visible ? TEXT : MUTED, false);
             int bx = x + w - controls;
@@ -1739,7 +1735,7 @@ public class PhoneScreen extends Screen {
         int rh = Mth.clamp(Math.round(h / scale), 1, ph);
         float u0 = Mth.clamp(u * pw - rw / 2f, 0, pw - rw);
         float v0 = Mth.clamp(v * ph - rh / 2f, 0, ph - rh);
-        context.blit(picture.texture(), x, y, w, h, u0, v0, rw, rh, pw, ph);
+        context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, picture.texture(), x, y, u0, v0, w, h, rw, rh, pw, ph);
         context.fill(x, y, x + w, y + h, 0x48000000);
         int r = Math.min(11, Math.min(w, h) / 2);
         for (int i = 0; i < r; i++) {
@@ -2365,7 +2361,7 @@ public class PhoneScreen extends Screen {
             y -= 20;
             round(context, x, y, 30, 16, 6, CARD);
             for (int d = 0; d < 3; d++) {
-                float phase = (ticks + minecraft.getFrameTime() - d * 4) / 6f;
+                float phase = (ticks + minecraft.getDeltaTracker().getGameTimeDeltaPartialTick(false) - d * 4) / 6f;
                 int hop = Math.round(Math.max(0, Mth.sin(phase)) * 3);
                 round(context, x + 7 + d * 6, y + 7 - hop, 4, 4, 2, MUTED);
             }
