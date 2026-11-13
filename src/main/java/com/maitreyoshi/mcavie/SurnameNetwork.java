@@ -59,10 +59,9 @@ public final class SurnameNetwork {
                 if (!(stack.getItem() instanceof BabyItem baby)) {
                     return;
                 }
-                CompoundTag nbt = BabyItem.getBabyNbt(stack);
+                net.conczin.mca.item.components.BabyParentsComponent parents = stack.get(net.conczin.mca.registry.DataComponentsMCA.BABY_PARENTS);
                 String surname = Surnames.babySurname(player.level(), player,
-                        Nbt.hasUUID(nbt, "father") ? Nbt.getUUID(nbt, "father") : null,
-                        Nbt.hasUUID(nbt, "mother") ? Nbt.getUUID(nbt, "mother") : null);
+                        parents == null ? null : parents.father(), parents == null ? null : parents.mother());
                 if (surname != null) {
                     FriendlyByteBuf out = PacketByteBufs.create();
                     out.writeUtf(SurnameText.display(surname, baby.getGender()));

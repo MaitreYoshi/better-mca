@@ -201,7 +201,7 @@ public final class PhoneClient {
             }
         }));
         ClientPlayNetworking.registerGlobalReceiver(PhoneNetwork.ERROR, (client, handler, buf, responseSender) -> {
-            Component text = buf.readComponent();
+            Component text = com.maitreyoshi.mcavie.compat.Nbt.readText(buf);
             client.execute(() -> {
                 if (client.gui.screen() instanceof PhoneScreen screen) {
                     screen.showError(text);

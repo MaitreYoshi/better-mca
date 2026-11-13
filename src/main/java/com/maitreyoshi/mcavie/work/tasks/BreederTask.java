@@ -99,7 +99,7 @@ public class BreederTask extends AbstractJobTask {
                 if (first instanceof Sheep sheep) {
                     sheep.setSheared(true);
                     world.playSound(null, sheep.blockPosition(), SoundEvents.SHEEP_SHEAR, SoundSource.NEUTRAL, 1.0F, 1.0F);
-                    store(villager, new ItemStack(woolOf(sheep.getColor()), 1 + world.random.nextInt(3)));
+                    store(villager, new ItemStack(woolOf(sheep.getColor()), 1 + world.getRandom().nextInt(3)));
                     gainExperience(villager, 1);
                 }
             }
@@ -210,6 +210,6 @@ public class BreederTask extends AbstractJobTask {
     }
 
     private static net.minecraft.world.item.Item woolOf(DyeColor color) {
-        return BuiltInRegistries.ITEM.get(Identifier.fromNamespaceAndPath("minecraft", color.getName() + "_wool"));
+        return BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath("minecraft", color.getName() + "_wool"));
     }
 }

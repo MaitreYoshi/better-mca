@@ -13,7 +13,7 @@ import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.profiling.ProfilerFiller;
 
-public class SurnameLists extends SimpleJsonResourceReloadListener {
+public class SurnameLists extends SimpleJsonResourceReloadListener<JsonElement> {
     public static final String DEFAULT_REGION = "default";
     public static final Identifier ID = MCAVie.id("surname_lists");
 
@@ -21,7 +21,7 @@ public class SurnameLists extends SimpleJsonResourceReloadListener {
     private static final RandomSource RANDOM = RandomSource.create();
 
     public SurnameLists() {
-        super(new Gson(), "mca_surnames");
+        super(net.minecraft.util.ExtraCodecs.JSON, net.minecraft.resources.FileToIdConverter.json("mca_surnames"));
     }
 
     @Override

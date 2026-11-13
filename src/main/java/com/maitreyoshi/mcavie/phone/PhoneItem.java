@@ -37,7 +37,7 @@ public class PhoneItem extends Item {
     }
 
     public static void setNumber(ItemStack stack, int number) {
-        stack.getOrCreateTag().putInt(NUMBER_KEY, number);
+        com.maitreyoshi.mcavie.compat.Nbt.update(stack, tag -> tag.putInt(NUMBER_KEY, number));
     }
 
     @Override

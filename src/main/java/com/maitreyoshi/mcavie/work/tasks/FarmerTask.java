@@ -181,7 +181,7 @@ public class FarmerTask extends AbstractJobTask {
         long now = world.getGameTime();
         if (!scan.running()) {
             if (nextScan < 0 || now - nextScan > SCAN_INTERVAL) {
-                nextScan = now + world.random.nextInt(SCAN_JITTER);
+                nextScan = now + world.getRandom().nextInt(SCAN_JITTER);
             }
             if (now < nextScan) {
                 return;

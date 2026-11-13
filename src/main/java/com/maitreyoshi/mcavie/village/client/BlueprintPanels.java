@@ -273,7 +273,7 @@ public final class BlueprintPanels {
     }
 
     private static net.minecraft.world.item.Item item(String id) {
-        return net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.tryParse(id));
+        return net.minecraft.core.registries.BuiltInRegistries.ITEM.getValue(net.minecraft.resources.Identifier.tryParse(id));
     }
 
     public static Component productLabel(String id) {

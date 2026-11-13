@@ -701,7 +701,7 @@ public final class PhoneServer {
 
     private static void error(ServerPlayer player, String key) {
         FriendlyByteBuf buf = PacketByteBufs.create();
-        buf.writeComponent(Component.translatable(key));
+        com.maitreyoshi.mcavie.compat.Nbt.writeText(buf, Component.translatable(key));
         ServerPlayNetworking.send(player, PhoneNetwork.ERROR, buf);
     }
 

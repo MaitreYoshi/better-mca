@@ -58,7 +58,7 @@ public final class WorkNetwork {
                 if (refusal != null) {
                     // métier refusé (trop jeune ou trop vieux) : ni métier, ni employeur
                     FriendlyByteBuf refused = PacketByteBufs.create();
-                    refused.writeComponent(Component.translatable(refusal, villager.getName()).withStyle(ChatFormatting.RED));
+                    com.maitreyoshi.mcavie.compat.Nbt.writeText(refused, Component.translatable(refusal, villager.getName()).withStyle(ChatFormatting.RED));
                     ServerPlayNetworking.send(player, JOB_REFUSED, refused);
                     return;
                 }
@@ -173,7 +173,7 @@ public final class WorkNetwork {
         ServerLevel world = player.level();
         BlockPos depot = record.depot;
         for (int i = 0; i < 12; i++) {
-            world.sendParticles(player, net.minecraft.core.particles.ParticleTypes.END_ROD, true,
+            world.sendParticles(player, net.minecraft.core.particles.ParticleTypes.END_ROD, true, false,
                     depot.getX() + 0.5, depot.getY() + 1.0 + i * 0.4, depot.getZ() + 0.5, 2, 0.1, 0.1, 0.1, 0.0);
         }
         BlockPos center = record.center != null ? record.center : depot;
@@ -184,7 +184,7 @@ public final class WorkNetwork {
             double x = center.getX() + 0.5 + Math.cos(angle) * radius;
             double z = center.getZ() + 0.5 + Math.sin(angle) * radius;
             int y = world.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, (int) Math.floor(x), (int) Math.floor(z));
-            world.sendParticles(player, net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, true, x, y + 0.2, z, 1, 0.0, 0.0, 0.0, 0.0);
+            world.sendParticles(player, net.minecraft.core.particles.ParticleTypes.HAPPY_VILLAGER, true, false, x, y + 0.2, z, 1, 0.0, 0.0, 0.0, 0.0);
         }
         player.displayClientMessage(Component.translatable("job.mca_vie.shown", villager.getName(),
                 depot.getX(), depot.getY(), depot.getZ()).withStyle(ChatFormatting.GREEN), false);

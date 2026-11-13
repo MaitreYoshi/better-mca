@@ -143,7 +143,7 @@ public final class RepairErrands {
             CompoundTag mark = new CompoundTag();
             Nbt.putUUID(mark, "owner", villager.getUUID());
             mark.putString("slot", slot.getName());
-            tagged.getOrCreateTag().put(TAG, mark);
+            Nbt.update(tagged, tag -> tag.put(TAG, mark));
             ItemStack rest = DepositTask.insert(forge, tagged);
             if (rest.isEmpty()) {
                 villager.setItemSlot(slot, ItemStack.EMPTY);
@@ -161,10 +161,7 @@ public final class RepairErrands {
             CompoundTag mark = Nbt.tag(stack).getCompoundOrEmpty(TAG);
             EquipmentSlot slot = slotByName(mark.getStringOr("slot", ""));
             ItemStack item = stack.copy();
-            Nbt.tag(item).remove(TAG);
-            if (Nbt.tag(item).isEmpty()) {
-                item.setTag(null);
-            }
+            Nbt.update(item, tag -> tag.remove(TAG));
             if (slot != null && villager.getItemBySlot(slot).isEmpty()) {
                 villager.setItemSlot(slot, item);
             } else {

@@ -157,7 +157,7 @@ public final class VillageMarket {
                 continue;
             }
             if (!market.containsPos(villager.blockPosition())) {
-                villager.moveTowards(stalls.get(world.random.nextInt(stalls.size())), 0.6f, 2);
+                villager.moveTowards(stalls.get(world.getRandom().nextInt(stalls.size())), 0.6f, 2);
             }
         }
     }
@@ -187,7 +187,7 @@ public final class VillageMarket {
             if (order.ready) {
                 continue;
             }
-            Item item = BuiltInRegistries.ITEM.get(Identifier.tryParse(order.item));
+            Item item = BuiltInRegistries.ITEM.getValue(Identifier.tryParse(order.item));
             int units = order.units;
             int lots = 0;
             while (units > 0 && lots < order.lots && count(storage, item) >= units) {
@@ -318,7 +318,7 @@ public final class VillageMarket {
                 if (!order.ready || !order.player.equals(player.getUUID())) {
                     continue;
                 }
-                give(player, BuiltInRegistries.ITEM.get(Identifier.tryParse(order.item)), order.delivered);
+                give(player, BuiltInRegistries.ITEM.getValue(Identifier.tryParse(order.item)), order.delivered);
                 give(player, Items.EMERALD, order.refund);
                 it.remove();
                 given++;

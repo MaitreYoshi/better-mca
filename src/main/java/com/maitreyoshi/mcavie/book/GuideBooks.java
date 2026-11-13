@@ -40,7 +40,7 @@ public final class GuideBooks {
     }
 
     private static VillagerTrades.ItemListing sell(Supplier<Item> book) {
-        return (entity, random) -> new MerchantOffer(new ItemStack(Items.EMERALD, 2), new ItemStack(book.get()), 12, 2, 0.05F);
+        return (entity, random) -> new MerchantOffer(new net.minecraft.world.item.trading.ItemCost(Items.EMERALD, 2), new ItemStack(book.get()), 12, 2, 0.05F);
     }
 
     private static Book memoryBook() {

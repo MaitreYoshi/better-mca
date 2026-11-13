@@ -29,7 +29,7 @@ public final class Surnames {
             return;
         }
 
-        String current = villager.getTrackedValue(VillagerLike.VILLAGER_NAME);
+        String current = (villager.getCustomName() == null ? "" : villager.getCustomName().getString());
         if (current == null || current.isBlank()) {
             return;
         }
@@ -50,7 +50,7 @@ public final class Surnames {
 
         String updated = SurnameText.withSurname(current, SurnameText.display(surname, villager.getGenetics().getGender()));
         if (!updated.equals(current)) {
-            villager.setName(updated);
+            villager.setCustomName(net.minecraft.network.chat.Component.literal(updated));
         }
     }
 
@@ -113,7 +113,7 @@ public final class Surnames {
         if (!(villager.level() instanceof ServerLevel world)) {
             return;
         }
-        String surname = existingSurname(villager.getTrackedValue(VillagerLike.VILLAGER_NAME));
+        String surname = existingSurname((villager.getCustomName() == null ? "" : villager.getCustomName().getString()));
         if (surname == null) {
             return;
         }

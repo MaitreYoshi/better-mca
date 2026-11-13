@@ -158,7 +158,7 @@ public final class CivilRegistry {
     }
 
     private static String name(VillagerEntityMCA villager) {
-        String name = villager.getTrackedValue(VillagerLike.VILLAGER_NAME);
+        String name = (villager.getCustomName() == null ? "" : villager.getCustomName().getString());
         return name == null || name.isBlank() ? villager.getName().getString() : name;
     }
 

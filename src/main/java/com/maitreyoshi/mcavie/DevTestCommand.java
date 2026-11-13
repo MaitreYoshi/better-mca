@@ -439,7 +439,7 @@ final class DevTestCommand {
                                 Long birth = LifeRegistry.get(world.getServer()).getBirthDay(v.getUUID());
                                 long today = WorldCalendar.now(world).dayIndex();
                                 String age = birth == null ? "?" : LifeCycle.ageInYears(birth, today) + " ans, né en " + WorldCalendar.displayYearOfDay(birth);
-                                String line = v.getTrackedValue(VillagerLike.VILLAGER_NAME)
+                                String line = (v.getCustomName() == null ? "" : v.getCustomName().getString())
                                         + " [" + v.getGenetics().getGender() + ", nom=" + registry.get(v.getUUID()) + "]"
                                         + " " + age + ", taille=" + v.getAgeState() + " (" + v.getAge() + ")"
                                         + Optional.ofNullable(WellbeingRegistry.get(world.getServer()).get(v.getUUID()))

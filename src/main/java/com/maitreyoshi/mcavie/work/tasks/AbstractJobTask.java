@@ -200,15 +200,14 @@ public abstract class AbstractJobTask extends Behavior<VillagerEntityMCA> {
     }
 
     protected List<ItemStack> blockDrops(ServerLevel world, VillagerEntityMCA villager, BlockPos pos, BlockState state, ItemStack tool) {
-        LootParams.Builder builder = new LootParams.Builder(world)
-                .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(pos))
-                .withParameter(LootContextParams.TOOL, tool)
-                .withParameter(LootContextParams.THIS_ENTITY, villager)
-                .withParameter(LootContextParams.BLOCK_STATE, state)
-                .withLuck(0);
-        return world.getServer().getLootData()
-                .getLootTable(state.getBlock().getLootTable())
-                .getRandomItems(builder.create(LootContextParamSets.BLOCK));
+        return net.minecraft.world.level.block.Block.getDrops(state, world, pos, world.getBlockEntity(pos), villager, tool);
+    }
+
+    /** Use l'outil d'un point ; vrai s'il vient de casser (il est alors retiré de la pile). */
+    protected static boolean damageTool(ItemStack tool, ServerLevel world) {
+        boolean[] broke = {false};
+        tool.hurtAndBreak(1, world, null, item -> broke[0] = true);
+        return broke[0];
     }
 
     @Nullable
@@ -356,12 +355,12 @@ public abstract class AbstractJobTask extends Behavior<VillagerEntityMCA> {
         }
         MinecraftServer server = world.getServer();
         if (!server.isDedicatedServer() || world.dimension() != Level.OVERWORLD
-                || server.getPlayerList().getOps().isEmpty() || server.getSpawnProtectionRadius() <= 0) {
+                || server.getPlayerList().getOps().isEmpty() || !(server instanceof net.minecraft.server.dedicated.DedicatedServer dedicated) || dedicated.spawnProtectionRadius() <= 0) {
             return true;
         }
         BlockPos spawn = world.getRespawnData().pos();
         int distance = Math.max(Math.abs(pos.getX() - spawn.getX()), Math.abs(pos.getZ() - spawn.getZ()));
-        return distance > server.getSpawnProtectionRadius();
+        return distance > ((net.minecraft.server.dedicated.DedicatedServer) server).spawnProtectionRadius();
     }
 
     protected static boolean isLoaded(net.minecraft.world.level.Level world, BlockPos pos) {

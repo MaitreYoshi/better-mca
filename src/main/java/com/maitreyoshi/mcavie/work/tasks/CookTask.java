@@ -163,9 +163,9 @@ public class CookTask extends AbstractJobTask {
             if (stack.isEmpty()) {
                 continue;
             }
-            SimpleContainer single = new SimpleContainer(stack.copyWithCount(1));
-            ItemStack result = world.getRecipeManager().getRecipeFor(RecipeType.SMOKING, single, world)
-                    .map(recipe -> recipe.getResultItem(world.registryAccess()).copy())
+            net.minecraft.world.item.crafting.SingleRecipeInput single = new net.minecraft.world.item.crafting.SingleRecipeInput(stack.copyWithCount(1));
+            ItemStack result = world.recipeAccess().getRecipeFor(RecipeType.SMOKING, single, world)
+                    .map(recipe -> recipe.value().assemble(single))
                     .orElse(ItemStack.EMPTY);
             if (!result.isEmpty()) {
                 return new Dish(List.of(stack.copyWithCount(1)), result);

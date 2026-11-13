@@ -53,7 +53,7 @@ public final class VillageMarketExtras {
         }
         int spawned = 0;
         for (int i = 0; i < config.marketMerchants; i++) {
-            BlockPos pos = stalls.get(world.random.nextInt(stalls.size())).above();
+            BlockPos pos = stalls.get(world.getRandom().nextInt(stalls.size())).above();
             if (!world.hasChunkAt(pos)) {
                 continue;
             }
@@ -61,7 +61,7 @@ public final class VillageMarketExtras {
             if (trader == null) {
                 continue;
             }
-            trader.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, world.random.nextFloat() * 360, 0);
+            trader.moveTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, world.getRandom().nextFloat() * 360, 0);
             trader.setDespawnDelay(config.marketMerchantTicks);
             trader.setWanderTarget(pos);
             if (world.addFreshEntity(trader)) {
@@ -180,7 +180,7 @@ public final class VillageMarketExtras {
             DISCOUNTS.put(villager, applied);
         }
         Object[] good = RARE_GOODS[Math.floorMod(villager.getUUID().hashCode() + (int) VillageMarket.marketWeek(world), RARE_GOODS.length)];
-        MerchantOffer rare = new MerchantOffer(new ItemStack(Items.EMERALD, (Integer) good[2]),
+        MerchantOffer rare = new MerchantOffer(new net.minecraft.world.item.trading.ItemCost(Items.EMERALD, (Integer) good[2]),
                 new ItemStack((net.minecraft.world.item.Item) good[0], (Integer) good[1]), 1, 5, 0.05F);
         offers.add(rare);
         RARE.put(villager, rare);

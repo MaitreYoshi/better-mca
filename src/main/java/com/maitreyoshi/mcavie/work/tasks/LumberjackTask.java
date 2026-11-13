@@ -292,7 +292,7 @@ public class LumberjackTask extends AbstractJobTask {
         long now = world.getGameTime();
         if (!scan.running()) {
             if (nextScan < 0 || now - nextScan > SCAN_INTERVAL) {
-                nextScan = now + world.random.nextInt(SCAN_JITTER);
+                nextScan = now + world.getRandom().nextInt(SCAN_JITTER);
             }
             if (now < nextScan) {
                 return;
@@ -392,9 +392,8 @@ public class LumberjackTask extends AbstractJobTask {
             for (ItemStack drop : blockDrops(world, villager, pos, state, axe)) {
                 store(villager, drop);
             }
-            if (axe.hurt(1, world.random, null)) {
-                axe.shrink(1);
-                world.playSound(null, villager.blockPosition(), net.minecraft.sounds.SoundEvents.ITEM_BREAK, net.minecraft.sounds.SoundSource.NEUTRAL, 0.8F, 1.0F);
+            if (damageTool(axe, world)) {
+                world.playSound(null, villager.blockPosition(), net.minecraft.sounds.SoundEvents.ITEM_BREAK.value(), net.minecraft.sounds.SoundSource.NEUTRAL, 0.8F, 1.0F);
             }
             net.minecraft.world.Container block = depotInventory(world, villager);
             if (block != null) {
@@ -556,9 +555,9 @@ public class LumberjackTask extends AbstractJobTask {
 
     private void replant(ServerLevel world, VillagerEntityMCA villager, BlockPos base, String namespace, String family) {
         String name = family.equals("mangrove") ? "mangrove_propagule" : family + "_sapling";
-        Item saplingItem = BuiltInRegistries.ITEM.get(Identifier.fromNamespaceAndPath(namespace, name));
+        Item saplingItem = BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath(namespace, name));
         if (saplingItem == Items.AIR) {
-            saplingItem = BuiltInRegistries.ITEM.get(Identifier.fromNamespaceAndPath("minecraft", name));
+            saplingItem = BuiltInRegistries.ITEM.getValue(Identifier.fromNamespaceAndPath("minecraft", name));
         }
         if (!(saplingItem instanceof BlockItem blockItem) || !world.getBlockState(base).isAir() || !mayAlter(world, base)) {
             return;

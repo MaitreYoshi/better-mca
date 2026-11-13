@@ -228,12 +228,12 @@ public final class WorkManager {
     public static void giveTool(VillagerEntityMCA villager, ItemStack tool) {
         ItemStack hand = villager.getMainHandItem();
         if (tool.isEmpty() || (hand.is(tool.getItem())
-                && EnchantmentHelper.getEnchantments(hand).equals(EnchantmentHelper.getEnchantments(tool)))) {
+                && java.util.Objects.equals(hand.getEnchantments(), tool.getEnchantments()))) {
             return;
         }
         ItemStack original = ItemStack.EMPTY;
         if (isMarkedTool(hand)) {
-            original = originalOf(hand);
+            original = originalOf(villager, hand);
         } else if (!hand.isEmpty()) {
             ItemStack rest = villager.getInventory().addItem(hand.copy());
             if (!rest.isEmpty()) {
@@ -244,9 +244,9 @@ public final class WorkManager {
         }
         CompoundTag mark = new CompoundTag();
         if (!original.isEmpty()) {
-            mark.put("held", original.save(new CompoundTag()));
+            mark.put("held", Nbt.saveStack(original, villager.registryAccess()));
         }
-        tool.getOrCreateTag().put(TOOL_KEY, mark);
+        Nbt.update(tool, tag -> tag.put(TOOL_KEY, mark));
         villager.setItemInHand(InteractionHand.MAIN_HAND, tool);
     }
 
@@ -261,7 +261,7 @@ public final class WorkManager {
         if (!isMarkedTool(hand)) {
             return;
         }
-        ItemStack original = originalOf(hand);
+        ItemStack original = originalOf(villager, hand);
         ItemStack back = ItemStack.EMPTY;
         for (int i = 0; i < inventory.getContainerSize() && !original.isEmpty(); i++) {
             ItemStack stack = inventory.getItem(i);
@@ -283,12 +283,12 @@ public final class WorkManager {
 
     public static ItemStack heldOriginal(VillagerEntityMCA villager) {
         ItemStack hand = villager.getMainHandItem();
-        return isMarkedTool(hand) ? originalOf(hand) : ItemStack.EMPTY;
+        return isMarkedTool(hand) ? originalOf(villager, hand) : ItemStack.EMPTY;
     }
 
-    private static ItemStack originalOf(ItemStack tool) {
+    private static ItemStack originalOf(VillagerEntityMCA villager, ItemStack tool) {
         CompoundTag mark = Nbt.tag(tool) == null ? null : Nbt.tag(tool).getCompoundOrEmpty(TOOL_KEY);
-        return mark == null || !mark.contains("held") ? ItemStack.EMPTY : ItemStack.of(mark.getCompoundOrEmpty("held"));
+        return mark == null || !mark.contains("held") ? ItemStack.EMPTY : Nbt.loadStack(mark.getCompoundOrEmpty("held"), villager.registryAccess());
     }
 
     private static int ageInYears(VillagerEntityMCA villager, ServerLevel world) {
@@ -326,7 +326,7 @@ public final class WorkManager {
                 String former = job != Job.NONE ? "job.mca_vie." + job.id()
                         : profession.equals("mca.none") ? null : "entity.minecraft.villager." + profession;
                 if (villager.isGuard() || isSyncedProfession(villager, job)) {
-                    villager.setProfession(VillagerProfession.NONE);
+                    villager.setVillagerData(villager.getVillagerData().withProfession(villager.registryAccess(), VillagerProfession.NONE));
                 }
                 record = registry.getOrCreate(villager.getUUID());
                 record.job = Job.RETIRED;
@@ -498,7 +498,7 @@ public final class WorkManager {
         } else if (professionFor(job) != null) {
             syncProfession(villager, job);
         } else if (villager.isGuard() || isSyncedProfession(villager, previous)) {
-            villager.setProfession(VillagerProfession.NONE);
+            villager.setVillagerData(villager.getVillagerData().withProfession(villager.registryAccess(), VillagerProfession.NONE));
         }
         if (isWorking(villager)) {
             WORKING.put(villager.getUUID(), false);

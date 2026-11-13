@@ -403,7 +403,7 @@ public final class History {
         if (HistoryRegistry.get(world.getServer()).pendingDeath(villager.getUUID()) == null) {
             return false;
         }
-        villager.kill();
+        villager.kill((net.minecraft.server.level.ServerLevel) villager.level());
         return true;
     }
 

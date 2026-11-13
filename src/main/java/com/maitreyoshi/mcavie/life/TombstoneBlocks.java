@@ -43,7 +43,7 @@ public final class TombstoneBlocks {
 
     private static <T extends Block> void register(String name, Supplier<T> factory, Consumer<T> onRegistered) {
         Registration.register(Registries.BLOCK, name, factory, onRegistered);
-        Registration.register(Registries.ITEM, name, () -> new BlockItem(BuiltInRegistries.BLOCK.get(MCAVie.id(name)), new Item.Properties()), item -> {
+        Registration.register(Registries.ITEM, name, () -> new BlockItem(BuiltInRegistries.BLOCK.getValue(MCAVie.id(name)), new Item.Properties()), item -> {
         });
     }
 

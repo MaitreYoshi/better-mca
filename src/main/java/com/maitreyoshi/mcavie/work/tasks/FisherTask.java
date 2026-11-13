@@ -78,7 +78,7 @@ public class FisherTask extends AbstractJobTask {
     @Override
     protected void start(ServerLevel world, VillagerEntityMCA villager, long time) {
         if (catchTimer <= 0) {
-            catchTimer = CATCH_MIN + world.random.nextInt(CATCH_RANDOM);
+            catchTimer = CATCH_MIN + world.getRandom().nextInt(CATCH_RANDOM);
         }
         cast = false;
         reach.reset();
@@ -126,7 +126,7 @@ public class FisherTask extends AbstractJobTask {
         }
         world.playSound(null, villager.blockPosition(), SoundEvents.FISHING_BOBBER_RETRIEVE, SoundSource.NEUTRAL, 0.5F, 1.0F);
         cast = false;
-        catchTimer = CATCH_MIN + world.random.nextInt(CATCH_RANDOM);
+        catchTimer = CATCH_MIN + world.getRandom().nextInt(CATCH_RANDOM);
         catchFish(world, villager);
     }
 
@@ -137,7 +137,7 @@ public class FisherTask extends AbstractJobTask {
     }
 
     private void catchFish(ServerLevel world, VillagerEntityMCA villager) {
-        LootTable table = world.getServer().getLootData().getLootTable(BuiltInLootTables.FISHING);
+        LootTable table = world.getServer().reloadableRegistries().getLootTable(BuiltInLootTables.FISHING);
         LootParams params = new LootParams.Builder(world)
                 .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(water))
                 .withParameter(LootContextParams.TOOL, new ItemStack(Items.FISHING_ROD))

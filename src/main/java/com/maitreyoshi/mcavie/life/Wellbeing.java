@@ -208,7 +208,7 @@ public final class Wellbeing {
         double h = record.happiness;
 
         if (age >= MAX_AGE || random.nextDouble() < overDays(oldAgeDeathChance(age, h), days)) {
-            villager.kill();
+            villager.kill((net.minecraft.server.level.ServerLevel) villager.level());
             return true;
         }
 
@@ -218,7 +218,7 @@ public final class Wellbeing {
             }
             double chance = SICK_DEATH_BASE * (1 + (100 - h) / 50) * Math.max(1, 1 + (age - 60) / 10);
             if (random.nextDouble() < Math.min(chance, 0.3)) {
-                villager.kill();
+                villager.kill((net.minecraft.server.level.ServerLevel) villager.level());
                 return true;
             }
         } else if (random.nextDouble() < overDays(illnessChance(h) * VillageDecrees.illnessMultiplier(villager), days)) {

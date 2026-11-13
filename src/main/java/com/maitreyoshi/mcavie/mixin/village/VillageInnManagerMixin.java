@@ -20,7 +20,7 @@ public abstract class VillageInnManagerMixin {
             return;
         }
         Surnames.update(adventurer);
-        String full = adventurer.getTrackedValue(VillagerLike.VILLAGER_NAME);
+        String full = (adventurer.getCustomName() == null ? "" : adventurer.getCustomName().getString());
         if (full != null && !full.isBlank() && (adventurer.getCustomName() == null || !full.equals(adventurer.getCustomName().getString()))) {
             adventurer.setCustomName(Component.literal(full));
         }

@@ -1,6 +1,12 @@
 package com.maitreyoshi.mcavie.compat;
 
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentSerialization;
+import com.google.gson.JsonParser;
+import com.mojang.serialization.JsonOps;
 import net.minecraft.core.UUIDUtil;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
@@ -63,5 +69,28 @@ public final class Nbt {
 
     public static UUID uuidOf(Tag tag) {
         return UUIDUtil.CODEC.parse(NbtOps.INSTANCE, tag).result().orElse(null);
+    }
+
+    /** Sous-élément des données perso (ancien getTagElement), copie ou null. */
+    public static CompoundTag element(ItemStack stack, String key) {
+        CompoundTag tag = tag(stack);
+        return tag == null ? null : tag.getCompound(key).orElse(null);
+    }
+
+    public static CompoundTag saveStack(ItemStack stack, HolderLookup.Provider registries) {
+        return (CompoundTag) ItemStack.CODEC.encodeStart(registries.createSerializationContext(NbtOps.INSTANCE), stack).getOrThrow();
+    }
+
+    public static ItemStack loadStack(CompoundTag tag, HolderLookup.Provider registries) {
+        return ItemStack.CODEC.parse(registries.createSerializationContext(NbtOps.INSTANCE), tag).result().orElse(ItemStack.EMPTY);
+    }
+
+    /** Texte dans un paquet brut (JSON, sans registres : traduisible et littéral). */
+    public static void writeText(FriendlyByteBuf buf, Component text) {
+        buf.writeUtf(ComponentSerialization.CODEC.encodeStart(JsonOps.INSTANCE, text).getOrThrow().toString());
+    }
+
+    public static Component readText(FriendlyByteBuf buf) {
+        return ComponentSerialization.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(buf.readUtf())).result().orElse(Component.empty());
     }
 }

@@ -202,9 +202,8 @@ public class MinerTask extends AbstractJobTask {
         Container cart = depotInventory(world, villager);
         ItemStack pickaxe = bestPickaxe(world, villager, state);
         List<ItemStack> drops = pickaxe == null ? List.of() : blockDrops(world, villager, pos, state, pickaxe);
-        if (pickaxe != null && pickaxe.hurt(1, world.random, null)) {
-            pickaxe.shrink(1);
-            world.playSound(null, villager.blockPosition(), SoundEvents.ITEM_BREAK, SoundSource.NEUTRAL, 0.8F, 1.0F);
+        if (pickaxe != null && damageTool(pickaxe, world)) {
+            world.playSound(null, villager.blockPosition(), SoundEvents.ITEM_BREAK.value(), SoundSource.NEUTRAL, 0.8F, 1.0F);
         }
         for (ItemStack drop : drops) {
             if (cart == null) {
@@ -249,7 +248,7 @@ public class MinerTask extends AbstractJobTask {
         float hardness = Math.max(0.5F, state.getDestroySpeed(world, pos));
         ItemStack pickaxe = bestPickaxe(world, villager, state);
         float speed = pickaxe == null ? 1F : pickaxe.getDestroySpeed(state);
-        int efficiency = pickaxe == null ? 0 : EnchantmentHelper.getItemEnchantmentLevel(Enchantments.BLOCK_EFFICIENCY, pickaxe);
+        int efficiency = pickaxe == null ? 0 : EnchantmentHelper.getItemEnchantmentLevel(world.registryAccess().lookupOrThrow(net.minecraft.core.registries.Registries.ENCHANTMENT).getOrThrow(Enchantments.EFFICIENCY), pickaxe);
         if (speed > 1F && efficiency > 0) {
             speed += efficiency * efficiency + 1;
         }

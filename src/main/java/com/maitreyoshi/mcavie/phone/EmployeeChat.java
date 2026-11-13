@@ -548,7 +548,7 @@ public final class EmployeeChat {
         keys.sort(Comparator.comparingInt(report::getInt).reversed());
         StringBuilder b = new StringBuilder();
         for (int i = 0; i < Math.min(4, keys.size()); i++) {
-            Item item = BuiltInRegistries.ITEM.get(Identifier.tryParse(keys.get(i)));
+            Item item = BuiltInRegistries.ITEM.getValue(Identifier.tryParse(keys.get(i)));
             if (b.length() > 0) {
                 b.append(", ");
             }

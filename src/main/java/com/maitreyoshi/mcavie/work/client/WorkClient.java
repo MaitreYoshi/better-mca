@@ -34,7 +34,7 @@ public final class WorkClient {
             client.execute(() -> BY_ENTITY_ID.put(entityId, info));
         });
         ClientPlayNetworking.registerGlobalReceiver(WorkNetwork.JOB_REFUSED, (client, handler, buf, responseSender) -> {
-            Component message = buf.readComponent();
+            Component message = com.maitreyoshi.mcavie.compat.Nbt.readText(buf);
             client.execute(() -> {
                 if (client.gui.screen() instanceof JobScreen screen) {
                     screen.showRefusal(message);

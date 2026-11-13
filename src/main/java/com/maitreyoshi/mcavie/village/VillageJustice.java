@@ -83,15 +83,15 @@ public final class VillageJustice {
             }
             WellbeingRegistry.Record record = wellbeing.get(uuid);
             if (record == null || record.happiness >= config.crimeHappiness || state.prisoners.containsKey(uuid)
-                    || state.cases.stream().anyMatch(c -> c.suspect.equals(uuid)) || world.random.nextDouble() >= chance) {
+                    || state.cases.stream().anyMatch(c -> c.suspect.equals(uuid)) || world.getRandom().nextDouble() >= chance) {
                 continue;
             }
             if (!(world.getEntity(uuid) instanceof VillagerEntityMCA thief) || thief.isGuard() || thief.isBaby()) {
                 continue;
             }
-            long amount = Math.min(state.treasury, 1 + world.random.nextInt(Math.max(1, config.theftMax)));
+            long amount = Math.min(state.treasury, 1 + world.getRandom().nextInt(Math.max(1, config.theftMax)));
             state.treasury -= amount;
-            if (world.random.nextDouble() < Math.min(config.arrestMaxChance, guards * config.arrestChancePerGuard)) {
+            if (world.getRandom().nextDouble() < Math.min(config.arrestMaxChance, guards * config.arrestChancePerGuard)) {
                 state.treasury += amount;
                 VillageState.Case c = new VillageState.Case();
                 c.suspect = uuid;
@@ -275,7 +275,7 @@ public final class VillageJustice {
     }
 
     private static String name(VillagerEntityMCA villager) {
-        String name = villager.getTrackedValue(VillagerLike.VILLAGER_NAME);
+        String name = (villager.getCustomName() == null ? "" : villager.getCustomName().getString());
         return name == null || name.isBlank() ? villager.getName().getString() : name;
     }
 }
