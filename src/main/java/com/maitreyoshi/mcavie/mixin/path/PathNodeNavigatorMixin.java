@@ -3,7 +3,7 @@ package com.maitreyoshi.mcavie.mixin.path;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.maitreyoshi.mcavie.path.LadderPaths;
-import net.mca.entity.ai.pathfinder.VillagerLandPathNodeMaker;
+import net.conczin.mca.entity.ai.pathfinder.VillagerLandPathNodeMaker;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.NodeEvaluator;
 import net.minecraft.world.level.pathfinder.PathFinder;

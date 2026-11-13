@@ -2,7 +2,7 @@ package com.maitreyoshi.mcavie.mixin.client;
 
 import com.maitreyoshi.mcavie.SurnameText;
 import com.maitreyoshi.mcavie.client.SurnameFieldHolder;
-import net.mca.client.gui.VillagerEditorScreen;
+import net.conczin.mca.client.gui.VillagerEditorScreen;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;

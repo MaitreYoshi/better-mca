@@ -11,13 +11,13 @@ import org.joml.Matrix4f;
 
 import java.util.UUID;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.client.renderer.rendertype.RenderType;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 
 public final class PhotoItemRenderer implements BuiltinItemRendererRegistry.DynamicItemRenderer {
-    private static final ResourceLocation PAPER = MCAVie.id("textures/entity/photo_paper.png");
+    private static final Identifier PAPER = MCAVie.id("textures/entity/photo_paper.png");
     private static final float CARD_HEIGHT = 0.5625f;
 
     @Override

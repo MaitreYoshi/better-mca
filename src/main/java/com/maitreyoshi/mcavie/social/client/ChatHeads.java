@@ -7,7 +7,7 @@ import org.joml.Vector3f;
 
 import java.util.UUID;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.network.chat.Component;
@@ -24,7 +24,7 @@ public final class ChatHeads {
     private ChatHeads() {
     }
 
-    public static void draw(GuiGraphics context, FormattedCharSequence text, int x, int y, int color) {
+    public static void draw(GuiGraphicsExtractor context, FormattedCharSequence text, int x, int y, int color) {
         if (((color >>> 24) & 0xFF) < MIN_ALPHA) {
             return;
         }

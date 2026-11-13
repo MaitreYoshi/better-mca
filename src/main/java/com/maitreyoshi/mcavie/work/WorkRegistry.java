@@ -4,7 +4,7 @@ import com.maitreyoshi.mcavie.MCAVie;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtUtils;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 import org.jetbrains.annotations.Nullable;
@@ -59,7 +59,7 @@ public class WorkRegistry extends SavedData {
         return deceased ? former : RETIRED_PREFIX + former;
     }
 
-    public boolean isClaimed(ResourceLocation dimension, BlockPos pos, UUID except) {
+    public boolean isClaimed(Identifier dimension, BlockPos pos, UUID except) {
         for (Map.Entry<UUID, Record> entry : records.entrySet()) {
             Record record = entry.getValue();
             if (!entry.getKey().equals(except) && pos.equals(record.depot)
@@ -102,14 +102,14 @@ public class WorkRegistry extends SavedData {
         @Nullable
         public UUID employer;
         @Nullable
-        public ResourceLocation depotDimension;
+        public Identifier depotDimension;
         // appli Employés : dernier état connu (PNJ hors chunk chargé) et ordre en attente
         @Nullable
         public String lastName;
         @Nullable
         public BlockPos lastPos;
         @Nullable
-        public ResourceLocation lastDimension;
+        public Identifier lastDimension;
         public float lastHealth;
         public float lastMaxHealth = 20;
         public int lastStatus = -1;
@@ -199,10 +199,10 @@ public class WorkRegistry extends SavedData {
             record.apprenticeChosen = nbt.getBoolean("apprenticeChosen");
             record.formerJob = nbt.contains("formerJob") ? nbt.getString("formerJob") : null;
             record.employer = nbt.hasUUID("employer") ? nbt.getUUID("employer") : null;
-            record.depotDimension = nbt.contains("depotDimension") ? ResourceLocation.tryParse(nbt.getString("depotDimension")) : null;
+            record.depotDimension = nbt.contains("depotDimension") ? Identifier.tryParse(nbt.getString("depotDimension")) : null;
             record.lastName = nbt.contains("lastName") ? nbt.getString("lastName") : null;
             record.lastPos = nbt.contains("lastPos") ? NbtUtils.readBlockPos(nbt.getCompound("lastPos")) : null;
-            record.lastDimension = nbt.contains("lastDimension") ? ResourceLocation.tryParse(nbt.getString("lastDimension")) : null;
+            record.lastDimension = nbt.contains("lastDimension") ? Identifier.tryParse(nbt.getString("lastDimension")) : null;
             record.lastHealth = nbt.getFloat("lastHealth");
             record.lastMaxHealth = nbt.contains("lastMaxHealth") ? nbt.getFloat("lastMaxHealth") : 20;
             record.lastStatus = nbt.contains("lastStatus") ? nbt.getInt("lastStatus") : -1;

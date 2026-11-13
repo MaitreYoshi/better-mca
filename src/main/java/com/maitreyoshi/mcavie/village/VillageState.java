@@ -1,7 +1,7 @@
 package com.maitreyoshi.mcavie.village;
 
-import net.mca.server.world.data.Building;
-import net.mca.server.world.data.Village;
+import net.conczin.mca.server.world.data.Building;
+import net.conczin.mca.server.world.data.Village;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -73,7 +73,7 @@ public final class VillageState {
     public boolean prisonActive;
     public final Set<UUID> pendingRelease = new HashSet<>();
     public final Map<UUID, Prisoner> prisoners = new java.util.LinkedHashMap<>();
-    public final Map<UUID, net.mca.resources.Rank> forcedTitles = new HashMap<>();
+    public final Map<UUID, net.conczin.mca.resources.Rank> forcedTitles = new HashMap<>();
 
     public static final class Case {
         public UUID suspect;
@@ -484,7 +484,7 @@ public final class VillageState {
         CompoundTag titleNbt = nbt.getCompound("forcedTitles");
         for (String key : titleNbt.getAllKeys()) {
             try {
-                forcedTitles.put(UUID.fromString(key), net.mca.resources.Rank.valueOf(titleNbt.getString(key)));
+                forcedTitles.put(UUID.fromString(key), net.conczin.mca.resources.Rank.valueOf(titleNbt.getString(key)));
             } catch (IllegalArgumentException ignored) {
             }
         }

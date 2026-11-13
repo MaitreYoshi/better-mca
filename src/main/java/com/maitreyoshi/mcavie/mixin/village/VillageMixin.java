@@ -2,7 +2,7 @@ package com.maitreyoshi.mcavie.mixin.village;
 
 import com.maitreyoshi.mcavie.village.VillageServer;
 import com.maitreyoshi.mcavie.village.VillageState;
-import net.mca.server.world.data.Village;
+import net.conczin.mca.server.world.data.Village;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import org.spongepowered.asm.mixin.Mixin;

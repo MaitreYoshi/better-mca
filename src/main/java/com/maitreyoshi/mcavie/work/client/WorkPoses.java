@@ -1,7 +1,7 @@
 package com.maitreyoshi.mcavie.work.client;
 
 import com.maitreyoshi.mcavie.work.WorkGesture;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.util.Mth;

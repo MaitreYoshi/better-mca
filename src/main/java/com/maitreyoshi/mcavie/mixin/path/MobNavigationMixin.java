@@ -1,7 +1,7 @@
 package com.maitreyoshi.mcavie.mixin.path;
 
 import com.maitreyoshi.mcavie.path.LadderPaths;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.navigation.GroundPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;

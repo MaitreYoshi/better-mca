@@ -5,13 +5,13 @@ import com.maitreyoshi.mcavie.life.Wellbeing;
 import com.maitreyoshi.mcavie.compat.EntityTrackingEvents;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.PlayerLookup;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.item.BabyItem;
-import net.mca.entity.ai.relationship.Gender;
-import net.mca.server.world.data.PlayerSaveData;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.item.BabyItem;
+import net.conczin.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.server.world.data.PlayerSaveData;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.item.ItemStack;
@@ -20,14 +20,14 @@ import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
 import java.util.UUID;
 
 public final class SurnameNetwork {
-    public static final ResourceLocation SET_SURNAME = MCAVie.id("set_surname");
-    public static final ResourceLocation RANDOM_SURNAME = MCAVie.id("random_surname");
-    public static final ResourceLocation OWN_SURNAME = MCAVie.id("own_surname");
-    public static final ResourceLocation RANDOM_SURNAME_RESULT = MCAVie.id("random_surname_result");
-    public static final ResourceLocation BABY_SURNAME = MCAVie.id("baby_surname");
-    public static final ResourceLocation BIRTH_DAY_REQUEST = MCAVie.id("birth_day_request");
-    public static final ResourceLocation BIRTH_DAY_RESULT = MCAVie.id("birth_day_result");
-    public static final ResourceLocation HAPPINESS = MCAVie.id("happiness");
+    public static final Identifier SET_SURNAME = MCAVie.id("set_surname");
+    public static final Identifier RANDOM_SURNAME = MCAVie.id("random_surname");
+    public static final Identifier OWN_SURNAME = MCAVie.id("own_surname");
+    public static final Identifier RANDOM_SURNAME_RESULT = MCAVie.id("random_surname_result");
+    public static final Identifier BABY_SURNAME = MCAVie.id("baby_surname");
+    public static final Identifier BIRTH_DAY_REQUEST = MCAVie.id("birth_day_request");
+    public static final Identifier BIRTH_DAY_RESULT = MCAVie.id("birth_day_result");
+    public static final Identifier HAPPINESS = MCAVie.id("happiness");
 
     private SurnameNetwork() {
     }
@@ -95,7 +95,7 @@ public final class SurnameNetwork {
             if (surname != null) {
                 Surnames.uppercasePlayer(handler.player);
             }
-            if (surname == null && net.mca.server.world.data.PlayerSaveData.get(handler.player).isEntityDataSet()) {
+            if (surname == null && net.conczin.mca.server.world.data.PlayerSaveData.get(handler.player).isEntityDataSet()) {
                 handler.player.displayClientMessage(net.minecraft.network.chat.Component.translatable("command.mca_vie.none"), false);
             }
         });

@@ -1,10 +1,10 @@
 package com.maitreyoshi.mcavie.work;
 
 import com.maitreyoshi.mcavie.work.tasks.DepositTask;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
@@ -104,7 +104,7 @@ public final class RepairErrands {
         BlockPos best = null;
         Mode mode = null;
         double bestDistance = SEARCH_SQ;
-        ResourceLocation dimension = world.dimension().location();
+        Identifier dimension = world.dimension().location();
         for (WorkRegistry.Record record : WorkRegistry.get(world.getServer()).all()) {
             if (record.job != Job.BLACKSMITH || record.depot == null
                     || (record.depotDimension != null && !record.depotDimension.equals(dimension))) {

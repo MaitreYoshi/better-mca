@@ -9,13 +9,13 @@ import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.PlayerLookup;
 import com.maitreyoshi.mcavie.compat.ServerPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.ai.Chore;
-import net.mca.entity.ai.MoveState;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.ai.Chore;
+import net.conczin.mca.entity.ai.MoveState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.TickTask;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,8 +30,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public final class Aging {
-    public static final ResourceLocation AGE = MCAVie.id("aging_age");
-    public static final ResourceLocation CONFIG = MCAVie.id("aging_config");
+    public static final Identifier AGE = MCAVie.id("aging_age");
+    public static final Identifier CONFIG = MCAVie.id("aging_config");
 
     private static final UUID SPEED_ID = UUID.fromString("5d6f0b8e-3c1a-4f7e-9b2d-8a4c6e1f2a01");
     private static final UUID HEALTH_ID = UUID.fromString("5d6f0b8e-3c1a-4f7e-9b2d-8a4c6e1f2a02");

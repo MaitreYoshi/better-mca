@@ -3,8 +3,8 @@ package com.maitreyoshi.mcavie.mixin;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.maitreyoshi.mcavie.life.Orientation;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.item.MatchmakersRingItem;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.item.MatchmakersRingItem;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 

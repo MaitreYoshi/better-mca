@@ -1,8 +1,8 @@
 package com.maitreyoshi.mcavie.mixin.village;
 
 import com.maitreyoshi.mcavie.village.BedClaims;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.ai.Residency;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.ai.Residency;
 import net.minecraft.server.level.ServerPlayer;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;

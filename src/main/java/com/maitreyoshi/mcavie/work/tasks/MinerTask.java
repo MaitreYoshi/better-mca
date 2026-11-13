@@ -6,7 +6,7 @@ import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
 import com.maitreyoshi.mcavie.work.WorkStatus;
 import com.maitreyoshi.mcavie.work.block.WorkstationBlock;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;

@@ -1,11 +1,11 @@
 package com.maitreyoshi.mcavie.phone.client;
 
 import com.maitreyoshi.mcavie.phone.PhoneEmployees;
-import net.mca.entity.EntitiesMCA;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.registry.EntitiesMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.ai.relationship.Gender;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.nbt.CompoundTag;
@@ -89,7 +89,7 @@ public final class EmployeeLooks {
     }
 
     // corps entier, pieds en bas du cadre ; le regard suit la souris comme dans l'inventaire
-    public static void drawBody(GuiGraphics context, LivingEntity entity, int x, int y, int w, int h, int mouseX, int mouseY) {
+    public static void drawBody(GuiGraphicsExtractor context, LivingEntity entity, int x, int y, int w, int h, int mouseX, int mouseY) {
         float height = Math.max(0.5f, entity.getBbHeight());
         int size = Math.max(1, Math.round((h - 8) / height));
         int cx = x + w / 2;
@@ -99,7 +99,7 @@ public final class EmployeeLooks {
     }
 
     // tête seule, de face, dans un carré (le rognage est à la charge de l'appelant)
-    public static void drawHead(GuiGraphics context, LivingEntity entity, int x, int y, int box) {
+    public static void drawHead(GuiGraphicsExtractor context, LivingEntity entity, int x, int y, int box) {
         float height = Math.max(0.5f, entity.getBbHeight());
         int scale = Math.max(1, Math.round(box / (height * 0.25f)));
         float bodyYaw = entity.yBodyRot;

@@ -1,7 +1,7 @@
 package com.maitreyoshi.mcavie.mixin.client;
 
 import com.maitreyoshi.mcavie.life.client.GhostRenderer;
-import net.mca.client.render.layer.VillagerLayer;
+import net.conczin.mca.client.render.layer.VillagerLayer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

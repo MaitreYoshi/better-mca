@@ -1,8 +1,8 @@
 package com.maitreyoshi.mcavie.life;
 
 import com.maitreyoshi.mcavie.social.SocialConversation;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;

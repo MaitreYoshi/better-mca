@@ -1,9 +1,9 @@
 package com.maitreyoshi.mcavie.village;
 
 import com.maitreyoshi.mcavie.life.Wellbeing;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.server.world.data.Building;
-import net.mca.server.world.data.Village;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.server.world.data.Building;
+import net.conczin.mca.server.world.data.Village;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -11,8 +11,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.Containers;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.npc.Villager;
-import net.minecraft.world.entity.npc.WanderingTrader;
+import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.npc.wanderingtrader.WanderingTrader;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.trading.MerchantOffer;

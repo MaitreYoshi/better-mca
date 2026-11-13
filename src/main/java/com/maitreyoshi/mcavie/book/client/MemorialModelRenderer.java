@@ -5,9 +5,9 @@ import com.maitreyoshi.mcavie.life.TombstoneBlocks;
 import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import net.mca.client.gui.ExtendedBookScreen;
+import net.conczin.mca.client.gui.ExtendedBookScreen;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.renderer.LightTexture;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
@@ -21,7 +21,7 @@ public final class MemorialModelRenderer {
     private static final int[] SLICES = {13, 40, 67};
     private static final int[] SLICE_Y = {1, 4, 7};
 
-    public static void render(ExtendedBookScreen screen, GuiGraphics context) {
+    public static void render(ExtendedBookScreen screen, GuiGraphicsExtractor context) {
         PoseStack matrices = context.pose();
         matrices.pushPose();
         matrices.translate(screen.width / 2f - 2, 92, 150);

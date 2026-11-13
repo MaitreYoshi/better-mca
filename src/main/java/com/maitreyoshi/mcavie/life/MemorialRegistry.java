@@ -1,8 +1,8 @@
 package com.maitreyoshi.mcavie.life;
 
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.server.world.data.Village;
-import net.mca.server.world.data.VillageManager;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.server.world.data.Village;
+import net.conczin.mca.server.world.data.VillageManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.core.registries.Registries;
@@ -12,7 +12,7 @@ import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
@@ -80,7 +80,7 @@ public class MemorialRegistry extends SavedData {
             Set<GlobalPos> set = new LinkedHashSet<>();
             for (Tag element : village.getList("monuments", Tag.TAG_COMPOUND)) {
                 CompoundTag pos = (CompoundTag) element;
-                set.add(GlobalPos.of(ResourceKey.create(Registries.DIMENSION, new ResourceLocation(pos.getString("dim"))), NbtUtils.readBlockPos(pos)));
+                set.add(GlobalPos.of(ResourceKey.create(Registries.DIMENSION, Identifier.parse(pos.getString("dim"))), NbtUtils.readBlockPos(pos)));
                 list.addAll(readList(pos));
             }
             registry.fallen.put(id, list);

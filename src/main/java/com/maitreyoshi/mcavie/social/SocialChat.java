@@ -1,6 +1,6 @@
 package com.maitreyoshi.mcavie.social;
 
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.ai.behavior.EntityTracker;

@@ -1,10 +1,10 @@
 package com.maitreyoshi.mcavie.village;
 
-import net.mca.resources.data.BuildingType;
-import net.mca.server.world.data.Building;
-import net.mca.server.world.data.Village;
+import net.conczin.mca.resources.data.BuildingType;
+import net.conczin.mca.server.world.data.Building;
+import net.conczin.mca.server.world.data.Village;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -98,7 +98,7 @@ public final class Prestige {
     }
 
     public static boolean hasRequiredBlocks(BuildingType type, Building building) {
-        Map<ResourceLocation, List<BlockPos>> available = type.getGroups(building.getBlocks());
+        Map<Identifier, List<BlockPos>> available = type.getGroups(building.getBlocks());
         return type.getGroups().entrySet().stream()
                 .allMatch(e -> available.containsKey(e.getKey()) && available.get(e.getKey()).size() >= e.getValue());
     }

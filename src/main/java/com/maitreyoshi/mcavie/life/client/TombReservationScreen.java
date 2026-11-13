@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
@@ -99,7 +99,7 @@ public class TombReservationScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
         context.drawCenteredString(font, title, width / 2, 10, 0xFFFFFF);
         Component hint = entries.isEmpty() ? Component.translatable("gui.mca_vie.tomb.empty") : Component.translatable("gui.mca_vie.tomb.hint");

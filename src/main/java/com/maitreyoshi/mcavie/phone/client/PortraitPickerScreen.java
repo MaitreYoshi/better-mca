@@ -4,7 +4,7 @@ import com.maitreyoshi.mcavie.phone.PhoneNetwork;
 import com.maitreyoshi.mcavie.tree.client.TreeScreen;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
@@ -78,7 +78,7 @@ public class PortraitPickerScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
         context.drawCenteredString(font, title, width / 2, 10, 0xFFFFFF);
         if (gallery.isEmpty()) {

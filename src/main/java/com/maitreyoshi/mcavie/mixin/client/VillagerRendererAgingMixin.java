@@ -2,8 +2,8 @@ package com.maitreyoshi.mcavie.mixin.client;
 
 import com.maitreyoshi.mcavie.aging.client.AgingClient;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.mca.client.render.VillagerLikeEntityMCARenderer;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.client.render.VillagerLikeEntityMCARenderer;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.world.entity.Mob;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

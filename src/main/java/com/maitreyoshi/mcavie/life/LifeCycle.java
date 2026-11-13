@@ -3,11 +3,11 @@ package com.maitreyoshi.mcavie.life;
 import com.maitreyoshi.mcavie.aging.Aging;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.village.VillageDecrees;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.ai.relationship.AgeState;
-import net.mca.entity.ai.relationship.Gender;
-import net.mca.server.world.data.FamilyTree;
-import net.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.ai.relationship.AgeState;
+import net.conczin.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.server.world.data.FamilyTree;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
 import net.minecraft.server.MinecraftServer;
@@ -61,7 +61,7 @@ public final class LifeCycle {
             }
             if (newborn) {
                 VillageDecrees.onBirth(villager);
-                if (villager.getAge() <= -net.mca.entity.ai.relationship.AgeState.getMaxAge() + 2400) {
+                if (villager.getAge() <= -net.conczin.mca.entity.ai.relationship.AgeState.getMaxAge() + 2400) {
                     com.maitreyoshi.mcavie.village.CivilRegistry.birth(villager, world);
                 }
             }

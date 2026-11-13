@@ -7,7 +7,7 @@ import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -19,7 +19,7 @@ import java.util.List;
 public final class WorldCalendar {
     public static final long TICKS_PER_DAY = 24000L;
     public static final double DAYS_PER_YEAR = 365.2425;
-    public static final ResourceLocation SEGMENTS_PACKET = MCAVie.id("calendar_segments");
+    public static final Identifier SEGMENTS_PACKET = MCAVie.id("calendar_segments");
     private static final long TICKS_OFFSET = 6000L;
     private static final LocalDate FIRST_DAY = LocalDate.of(1, 1, 1);
     private static final List<Segment> DEFAULT = List.of(new Segment(0, 0, 1));

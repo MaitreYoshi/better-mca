@@ -1,9 +1,9 @@
 package com.maitreyoshi.mcavie.mixin;
 
 import com.maitreyoshi.mcavie.tree.server.mixin.FamilyTreeAccessor;
-import net.mca.network.c2s.FamilyTreeUUIDLookup;
-import net.mca.server.world.data.FamilyTree;
-import net.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.network.c2s.FamilyTreeUUIDLookup;
+import net.conczin.mca.server.world.data.FamilyTree;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;

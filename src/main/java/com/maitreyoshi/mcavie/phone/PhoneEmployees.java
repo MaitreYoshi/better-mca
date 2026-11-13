@@ -7,17 +7,17 @@ import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
 import com.maitreyoshi.mcavie.work.WorkStatus;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.server.world.data.FamilyTree;
-import net.mca.server.world.data.FamilyTreeNode;
-import net.mca.entity.ai.Chore;
-import net.mca.entity.ai.MoveState;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.server.world.data.FamilyTree;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.entity.ai.Chore;
+import net.conczin.mca.entity.ai.MoveState;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -35,10 +35,10 @@ import java.util.WeakHashMap;
 // Appli « Employés » : liste des PNJ dont le joueur est l'employeur (registre des métiers) et licenciement à distance.
 // Un PNJ dont le chunk n'est pas chargé est décrit par son dernier instantané ; un licenciement s'applique à son rechargement.
 public final class PhoneEmployees {
-    public static final ResourceLocation REQUEST = MCAVie.id("employees_request");
-    public static final ResourceLocation LIST = MCAVie.id("employees_list");
-    public static final ResourceLocation FIRE = MCAVie.id("employee_fire");
-    public static final ResourceLocation ORDER = MCAVie.id("employee_order");
+    public static final Identifier REQUEST = MCAVie.id("employees_request");
+    public static final Identifier LIST = MCAVie.id("employees_list");
+    public static final Identifier FIRE = MCAVie.id("employee_fire");
+    public static final Identifier ORDER = MCAVie.id("employee_order");
     public static final String ORDER_FIRE = "fire";
     public static final String ORDER_FOLLOW = "follow";
     public static final String ORDER_STAY = "stay";

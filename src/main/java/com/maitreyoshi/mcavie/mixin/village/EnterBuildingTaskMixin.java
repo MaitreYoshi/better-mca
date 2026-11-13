@@ -1,8 +1,8 @@
 package com.maitreyoshi.mcavie.mixin.village;
 
 import com.maitreyoshi.mcavie.village.BuildingQuality;
-import net.mca.entity.ai.brain.tasks.EnterBuildingTask;
-import net.mca.server.world.data.Building;
+import net.conczin.mca.entity.ai.brain.tasks.EnterBuildingTask;
+import net.conczin.mca.server.world.data.Building;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;

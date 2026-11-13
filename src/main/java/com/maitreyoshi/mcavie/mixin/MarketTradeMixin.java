@@ -1,7 +1,7 @@
 package com.maitreyoshi.mcavie.mixin;
 
 import com.maitreyoshi.mcavie.village.VillageMarketExtras;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;

@@ -6,13 +6,13 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import net.minecraft.Util;
+import net.minecraft.util.Util;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class TreeProtocol {
-    public static final ResourceLocation REQUEST = MCAVie.id("tree_request");
-    public static final ResourceLocation RESPONSE = MCAVie.id("tree_response");
+    public static final Identifier REQUEST = MCAVie.id("tree_request");
+    public static final Identifier RESPONSE = MCAVie.id("tree_response");
 
     public static final int MODE_TREE = 0;
     public static final int MODE_PATH = 1;

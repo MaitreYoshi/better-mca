@@ -2,7 +2,7 @@ package com.maitreyoshi.mcavie.work.tasks;
 
 import com.google.common.collect.ImmutableList;
 import com.mojang.datafixers.util.Pair;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.world.entity.ai.behavior.BehaviorControl;
 
 public final class JobTasks {

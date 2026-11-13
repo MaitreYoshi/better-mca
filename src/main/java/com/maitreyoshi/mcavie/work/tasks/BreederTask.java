@@ -3,10 +3,10 @@ package com.maitreyoshi.mcavie.work.tasks;
 import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -14,7 +14,7 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.animal.Animal;
-import net.minecraft.world.entity.animal.Sheep;
+import net.minecraft.world.entity.animal.sheep.Sheep;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
@@ -209,6 +209,6 @@ public class BreederTask extends AbstractJobTask {
     }
 
     private static net.minecraft.world.item.Item woolOf(DyeColor color) {
-        return BuiltInRegistries.ITEM.get(new ResourceLocation("minecraft", color.getName() + "_wool"));
+        return BuiltInRegistries.ITEM.get(Identifier.fromNamespaceAndPath("minecraft", color.getName() + "_wool"));
     }
 }

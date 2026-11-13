@@ -1,14 +1,14 @@
 package com.maitreyoshi.mcavie.book;
 
-import net.mca.client.book.pages.Page;
-import net.mca.client.gui.ExtendedBookScreen;
+import net.conczin.mca.client.book.pages.Page;
+import net.conczin.mca.client.gui.ExtendedBookScreen;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.locale.Language;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.alchemy.PotionUtils;
@@ -36,7 +36,7 @@ public class IllustratedPage extends Page {
     private final List<String> grid = new ArrayList<>();
     private String noteKey;
     private String bigIcon;
-    private ResourceLocation image;
+    private Identifier image;
     private int imageWidth;
     private int imageHeight;
     private String[] recipe;
@@ -87,7 +87,7 @@ public class IllustratedPage extends Page {
         return this;
     }
 
-    public IllustratedPage image(ResourceLocation image, int width, int height) {
+    public IllustratedPage image(Identifier image, int width, int height) {
         this.image = image;
         this.imageWidth = width;
         this.imageHeight = height;
@@ -113,14 +113,14 @@ public class IllustratedPage extends Page {
     private static ItemStack stack(String id) {
         int at = id.indexOf('@');
         if (at < 0) {
-            return new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation(id)));
+            return new ItemStack(BuiltInRegistries.ITEM.get(Identifier.parse(id)));
         }
-        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(new ResourceLocation(id.substring(0, at))));
-        return PotionUtils.setPotion(stack, BuiltInRegistries.POTION.get(new ResourceLocation(id.substring(at + 1))));
+        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.get(Identifier.parse(id.substring(0, at))));
+        return PotionUtils.setPotion(stack, BuiltInRegistries.POTION.get(Identifier.parse(id.substring(at + 1))));
     }
 
     @Override
-    public void render(ExtendedBookScreen screen, GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void render(ExtendedBookScreen screen, GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         Font font = screen.getTextRenderer();
         int left = (screen.width - 192) / 2 + 36;
 

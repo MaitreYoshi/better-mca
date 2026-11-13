@@ -1,7 +1,7 @@
 package com.maitreyoshi.mcavie.life;
 
 import com.maitreyoshi.mcavie.MCAVie;
-import net.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.entity.ai.relationship.Gender;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;

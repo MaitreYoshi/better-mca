@@ -10,15 +10,15 @@ import org.joml.Matrix4f;
 
 import java.util.UUID;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.core.Direction;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public class PhotoFrameRenderer extends EntityRenderer<PhotoFrameEntity> {
-    private static final ResourceLocation PAPER = MCAVie.id("textures/entity/photo_paper.png");
+    private static final Identifier PAPER = MCAVie.id("textures/entity/photo_paper.png");
 
     public PhotoFrameRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -68,7 +68,7 @@ public class PhotoFrameRenderer extends EntityRenderer<PhotoFrameEntity> {
     }
 
     @Override
-    public ResourceLocation getTextureLocation(PhotoFrameEntity entity) {
+    public Identifier getTextureLocation(PhotoFrameEntity entity) {
         return PAPER;
     }
 }

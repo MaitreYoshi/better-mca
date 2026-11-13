@@ -19,13 +19,13 @@ import java.util.UUID;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -228,7 +228,7 @@ public final class MemorialClient {
         }
 
         @Override
-        public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+        public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
             renderBackground(context);
             context.drawCenteredString(font, title, width / 2, height / 2 - 76, 0xFFFFFF);
             context.drawString(font, Component.translatable("gui.mca_vie.war_memorial.inscription_hint"), width / 2 - 120, height / 2 - 48, 0xA0A0A0);
@@ -269,7 +269,7 @@ public final class MemorialClient {
         }
 
         @Override
-        public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+        public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
             renderBackground(context);
             context.drawCenteredString(font, title, width / 2, 14, 0xF2CC5A);
             List<MemorialRegistry.Fallen> all = memorial.fallen();

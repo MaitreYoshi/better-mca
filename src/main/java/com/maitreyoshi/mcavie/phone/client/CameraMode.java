@@ -20,7 +20,7 @@ import javax.imageio.stream.ImageOutputStream;
 import net.minecraft.client.CameraType;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.Screenshot;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
@@ -253,7 +253,7 @@ public final class CameraMode {
         return new int[]{(width - w) / 2, (height - h) / 2, w, h};
     }
 
-    public static void render(GuiGraphics context, float tickDelta) {
+    public static void render(GuiGraphicsExtractor context, float tickDelta) {
         Minecraft client = Minecraft.getInstance();
         if (state == null && flash == 0) {
             return;
@@ -309,7 +309,7 @@ public final class CameraMode {
         }
     }
 
-    private static void corner(GuiGraphics context, int x, int y, int size, int dx, int dy) {
+    private static void corner(GuiGraphicsExtractor context, int x, int y, int size, int dx, int dy) {
         int x2 = x + dx * size;
         int y2 = y + dy * size;
         context.fill(Math.min(x, x2), Math.min(y, y + dy * 2), Math.max(x, x2), Math.max(y, y + dy * 2), 0xFFFFFFFF);

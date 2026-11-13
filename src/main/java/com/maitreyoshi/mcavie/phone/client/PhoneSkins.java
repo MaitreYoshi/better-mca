@@ -12,17 +12,17 @@ import java.util.UUID;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.PlayerInfo;
 import net.minecraft.client.resources.DefaultPlayerSkin;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class PhoneSkins {
-    private static final Map<UUID, ResourceLocation> CACHE = new HashMap<>();
+    private static final Map<UUID, Identifier> CACHE = new HashMap<>();
     private static final Map<UUID, String> SOURCES = new HashMap<>();
 
     private PhoneSkins() {
     }
 
     @Nullable
-    public static ResourceLocation head(@Nullable Person person) {
+    public static Identifier head(@Nullable Person person) {
         if (person == null || person.uuid() == null) {
             return null;
         }

@@ -3,7 +3,7 @@ package com.maitreyoshi.mcavie.tree.client;
 import com.maitreyoshi.mcavie.SurnameText;
 import com.maitreyoshi.mcavie.tree.FamilyPerson;
 import com.maitreyoshi.mcavie.tree.TreeSelection;
-import net.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.entity.ai.relationship.Gender;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.NbtIo;

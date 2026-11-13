@@ -11,17 +11,17 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.core.BlockPos;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
-import net.minecraft.world.level.chunk.ChunkStatus;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.material.MapColor;
 
 public final class PhoneMap {
-    public static final ResourceLocation TEXTURE = new ResourceLocation("mca_vie", "phone_map");
+    public static final Identifier TEXTURE = Identifier.fromNamespaceAndPath("mca_vie", "phone_map");
     private static final int MAX_RADIUS = 12;
     private static final int NEW_PER_FRAME = 24;
     private static final int REFRESH_PER_FRAME = 4;

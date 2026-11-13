@@ -1,8 +1,8 @@
 package com.maitreyoshi.mcavie.mixin.village;
 
 import com.maitreyoshi.mcavie.village.VillageRights;
-import net.mca.network.c2s.RenameVillageMessage;
-import net.mca.server.world.data.VillageManager;
+import net.conczin.mca.network.c2s.RenameVillageMessage;
+import net.conczin.mca.server.world.data.VillageManager;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import org.spongepowered.asm.mixin.Final;

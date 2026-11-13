@@ -10,14 +10,14 @@ import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.PlayerLookup;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
 import com.maitreyoshi.mcavie.village.VillageRights;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.server.world.data.Village;
-import net.mca.server.world.data.VillageManager;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.server.world.data.Village;
+import net.conczin.mca.server.world.data.VillageManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.Level;
@@ -26,12 +26,12 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class WorkNetwork {
-    public static final ResourceLocation SET_JOB = MCAVie.id("set_job");
-    public static final ResourceLocation PICK_DEPOT = MCAVie.id("pick_depot");
-    public static final ResourceLocation ZONE_HERE = MCAVie.id("zone_here");
-    public static final ResourceLocation JOB_INFO = MCAVie.id("job_info");
-    public static final ResourceLocation SHOW_WORKSTATION = MCAVie.id("show_workstation");
-    public static final ResourceLocation JOB_REFUSED = MCAVie.id("job_refused");
+    public static final Identifier SET_JOB = MCAVie.id("set_job");
+    public static final Identifier PICK_DEPOT = MCAVie.id("pick_depot");
+    public static final Identifier ZONE_HERE = MCAVie.id("zone_here");
+    public static final Identifier JOB_INFO = MCAVie.id("job_info");
+    public static final Identifier SHOW_WORKSTATION = MCAVie.id("show_workstation");
+    public static final Identifier JOB_REFUSED = MCAVie.id("job_refused");
 
     private static final double MAX_DISTANCE_SQ = 16 * 16;
     private static final Map<UUID, PendingDepot> PENDING_DEPOTS = new ConcurrentHashMap<>();
@@ -122,7 +122,7 @@ public final class WorkNetwork {
                     serverPlayer.displayClientMessage(Component.translatable("job.mca_vie.wrong_workstation", villager.getName(), record.job.getName()).withStyle(ChatFormatting.RED), false);
                     return EventResult.interruptTrue();
                 }
-                ResourceLocation dimension = world.dimension().location();
+                Identifier dimension = world.dimension().location();
                 if (WorkRegistry.get(serverPlayer.getServer()).isClaimed(dimension, pos, villager.getUUID())) {
                     serverPlayer.displayClientMessage(Component.translatable("job.mca_vie.workstation_taken").withStyle(ChatFormatting.RED), false);
                     return EventResult.interruptTrue();

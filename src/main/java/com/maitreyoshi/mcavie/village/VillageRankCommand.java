@@ -2,8 +2,8 @@ package com.maitreyoshi.mcavie.village;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import dev.architectury.event.events.common.CommandRegistrationEvent;
-import net.mca.server.world.data.Village;
-import net.mca.server.world.data.VillageManager;
+import net.conczin.mca.server.world.data.Village;
+import net.conczin.mca.server.world.data.VillageManager;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.network.chat.Component;

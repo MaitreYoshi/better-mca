@@ -1,8 +1,8 @@
 package com.maitreyoshi.mcavie.tree.server.mixin;
 
 import com.maitreyoshi.mcavie.tree.server.TreeRepair;
-import net.mca.server.world.data.FamilyTree;
-import net.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.server.world.data.FamilyTree;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
 import net.minecraft.world.level.saveddata.SavedData;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;

@@ -2,7 +2,7 @@ package com.maitreyoshi.mcavie.mixin;
 
 import com.maitreyoshi.mcavie.life.TombReservations;
 import com.maitreyoshi.mcavie.life.VaultBlock;
-import net.mca.block.TombstoneBlock;
+import net.conczin.mca.block.TombstoneBlock;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;

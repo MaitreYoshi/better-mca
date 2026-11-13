@@ -1,8 +1,8 @@
 package com.maitreyoshi.mcavie.mixin;
 
 import com.maitreyoshi.mcavie.Surnames;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.network.c2s.VillagerEditorSyncRequest;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.network.c2s.VillagerEditorSyncRequest;
 import net.minecraft.server.level.ServerPlayer;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;

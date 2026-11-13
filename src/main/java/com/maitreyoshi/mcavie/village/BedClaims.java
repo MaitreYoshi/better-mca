@@ -6,8 +6,8 @@ import dev.architectury.event.events.common.EntityEvent;
 import dev.architectury.event.events.common.InteractionEvent;
 import com.maitreyoshi.mcavie.compat.ServerLifecycleEvents;
 import com.maitreyoshi.mcavie.compat.ServerPlayConnectionEvents;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.ai.MemoryModuleTypeMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.ai.MemoryModuleTypeMCA;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -16,7 +16,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -263,7 +263,7 @@ public final class BedClaims {
             ListTag list = nbt.getList("beds", 10);
             for (int i = 0; i < list.size(); i++) {
                 CompoundTag c = list.getCompound(i);
-                ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(c.getString("dim")));
+                ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, Identifier.parse(c.getString("dim")));
                 BlockPos pos = BlockPos.of(c.getLong("pos"));
                 registry.claims.put(GlobalPos.of(dimension, pos), new Claim(c.getUUID("villager"), c.getString("name")));
             }

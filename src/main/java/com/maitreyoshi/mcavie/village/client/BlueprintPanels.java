@@ -7,14 +7,14 @@ import com.maitreyoshi.mcavie.village.VillageConfig;
 import com.maitreyoshi.mcavie.village.VillageEconomy;
 import com.maitreyoshi.mcavie.village.VillageRank;
 import com.maitreyoshi.mcavie.village.VillageState;
-import net.mca.resources.Rank;
-import net.mca.resources.data.BuildingType;
-import net.mca.resources.data.tasks.Task;
-import net.mca.server.world.data.Building;
-import net.mca.server.world.data.Village;
+import net.conczin.mca.resources.Rank;
+import net.conczin.mca.resources.data.BuildingType;
+import net.conczin.mca.resources.data.tasks.Task;
+import net.conczin.mca.server.world.data.Building;
+import net.conczin.mca.server.world.data.Village;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.util.FormattedCharSequence;
@@ -43,7 +43,7 @@ public final class BlueprintPanels {
         return Component.translatable("buildingType." + type);
     }
 
-    public static int wrapped(GuiGraphics context, Font text, Component line, int x, int y, int width, int color) {
+    public static int wrapped(GuiGraphicsExtractor context, Font text, Component line, int x, int y, int width, int color) {
         for (FormattedCharSequence part : text.split(line, Math.max(40, width))) {
             context.drawString(text, part, x, y, color);
             y += LINE;
@@ -51,7 +51,7 @@ public final class BlueprintPanels {
         return y;
     }
 
-    public static int renderPersonal(GuiGraphics context, Font text, Rank rank, int reputation,
+    public static int renderPersonal(GuiGraphicsExtractor context, Font text, Rank rank, int reputation,
                                      List<Task> tasks, Set<String> completed, int x, int y, int width) {
         if (rank == null) {
             return y;
@@ -71,7 +71,7 @@ public final class BlueprintPanels {
         return y;
     }
 
-    public static int renderRank(GuiGraphics context, Font text, Village village, int x, int y, int width) {
+    public static int renderRank(GuiGraphicsExtractor context, Font text, Village village, int x, int y, int width) {
         VillageState state = VillageState.of(village);
         Prestige.Result result = Prestige.evaluateCached(village, state.rank);
 
@@ -113,7 +113,7 @@ public final class BlueprintPanels {
         return y;
     }
 
-    private static int condition(GuiGraphics context, Font text, int x, int y, int width, boolean ok, MutableComponent line) {
+    private static int condition(GuiGraphicsExtractor context, Font text, int x, int y, int width, boolean ok, MutableComponent line) {
         return wrapped(context, text, Component.literal(ok ? "✔ " : "✘ ").append(line), x + 4, y, width - 4, ok ? GREEN : RED);
     }
 
@@ -200,7 +200,7 @@ public final class BlueprintPanels {
         return Component.translatable("gui.mca_vie.quality.missing", target.getName(), parts).withStyle(ChatFormatting.YELLOW);
     }
 
-    public static int renderCatalogInfo(GuiGraphics context, Font text, BuildingType type, int x, int y, int width) {
+    public static int renderCatalogInfo(GuiGraphicsExtractor context, Font text, BuildingType type, int x, int y, int width) {
         VillageConfig.BuildingRule rule = VillageConfig.get().building(type.name());
         if (rule == null || rule.points <= 0) {
             return wrapped(context, text, Component.translatable("gui.mca_vie.building.not_rated"), x, y, width, GRAY);
@@ -220,7 +220,7 @@ public final class BlueprintPanels {
         return wrapped(context, text, Component.translatable("gui.mca_vie.building.upkeep", rule.upkeep), x, y, width, WHITE);
     }
 
-    public static int renderTreasury(GuiGraphics context, Font text, Village village, int x, int y, int width) {
+    public static int renderTreasury(GuiGraphicsExtractor context, Font text, Village village, int x, int y, int width) {
         VillageState state = VillageState.of(village);
         VillageConfig config = VillageConfig.get();
         Prestige.Result result = Prestige.evaluateCached(village, state.rank);
@@ -266,14 +266,14 @@ public final class BlueprintPanels {
         return config.natureUnitsPerEmerald.keySet().stream()
                 .filter(id -> config.unitsPerEmerald(id) > 0)
                 .filter(id -> {
-                    net.minecraft.resources.ResourceLocation parsed = net.minecraft.resources.ResourceLocation.tryParse(id);
+                    net.minecraft.resources.Identifier parsed = net.minecraft.resources.Identifier.tryParse(id);
                     return parsed != null && net.minecraft.core.registries.BuiltInRegistries.ITEM.containsKey(parsed);
                 })
                 .toList();
     }
 
     private static net.minecraft.world.item.Item item(String id) {
-        return net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.ResourceLocation.tryParse(id));
+        return net.minecraft.core.registries.BuiltInRegistries.ITEM.get(net.minecraft.resources.Identifier.tryParse(id));
     }
 
     public static Component productLabel(String id) {

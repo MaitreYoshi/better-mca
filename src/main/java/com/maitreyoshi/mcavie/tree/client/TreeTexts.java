@@ -5,7 +5,7 @@ import com.maitreyoshi.mcavie.life.LifeCycle;
 import com.maitreyoshi.mcavie.tree.FamilyPerson;
 import com.maitreyoshi.mcavie.tree.RelationInfo;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
-import net.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.entity.ai.relationship.Gender;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.resources.language.I18n;
 import net.minecraft.network.chat.Component;

@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.packs.resources.ResourceManager;
 import net.minecraft.server.packs.resources.SimpleJsonResourceReloadListener;
 import net.minecraft.util.RandomSource;
@@ -15,7 +15,7 @@ import net.minecraft.util.profiling.ProfilerFiller;
 
 public class SurnameLists extends SimpleJsonResourceReloadListener {
     public static final String DEFAULT_REGION = "default";
-    public static final ResourceLocation ID = MCAVie.id("surname_lists");
+    public static final Identifier ID = MCAVie.id("surname_lists");
 
     private static final Map<String, Pool> POOLS = new HashMap<>();
     private static final RandomSource RANDOM = RandomSource.create();
@@ -25,7 +25,7 @@ public class SurnameLists extends SimpleJsonResourceReloadListener {
     }
 
     @Override
-    protected void apply(Map<ResourceLocation, JsonElement> prepared, ResourceManager manager, ProfilerFiller profiler) {
+    protected void apply(Map<Identifier, JsonElement> prepared, ResourceManager manager, ProfilerFiller profiler) {
         POOLS.clear();
         prepared.forEach((id, json) -> {
             Pool pool = POOLS.computeIfAbsent(id.getPath(), r -> new Pool());

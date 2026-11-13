@@ -3,10 +3,10 @@ package com.maitreyoshi.mcavie.life;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
-import net.mca.block.TombstoneBlock;
-import net.mca.item.ScytheItem;
-import net.mca.item.StaffOfLifeItem;
-import net.mca.server.world.data.GraveyardManager;
+import net.conczin.mca.block.TombstoneBlock;
+import net.conczin.mca.item.ScytheItem;
+import net.conczin.mca.item.StaffOfLifeItem;
+import net.conczin.mca.server.world.data.GraveyardManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -16,7 +16,7 @@ import net.minecraft.nbt.StringTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -58,8 +58,8 @@ public class VaultBlock extends TombstoneBlock {
     public static final int TITLE = -1;
     public static final int TITLE_MAX = 32;
     private static final String SLOTS_KEY = "mca_vie:vault_slots";
-    public static final ResourceLocation TITLE_OPEN = MCAVie.id("vault_title_open");
-    public static final ResourceLocation TITLE_SET = MCAVie.id("vault_title_set");
+    public static final Identifier TITLE_OPEN = MCAVie.id("vault_title_open");
+    public static final Identifier TITLE_SET = MCAVie.id("vault_title_set");
     private static final double[][] BOXES = {
             {-16, 0, 0, 32, 1, 32}, {-15, 1, 1, 31, 2, 31}, {-13, 2, 3, 27, 12, 29}, {-14, 12, 2, 28, 14, 30},
             {-11, 14, 5, 19, 15, 27}, {19, 14, 3, 27, 15.5, 29}, {21, 15.5, 4, 24, 32, 28}

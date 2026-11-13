@@ -3,7 +3,7 @@ package com.maitreyoshi.mcavie.tree.client.mixin;
 import com.maitreyoshi.mcavie.tree.TreeProtocol;
 import com.maitreyoshi.mcavie.tree.client.TreeClient;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
-import net.mca.client.gui.FamilyTreeScreen;
+import net.conczin.mca.client.gui.FamilyTreeScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import org.spongepowered.asm.mixin.Mixin;

@@ -1,8 +1,8 @@
 package com.maitreyoshi.mcavie.mixin;
 
-import net.mca.item.VillagerTrackerItem;
-import net.mca.server.world.data.VillagerTrackerManager;
-import net.mca.util.NbtHelper;
+import net.conczin.mca.item.VillagerTrackerItem;
+import net.conczin.mca.server.world.data.VillagerTrackerManager;
+import net.conczin.mca.util.NbtHelper;
 import net.minecraft.core.GlobalPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;

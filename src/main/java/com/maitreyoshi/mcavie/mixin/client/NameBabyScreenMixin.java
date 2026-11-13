@@ -3,8 +3,8 @@ package com.maitreyoshi.mcavie.mixin.client;
 import com.maitreyoshi.mcavie.SurnameText;
 import com.maitreyoshi.mcavie.client.MCAVieClient;
 import com.maitreyoshi.mcavie.client.SurnameFieldHolder;
-import net.mca.client.gui.NameBabyScreen;
-import net.minecraft.client.gui.GuiGraphics;
+import net.conczin.mca.client.gui.NameBabyScreen;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -92,7 +92,7 @@ public abstract class NameBabyScreenMixin extends Screen implements SurnameField
     }
 
     @Inject(method = "render", at = @At("TAIL"))
-    private void mcavie$keepSurnameFocus(GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    private void mcavie$keepSurnameFocus(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         mcavie$applyFocus();
     }
 

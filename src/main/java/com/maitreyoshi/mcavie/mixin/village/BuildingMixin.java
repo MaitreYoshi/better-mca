@@ -1,7 +1,7 @@
 package com.maitreyoshi.mcavie.mixin.village;
 
 import com.maitreyoshi.mcavie.village.BuildingQuality;
-import net.mca.server.world.data.Building;
+import net.conczin.mca.server.world.data.Building;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;

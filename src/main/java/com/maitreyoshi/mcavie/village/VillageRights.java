@@ -1,8 +1,8 @@
 package com.maitreyoshi.mcavie.village;
 
-import net.mca.resources.Rank;
-import net.mca.resources.Tasks;
-import net.mca.server.world.data.Village;
+import net.conczin.mca.resources.Rank;
+import net.conczin.mca.resources.Tasks;
+import net.conczin.mca.server.world.data.Village;
 import net.minecraft.server.level.ServerPlayer;
 import java.util.HashMap;
 import java.util.Map;

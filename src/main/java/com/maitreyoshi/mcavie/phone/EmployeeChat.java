@@ -11,14 +11,14 @@ import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
 import com.maitreyoshi.mcavie.work.WorkStatus;
 import java.util.Locale;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.ai.Memories;
-import net.mca.entity.ai.relationship.Gender;
-import net.mca.entity.ai.relationship.RelationshipState;
-import net.mca.server.world.data.FamilyTree;
-import net.mca.server.world.data.FamilyTreeNode;
-import net.mca.server.world.data.Village;
-import net.minecraft.Util;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.ai.Memories;
+import net.conczin.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.entity.ai.relationship.RelationshipState;
+import net.conczin.mca.server.world.data.FamilyTree;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.server.world.data.Village;
+import net.minecraft.util.Util;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
@@ -28,7 +28,7 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.contents.TranslatableContents;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -46,9 +46,9 @@ import java.util.regex.Pattern;
 
 // Messagerie de l'appli Employés : réponses par mots-clés (EmployeeDialogues), ordres par texte, conséquences sur les cœurs.
 public final class EmployeeChat {
-    public static final ResourceLocation REQUEST = MCAVie.id("employee_chat_request");
-    public static final ResourceLocation SEND = MCAVie.id("employee_chat_send");
-    public static final ResourceLocation LOG = MCAVie.id("employee_chat_log");
+    public static final Identifier REQUEST = MCAVie.id("employee_chat_request");
+    public static final Identifier SEND = MCAVie.id("employee_chat_send");
+    public static final Identifier LOG = MCAVie.id("employee_chat_log");
     public static final int MAX_TEXT = 200;
     private static final int MAX_LOG = 30;
     private static final long SPAM_TICKS = 30;
@@ -548,7 +548,7 @@ public final class EmployeeChat {
         keys.sort(Comparator.comparingInt(report::getInt).reversed());
         StringBuilder b = new StringBuilder();
         for (int i = 0; i < Math.min(4, keys.size()); i++) {
-            Item item = BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(keys.get(i)));
+            Item item = BuiltInRegistries.ITEM.get(Identifier.tryParse(keys.get(i)));
             if (b.length() > 0) {
                 b.append(", ");
             }

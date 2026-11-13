@@ -5,7 +5,7 @@ import com.maitreyoshi.mcavie.calendar.WorldCalendar.CalendarDate;
 import com.maitreyoshi.mcavie.compat.client.HudRenderCallback;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Items;
@@ -24,7 +24,7 @@ public final class CalendarHud {
         HudRenderCallback.EVENT.register(CalendarHud::render);
     }
 
-    private static void render(GuiGraphics context, float tickDelta) {
+    private static void render(GuiGraphicsExtractor context, float tickDelta) {
         Minecraft client = Minecraft.getInstance();
         LocalPlayer player = client.player;
         if (player == null || client.level == null || client.options.hideGui) {

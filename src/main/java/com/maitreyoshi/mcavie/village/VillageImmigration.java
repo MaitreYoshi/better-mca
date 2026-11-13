@@ -4,18 +4,18 @@ import com.maitreyoshi.mcavie.SurnameRegistry;
 import com.maitreyoshi.mcavie.Surnames;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.life.Orientation;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.VillagerFactory;
-import net.mca.entity.ai.relationship.AgeState;
-import net.mca.entity.ai.relationship.Gender;
-import net.mca.server.world.data.Building;
-import net.mca.server.world.data.Village;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerFactory;
+import net.conczin.mca.entity.ai.relationship.AgeState;
+import net.conczin.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.server.world.data.Building;
+import net.conczin.mca.server.world.data.Village;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
-import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.EntitySpawnReason;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -75,12 +75,12 @@ public final class VillageImmigration {
         int size = config.familyMinSize + random.nextInt(Math.max(1, config.familyMaxSize - config.familyMinSize + 1));
         size = Math.min(size, freeBeds);
 
-        VillagerEntityMCA father = VillagerFactory.newVillager(world).withGender(Gender.MALE).withAge(0).withPosition(spot).spawn(MobSpawnType.EVENT);
-        VillagerEntityMCA mother = VillagerFactory.newVillager(world).withGender(Gender.FEMALE).withAge(0).withPosition(spot).spawn(MobSpawnType.EVENT);
+        VillagerEntityMCA father = VillagerFactory.newVillager(world).withGender(Gender.MALE).withAge(0).withPosition(spot).spawn(EntitySpawnReason.EVENT);
+        VillagerEntityMCA mother = VillagerFactory.newVillager(world).withGender(Gender.FEMALE).withAge(0).withPosition(spot).spawn(EntitySpawnReason.EVENT);
         List<VillagerEntityMCA> children = new ArrayList<>();
         for (int i = 2; i < size; i++) {
             int age = -(int) (AgeState.getMaxAge() * (0.1 + 0.6 * random.nextFloat()));
-            children.add(VillagerFactory.newVillager(world).withAge(age).withPosition(spot).spawn(MobSpawnType.EVENT));
+            children.add(VillagerFactory.newVillager(world).withAge(age).withPosition(spot).spawn(EntitySpawnReason.EVENT));
         }
 
         if (!Orientation.compatible(father, mother)) {

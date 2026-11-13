@@ -1,9 +1,9 @@
 package com.maitreyoshi.mcavie.mixin;
 
 import com.maitreyoshi.mcavie.work.tasks.JobTasks;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.ai.ActivityMCA;
-import net.mca.entity.ai.brain.VillagerTasksMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.ai.ActivityMCA;
+import net.conczin.mca.entity.ai.brain.VillagerTasksMCA;
 import net.minecraft.world.entity.ai.Brain;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

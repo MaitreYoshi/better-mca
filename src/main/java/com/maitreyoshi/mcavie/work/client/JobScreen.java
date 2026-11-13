@@ -10,7 +10,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.ConfirmScreen;
@@ -172,7 +172,7 @@ public class JobScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
         context.drawCenteredString(font, title, width / 2, top - 14, 0xFFFFFF);
         context.fill(left, top, left + panelWidth, top + panelHeight, PANEL);
@@ -196,7 +196,7 @@ public class JobScreen extends Screen {
         return (panelHeight - PAD * 2) / ROW_HEIGHT;
     }
 
-    private void renderList(GuiGraphics context, int mouseX, int mouseY) {
+    private void renderList(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         int x = left + PAD / 2;
         int y = top + PAD;
         int w = LIST_WIDTH - PAD;
@@ -219,7 +219,7 @@ public class JobScreen extends Screen {
         context.disableScissor();
     }
 
-    private void renderDetail(GuiGraphics context) {
+    private void renderDetail(GuiGraphicsExtractor context) {
         int x = left + LIST_WIDTH + PAD;
         int w = panelWidth - LIST_WIDTH - PAD * 2;
         int y = top + PAD;
@@ -284,7 +284,7 @@ public class JobScreen extends Screen {
         }
     }
 
-    private int renderItems(GuiGraphics context, int x, int y, String key, Item[] items) {
+    private int renderItems(GuiGraphicsExtractor context, int x, int y, String key, Item[] items) {
         if (items.length == 0) {
             return y;
         }
@@ -298,7 +298,7 @@ public class JobScreen extends Screen {
         return y + 18;
     }
 
-    private int renderProgress(GuiGraphics context, WorkClient.Info info, int x, int y, int w) {
+    private int renderProgress(GuiGraphicsExtractor context, WorkClient.Info info, int x, int y, int w) {
         int level = Math.max(1, Math.min(5, info.level()));
         Component levelName = Component.translatable("job.mca_vie.level." + level).withStyle(ChatFormatting.GOLD);
         int next = WorkManager.nextLevelExperience(level);

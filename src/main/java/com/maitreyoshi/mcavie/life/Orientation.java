@@ -1,11 +1,11 @@
 package com.maitreyoshi.mcavie.life;
 
 import com.maitreyoshi.mcavie.mixin.TraitAccessor;
-import net.mca.Config;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.VillagerLike;
-import net.mca.entity.ai.Traits;
-import net.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.Config;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerLike;
+import net.conczin.mca.entity.ai.Traits;
+import net.conczin.mca.entity.ai.relationship.Gender;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import java.util.UUID;

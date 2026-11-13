@@ -3,11 +3,11 @@ package com.maitreyoshi.mcavie.mixin.client;
 import com.maitreyoshi.mcavie.SurnameText;
 import com.maitreyoshi.mcavie.client.MCAVieClient;
 import com.maitreyoshi.mcavie.client.SurnameFieldHolder;
-import net.mca.MCA;
-import net.mca.client.gui.DestinyScreen;
-import net.mca.client.gui.VillagerEditorScreen;
-import net.mca.util.compat.ButtonWidget;
-import net.minecraft.client.gui.GuiGraphics;
+import net.conczin.mca.MCA;
+import net.conczin.mca.client.gui.DestinyScreen;
+import net.conczin.mca.client.gui.VillagerEditorScreen;
+import net.conczin.mca.util.compat.ButtonWidget;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.events.GuiEventListener;
@@ -108,7 +108,7 @@ public abstract class DestinyScreenMixin extends VillagerEditorScreen implements
     }
 
     @Inject(method = "render", at = @At("HEAD"))
-    private void mcavie$updateAcceptButton(GuiGraphics context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
+    private void mcavie$updateAcceptButton(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
         if ("general".equals(page) && acceptWidget != null && mcavie$surnameField != null) {
             EditBox nameField = ((VillagerEditorScreenAccessor) this).mcavie$getNameField();
             boolean nameOk = nameField != null && !MCA.isBlankString(nameField.getValue());

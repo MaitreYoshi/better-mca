@@ -1,11 +1,11 @@
 package com.maitreyoshi.mcavie.mixin.village;
 
-import net.mca.resources.Rank;
-import net.mca.resources.Tasks;
-import net.mca.resources.data.tasks.AdvancementTask;
-import net.mca.resources.data.tasks.BuildingTask;
-import net.mca.resources.data.tasks.PopulationTask;
-import net.mca.server.world.data.Village;
+import net.conczin.mca.resources.Rank;
+import net.conczin.mca.resources.Tasks;
+import net.conczin.mca.resources.data.tasks.AdvancementTask;
+import net.conczin.mca.resources.data.tasks.BuildingTask;
+import net.conczin.mca.resources.data.tasks.PopulationTask;
+import net.conczin.mca.server.world.data.Village;
 import net.minecraft.server.level.ServerPlayer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;

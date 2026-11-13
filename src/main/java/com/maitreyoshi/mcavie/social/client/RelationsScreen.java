@@ -10,16 +10,16 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.Entity;
 
 public class RelationsScreen extends Screen {
-    private static final ResourceLocation ICONS = new ResourceLocation("textures/gui/icons.png");
+    private static final Identifier ICONS = Identifier.parse("textures/gui/icons.png");
     private static final int ROW = 14;
     private static final int HALF_WIDTH = 150;
     private static final int TOP = 40;
@@ -111,7 +111,7 @@ public class RelationsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
         context.drawCenteredString(font, title, width / 2, 16, 0xFFFFFF);
         Relations relations = RelationsClient.get(villager);
@@ -179,7 +179,7 @@ public class RelationsScreen extends Screen {
         return Component.translatable(entry.female() ? key + ".female" : key);
     }
 
-    private static void drawHearts(GuiGraphics context, int x, int y, int score) {
+    private static void drawHearts(GuiGraphicsExtractor context, int x, int y, int score) {
         int halves = Math.round(Math.min(100, Math.abs(score)) / 10f);
         int full = score >= 0 ? 52 : 124;
         for (int i = 0; i < HEARTS; i++) {

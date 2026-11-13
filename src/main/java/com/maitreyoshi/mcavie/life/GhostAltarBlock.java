@@ -1,6 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
-import net.mca.server.world.data.FamilyTree;
+import net.conczin.mca.server.world.data.FamilyTree;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;

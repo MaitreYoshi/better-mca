@@ -2,11 +2,11 @@ package com.maitreyoshi.mcavie.mixin;
 
 import com.maitreyoshi.mcavie.life.LifeCycle;
 import com.maitreyoshi.mcavie.life.Wellbeing;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.ai.BreedableRelationship;
-import net.mca.entity.ai.Relationship;
-import net.mca.entity.ai.Memories;
-import net.mca.entity.interaction.gifts.Response;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.ai.BreedableRelationship;
+import net.conczin.mca.entity.ai.Relationship;
+import net.conczin.mca.entity.ai.Memories;
+import net.conczin.mca.entity.interaction.gifts.Response;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;

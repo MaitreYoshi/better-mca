@@ -1,8 +1,8 @@
 package com.maitreyoshi.mcavie.mixin;
 
 import com.maitreyoshi.mcavie.life.LifeCycle;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.ai.Pregnancy;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.ai.Pregnancy;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;

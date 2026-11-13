@@ -1,7 +1,7 @@
 package com.maitreyoshi.mcavie.village;
 
 import com.maitreyoshi.mcavie.work.tasks.DepositTask;
-import net.mca.server.world.data.Village;
+import net.conczin.mca.server.world.data.Village;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.BuiltInRegistries;

@@ -14,22 +14,22 @@ import com.maitreyoshi.mcavie.village.VillageState;
 import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
-import net.mca.client.gui.BlueprintScreen;
-import net.mca.client.gui.FamilyTreeScreen;
-import net.mca.client.gui.widget.WidgetUtils;
-import net.mca.cobalt.network.NetworkHandler;
-import net.mca.network.c2s.GetVillageRequest;
-import net.mca.network.c2s.RenameVillageMessage;
-import net.mca.network.c2s.ReportBuildingMessage;
-import net.mca.network.c2s.SaveVillageMessage;
-import net.mca.resources.BuildingTypes;
-import net.mca.resources.Rank;
-import net.mca.resources.data.BuildingType;
-import net.mca.resources.data.tasks.Task;
-import net.mca.server.world.data.Building;
-import net.mca.server.world.data.Village;
+import net.conczin.mca.client.gui.BlueprintScreen;
+import net.conczin.mca.client.gui.FamilyTreeScreen;
+import net.conczin.mca.client.gui.widget.WidgetUtils;
+import net.conczin.mca.cobalt.network.NetworkHandler;
+import net.conczin.mca.network.c2s.GetVillageRequest;
+import net.conczin.mca.network.c2s.RenameVillageMessage;
+import net.conczin.mca.network.c2s.ReportBuildingMessage;
+import net.conczin.mca.network.c2s.SaveVillageMessage;
+import net.conczin.mca.resources.BuildingTypes;
+import net.conczin.mca.resources.Rank;
+import net.conczin.mca.resources.data.BuildingType;
+import net.conczin.mca.resources.data.tasks.Task;
+import net.conczin.mca.server.world.data.Building;
+import net.conczin.mca.server.world.data.Village;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.ImageButton;
@@ -44,7 +44,7 @@ import net.minecraft.locale.Language;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FormattedCharSequence;
 import java.util.ArrayList;
@@ -54,7 +54,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public class PlanScreen extends BlueprintScreen {
-    private static final ResourceLocation ICONS = new ResourceLocation("mca", "textures/buildings.png");
+    private static final Identifier ICONS = Identifier.fromNamespaceAndPath("mca", "textures/buildings.png");
 
     private static final int WHITE = 0xffffffff;
     private static final int LABEL = 0xffcccccc;
@@ -167,7 +167,7 @@ public class PlanScreen extends BlueprintScreen {
         NetworkHandler.sendToServer(new GetVillageRequest());
     }
 
-    private void send(ResourceLocation channel, int value) {
+    private void send(Identifier channel, int value) {
         if (village == null) {
             return;
         }
@@ -581,7 +581,7 @@ public class PlanScreen extends BlueprintScreen {
     }
 
     @Override
-    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         renderBackground(context);
         context.fill(fx, fy, fx + fw, fy + fh, 0xe0101014);
         context.renderOutline(fx, fy, fw, fh, 0x60ffffff);
@@ -615,7 +615,7 @@ public class PlanScreen extends BlueprintScreen {
         }
     }
 
-    private void renderHeader(GuiGraphics context) {
+    private void renderHeader(GuiGraphicsExtractor context) {
         context.fill(fx + 1, fy + 1, fx + fw - 1, fy + HEADER, 0x40ffffff);
         Component name = villageName();
         context.drawString(font, name, fx + PAD, fy + 6, WHITE);
@@ -654,7 +654,7 @@ public class PlanScreen extends BlueprintScreen {
         return p == Page.TREASURY && !allowed(VillageRights.VIEW_TREASURY);
     }
 
-    private void renderSidebar(GuiGraphics context, int mouseX, int mouseY) {
+    private void renderSidebar(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         context.fill(fx + 1, fy + HEADER, fx + SIDEBAR, fy + fh - 1, 0x30000000);
         context.fill(fx + SIDEBAR, fy + HEADER, fx + SIDEBAR + 1, fy + fh - 1, 0x40ffffff);
         int group = -1;
@@ -690,7 +690,7 @@ public class PlanScreen extends BlueprintScreen {
         return null;
     }
 
-    private void renderFooter(GuiGraphics context, Component footer, int mouseX, int mouseY) {
+    private void renderFooter(GuiGraphicsExtractor context, Component footer, int mouseX, int mouseY) {
         int color = GRAY;
         int y = fy + fh - FOOTER + 1;
         context.fill(cx - 2, y - 3, cx + cw + 2, y - 2, 0x30ffffff);
@@ -701,12 +701,12 @@ public class PlanScreen extends BlueprintScreen {
         }
     }
 
-    private int beginScroll(GuiGraphics context, int top) {
+    private int beginScroll(GuiGraphicsExtractor context, int top) {
         context.enableScissor(cx - 1, top, cx + cw + 1, cy + ch);
         return top - scroll;
     }
 
-    private void endScroll(GuiGraphics context, int top, int startY, int endY) {
+    private void endScroll(GuiGraphicsExtractor context, int top, int startY, int endY) {
         context.disableScissor();
         int area = cy + ch - top;
         int content = endY - startY;
@@ -720,7 +720,7 @@ public class PlanScreen extends BlueprintScreen {
         }
     }
 
-    private Component renderPage(GuiGraphics context, int mouseX, int mouseY) {
+    private Component renderPage(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         return switch (page) {
             case MAP -> renderMap(context, mouseX, mouseY);
             case PRESTIGE -> {
@@ -747,7 +747,7 @@ public class PlanScreen extends BlueprintScreen {
         };
     }
 
-    private void renderOverlays(GuiGraphics context, int mouseX, int mouseY) {
+    private void renderOverlays(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         if (page == Page.CATALOG && selectedBuilding != null) {
             Button b = catalogButtons.get(selectedBuilding);
             if (b != null) {
@@ -766,7 +766,7 @@ public class PlanScreen extends BlueprintScreen {
     }
 
 
-    private Component renderMap(GuiGraphics context, int mouseX, int mouseY) {
+    private Component renderMap(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         int size = mapSize();
         WidgetUtils.drawRectangle(context, cx, cy, cx + size, cy + size, 0x60ffffff);
         context.enableScissor(cx, cy, cx + size, cy + size);
@@ -816,7 +816,7 @@ public class PlanScreen extends BlueprintScreen {
         return Component.translatable("gui.mca_vie.plan.hint.map");
     }
 
-    private void renderMapTooltips(GuiGraphics context, int mouseX, int mouseY) {
+    private void renderMapTooltips(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         int size = mapSize();
         if (mouseX < cx || mouseX >= cx + size || mouseY < cy || mouseY >= cy + size) {
             return;
@@ -866,13 +866,13 @@ public class PlanScreen extends BlueprintScreen {
             lines.add(Component.literal(name).withStyle(ChatFormatting.AQUA));
         }
         BlueprintPanels.appendTooltip(lines, village, building);
-        for (Map.Entry<ResourceLocation, List<BlockPos>> block : building.getBlocks().entrySet()) {
+        for (Map.Entry<Identifier, List<BlockPos>> block : building.getBlocks().entrySet()) {
             lines.add(Component.literal(block.getValue().size() + " x ").append(blockName(block.getKey())).withStyle(ChatFormatting.DARK_GRAY));
         }
         return lines;
     }
 
-    private static Component blockName(ResourceLocation id) {
+    private static Component blockName(Identifier id) {
         if (BuiltInRegistries.BLOCK.containsKey(id)) {
             return Component.translatable(BuiltInRegistries.BLOCK.get(id).getDescriptionId());
         }
@@ -880,7 +880,7 @@ public class PlanScreen extends BlueprintScreen {
     }
 
 
-    private Component renderCatalog(GuiGraphics context) {
+    private Component renderCatalog(GuiGraphicsExtractor context) {
         int x = cx + 112;
         int w = cx + cw - x - 6;
         int y = beginScroll(context, cy);
@@ -895,7 +895,7 @@ public class PlanScreen extends BlueprintScreen {
             if (!selectedBuilding.getGroups().isEmpty()) {
                 y += 4;
                 y = BlueprintPanels.wrapped(context, font, Component.translatable("gui.mca_vie.plan.blocks"), x, y, w, LABEL);
-                for (Map.Entry<ResourceLocation, Integer> b : selectedBuilding.getGroups().entrySet()) {
+                for (Map.Entry<Identifier, Integer> b : selectedBuilding.getGroups().entrySet()) {
                     y = BlueprintPanels.wrapped(context, font, Component.literal(b.getValue() + " x ").append(blockName(b.getKey())), x + 4, y, w - 4, WHITE);
                 }
             }
@@ -909,7 +909,7 @@ public class PlanScreen extends BlueprintScreen {
         return village.getResidentNames().entrySet().stream().sorted(Map.Entry.comparingByValue()).toList();
     }
 
-    private Component renderVillagers(GuiGraphics context, int mouseX, int mouseY) {
+    private Component renderVillagers(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         VillageState state = VillageState.of(village);
         context.drawString(font, Component.translatable("gui.mca_vie.plan.villagers.count", village.getPopulation(), village.getMaxPopulation()), cx, cy, LABEL);
         int top = cy + 14;
@@ -945,7 +945,7 @@ public class PlanScreen extends BlueprintScreen {
     }
 
 
-    private Component renderRules(GuiGraphics context) {
+    private Component renderRules(GuiGraphicsExtractor context) {
         VillageState state = VillageState.of(village);
         int[] values = ruleValues();
         Rank[] required = rulesRequired();
@@ -974,7 +974,7 @@ public class PlanScreen extends BlueprintScreen {
     }
 
 
-    private Component renderTreasury(GuiGraphics context) {
+    private Component renderTreasury(GuiGraphicsExtractor context) {
         if (!allowed(VillageRights.VIEW_TREASURY)) {
             BlueprintPanels.wrapped(context, font, Component.translatable("gui.mca_vie.plan.locked_page", Component.translatable(VillageRights.VIEW_TREASURY.getTranslationKey())), cx, cy, cw, RED);
             return null;
@@ -1006,7 +1006,7 @@ public class PlanScreen extends BlueprintScreen {
     }
 
 
-    private Component renderDecrees(GuiGraphics context) {
+    private Component renderDecrees(GuiGraphicsExtractor context) {
         long today = today();
         VillageState state = VillageState.of(village);
         int x = cx + decreeButtonWidth() + 6;
@@ -1084,7 +1084,7 @@ public class PlanScreen extends BlueprintScreen {
         return Component.translatable("gui.mca_vie.market.inactive.reason", name, why);
     }
 
-    private Component renderMarket(GuiGraphics context) {
+    private Component renderMarket(GuiGraphicsExtractor context) {
         VillageState state = VillageState.of(village);
         VillageConfig config = VillageConfig.get();
         int y = cy;
@@ -1108,7 +1108,7 @@ public class PlanScreen extends BlueprintScreen {
             int colW = (cw - 10) / 2;
             for (int i = 0; i < products.size(); i++) {
                 String id = products.get(i);
-                Component line = Component.translatable("gui.mca_vie.market.price", config.unitsPerEmerald(id), BuiltInRegistries.ITEM.get(ResourceLocation.tryParse(id)).getDescription());
+                Component line = Component.translatable("gui.mca_vie.market.price", config.unitsPerEmerald(id), BuiltInRegistries.ITEM.get(Identifier.tryParse(id)).getDescription());
                 context.drawString(font, Language.getInstance().getVisualOrder(font.substrByWidth(line, colW)), cx + (i % 2) * (colW + 4), y + (i / 2) * LINE, GRAY);
             }
             y += (products.size() + 1) / 2 * LINE;
@@ -1132,7 +1132,7 @@ public class PlanScreen extends BlueprintScreen {
         return VillageState.of(village).registry.stream().filter(e -> registryFilter < 0 || e.kind() == registryFilter).toList();
     }
 
-    private Component renderRegistry(GuiGraphics context, int mouseX, int mouseY) {
+    private Component renderRegistry(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         List<CivilRegistry.Entry> entries = registryEntries();
         int top = cy + 22;
         int y = beginScroll(context, top);
@@ -1171,7 +1171,7 @@ public class PlanScreen extends BlueprintScreen {
     }
 
 
-    private Component renderJustice(GuiGraphics context) {
+    private Component renderJustice(GuiGraphicsExtractor context) {
         VillageState state = VillageState.of(village);
         VillageConfig config = VillageConfig.get();
         long today = today();

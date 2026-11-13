@@ -2,7 +2,7 @@ package com.maitreyoshi.mcavie.work.tasks;
 
 import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkGesture;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
@@ -147,7 +147,7 @@ public class BakerTask extends AbstractJobTask {
 
     // four vide : il va chercher le blé rangé par le fermier le plus proche, puis le dépose dans son four
     private BlockPos findSupplier(ServerLevel world, VillagerEntityMCA villager) {
-        net.minecraft.resources.ResourceLocation dimension = world.dimension().location();
+        net.minecraft.resources.Identifier dimension = world.dimension().location();
         BlockPos best = null;
         double bestDistance = SUPPLIER_SQ;
         for (com.maitreyoshi.mcavie.work.WorkRegistry.Record record

@@ -41,8 +41,8 @@ public final class MCAVieClient {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> VillageConfig.load());
 
         if (Platform.isDevelopmentEnvironment()) {
-            for (String screen : new String[]{"net.mca.client.gui.InteractScreen", "net.mca.client.gui.DestinyScreen", "net.mca.client.gui.BlueprintScreen",
-                    "net.mca.network.ClientInteractionManagerImpl", "com.maitreyoshi.mcavie.village.client.PlanScreen"}) {
+            for (String screen : new String[]{"net.conczin.mca.client.gui.InteractScreen", "net.conczin.mca.client.gui.DestinyScreen", "net.conczin.mca.client.gui.BlueprintScreen",
+                    "net.conczin.mca.network.ClientInteractionManagerImpl", "com.maitreyoshi.mcavie.village.client.PlanScreen"}) {
                 try {
                     Class.forName(screen);
                 } catch (ClassNotFoundException e) {

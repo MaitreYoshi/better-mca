@@ -2,7 +2,7 @@ package com.maitreyoshi.mcavie.mixin.client;
 
 import com.maitreyoshi.mcavie.client.HappinessDisplay;
 import com.mojang.blaze3d.vertex.PoseStack;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.EntityRenderDispatcher;

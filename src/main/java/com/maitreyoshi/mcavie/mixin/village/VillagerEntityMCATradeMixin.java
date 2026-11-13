@@ -1,7 +1,7 @@
 package com.maitreyoshi.mcavie.mixin.village;
 
 import com.maitreyoshi.mcavie.village.VillageEconomy;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.world.entity.player.Player;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

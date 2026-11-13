@@ -1,7 +1,7 @@
 package com.maitreyoshi.mcavie.tree.server;
 
 import com.maitreyoshi.mcavie.tree.RelationInfo;
-import net.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
 
 import java.util.List;
 import java.util.Optional;

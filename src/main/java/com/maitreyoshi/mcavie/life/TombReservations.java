@@ -5,13 +5,13 @@ import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
 import dev.architectury.event.EventResult;
 import dev.architectury.event.events.common.InteractionEvent;
-import net.mca.TagsMCA;
-import net.mca.block.TombstoneBlock;
-import net.mca.server.world.data.FamilyTree;
-import net.mca.server.world.data.FamilyTreeNode;
-import net.mca.server.world.data.GraveyardManager;
-import net.mca.server.world.data.Village;
-import net.mca.server.world.data.VillageManager;
+import net.conczin.mca.registry.TagsMCA;
+import net.conczin.mca.block.TombstoneBlock;
+import net.conczin.mca.server.world.data.FamilyTree;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.server.world.data.GraveyardManager;
+import net.conczin.mca.server.world.data.Village;
+import net.conczin.mca.server.world.data.VillageManager;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.GlobalPos;
@@ -21,7 +21,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -39,8 +39,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 public final class TombReservations {
-    public static final ResourceLocation OPEN = MCAVie.id("tomb_reservation_open");
-    public static final ResourceLocation CHOOSE = MCAVie.id("tomb_reservation_choose");
+    public static final Identifier OPEN = MCAVie.id("tomb_reservation_open");
+    public static final Identifier CHOOSE = MCAVie.id("tomb_reservation_choose");
     private static final int VILLAGE_MARGIN = 32;
     private static final double MAX_REACH = 64;
     private static final int FALLBACK_RANGE = 256;
@@ -235,7 +235,7 @@ public final class TombReservations {
             ListTag list = nbt.getList("tombs", 10);
             for (int i = 0; i < list.size(); i++) {
                 CompoundTag c = list.getCompound(i);
-                ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, new ResourceLocation(c.getString("dim")));
+                ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, Identifier.parse(c.getString("dim")));
                 registry.claims.put(GlobalPos.of(dimension, BlockPos.of(c.getLong("pos"))), new Claim(c.getUUID("villager"), c.getString("name")));
             }
             return registry;

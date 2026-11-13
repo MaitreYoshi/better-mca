@@ -1,13 +1,13 @@
 package com.maitreyoshi.mcavie.compat.client;
 
 import dev.architectury.event.events.client.ClientGuiEvent;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 @FunctionalInterface
 public interface HudRenderCallback {
     Event EVENT = listener -> ClientGuiEvent.RENDER_HUD.register(listener::onHudRender);
 
-    void onHudRender(GuiGraphics drawContext, float tickDelta);
+    void onHudRender(GuiGraphicsExtractor drawContext, float tickDelta);
 
     @FunctionalInterface
     interface Event {

@@ -2,7 +2,7 @@ package com.maitreyoshi.mcavie.village;
 
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.life.History;
-import net.mca.server.world.data.Village;
+import net.conczin.mca.server.world.data.Village;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -77,7 +77,7 @@ public final class VillageServer {
 
         Prestige.Result current = result.rank() == state.rank ? result : Prestige.evaluate(village, state.rank);
         boolean cleared = false;
-        for (net.mca.server.world.data.Building b : village.getBuildings().values()) {
+        for (net.conczin.mca.server.world.data.Building b : village.getBuildings().values()) {
             Prestige.Score score = current.score(b);
             if (score != null && score.protectedKey() && state.clearDecay(village, b)) {
                 cleared = true;

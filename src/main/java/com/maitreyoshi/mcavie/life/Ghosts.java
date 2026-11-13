@@ -5,16 +5,16 @@ import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
 import com.maitreyoshi.mcavie.phone.PortraitRegistry;
 import com.maitreyoshi.mcavie.tree.server.mixin.FamilyTreeAccessor;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.server.world.data.FamilyTree;
-import net.mca.server.world.data.FamilyTreeNode;
-import net.mca.server.world.data.Building;
-import net.mca.server.world.data.GraveyardManager;
-import net.mca.server.world.data.VillageManager;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.server.world.data.FamilyTree;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.server.world.data.Building;
+import net.conczin.mca.server.world.data.GraveyardManager;
+import net.conczin.mca.server.world.data.VillageManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -37,8 +37,8 @@ import java.util.UUID;
  * Apparence des défunts (NBT du PNJ au moment de sa mort) et choix du défunt sur l'autel du souvenir.
  */
 public class Ghosts extends SavedData {
-    public static final ResourceLocation OPEN = MCAVie.id("ghost_altar_open");
-    public static final ResourceLocation CHOOSE = MCAVie.id("ghost_altar_choose");
+    public static final Identifier OPEN = MCAVie.id("ghost_altar_open");
+    public static final Identifier CHOOSE = MCAVie.id("ghost_altar_choose");
     private static final String DATA_ID = "mca_vie_ghosts";
     private static final String[] STRIPPED = {"Brain", "Inventory", "Offers", "Gossips", "HandItems", "ArmorItems", "HandDropChances",
             "ArmorDropChances", "ActiveEffects", "Passengers", "Leash", "Pos", "Motion", "Rotation", "UUID", "Health", "DeathTime",

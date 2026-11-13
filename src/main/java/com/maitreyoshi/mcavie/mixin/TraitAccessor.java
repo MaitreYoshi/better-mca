@@ -1,6 +1,6 @@
 package com.maitreyoshi.mcavie.mixin;
 
-import net.mca.entity.ai.Traits;
+import net.conczin.mca.entity.ai.Traits;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 

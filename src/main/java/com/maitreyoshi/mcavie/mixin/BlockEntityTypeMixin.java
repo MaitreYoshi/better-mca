@@ -1,7 +1,7 @@
 package com.maitreyoshi.mcavie.mixin;
 
 import com.maitreyoshi.mcavie.life.TombstoneBlocks;
-import net.mca.block.BlockEntityTypesMCA;
+import net.conczin.mca.block.BlockEntityTypesMCA;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;

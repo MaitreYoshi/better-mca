@@ -3,7 +3,7 @@ package com.maitreyoshi.mcavie.mixin.client;
 import com.maitreyoshi.mcavie.client.InteractScreenHolder;
 import com.maitreyoshi.mcavie.social.client.RelationsScreen;
 import com.maitreyoshi.mcavie.work.client.JobScreen;
-import net.mca.client.gui.AbstractDynamicScreen;
+import net.conczin.mca.client.gui.AbstractDynamicScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
@@ -29,8 +29,8 @@ public abstract class AbstractDynamicScreenMixin extends Screen {
         if (!"main".equals(guiKey) || !((Object) this instanceof InteractScreenHolder holder)) {
             return;
         }
-        boolean mercenary = holder.mcavie$getVillagerEntity() instanceof net.mca.entity.VillagerEntityMCA villager
-                && villager.getProfession() == net.mca.ProfessionsMCA.MERCENARY.get();
+        boolean mercenary = holder.mcavie$getVillagerEntity() instanceof net.conczin.mca.entity.VillagerEntityMCA villager
+                && villager.getProfession() == net.conczin.mca.registry.ProfessionsMCA.MERCENARY.get();
         if (!mercenary) {
             for (GuiEventListener element : new ArrayList<>(children())) {
                 if (element instanceof AbstractWidget widget && widget.getMessage().getContents() instanceof TranslatableContents content

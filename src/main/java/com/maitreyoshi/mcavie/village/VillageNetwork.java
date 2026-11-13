@@ -4,19 +4,19 @@ import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
-import net.mca.network.c2s.GetVillageRequest;
+import net.conczin.mca.network.c2s.GetVillageRequest;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class VillageNetwork {
-    public static final ResourceLocation WITHDRAW = MCAVie.id("treasury_withdraw");
-    public static final ResourceLocation CONFIG = MCAVie.id("village_config");
-    public static final ResourceLocation DECREE = MCAVie.id("village_decree");
-    public static final ResourceLocation DEPOSIT = MCAVie.id("treasury_deposit");
-    public static final ResourceLocation NATURE = MCAVie.id("tax_nature");
-    public static final ResourceLocation ORDER = MCAVie.id("market_order");
-    public static final ResourceLocation COLLECT = MCAVie.id("market_collect");
-    public static final ResourceLocation JUDGE = MCAVie.id("justice_judge");
+    public static final Identifier WITHDRAW = MCAVie.id("treasury_withdraw");
+    public static final Identifier CONFIG = MCAVie.id("village_config");
+    public static final Identifier DECREE = MCAVie.id("village_decree");
+    public static final Identifier DEPOSIT = MCAVie.id("treasury_deposit");
+    public static final Identifier NATURE = MCAVie.id("tax_nature");
+    public static final Identifier ORDER = MCAVie.id("market_order");
+    public static final Identifier COLLECT = MCAVie.id("market_collect");
+    public static final Identifier JUDGE = MCAVie.id("justice_judge");
 
     private VillageNetwork() {
     }

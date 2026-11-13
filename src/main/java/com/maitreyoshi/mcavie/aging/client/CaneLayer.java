@@ -2,8 +2,8 @@ package com.maitreyoshi.mcavie.aging.client;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
-import net.mca.client.model.VillagerEntityModelMCA;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.client.model.VillagerEntityModelMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.client.renderer.ItemInHandRenderer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.entity.RenderLayerParent;

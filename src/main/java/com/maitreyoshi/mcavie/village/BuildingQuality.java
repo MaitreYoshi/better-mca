@@ -1,6 +1,6 @@
 package com.maitreyoshi.mcavie.village;
 
-import net.mca.Config;
+import net.conczin.mca.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.nbt.CompoundTag;
@@ -8,7 +8,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.AbstractGlassBlock;
+import net.minecraft.world.level.block.TransparentBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.DoorBlock;
@@ -72,7 +72,7 @@ public enum BuildingQuality {
         void mcavie$setMeasure(Measure measure);
     }
 
-    public static Measure measureOf(net.mca.server.world.data.Building building) {
+    public static Measure measureOf(net.conczin.mca.server.world.data.Building building) {
         return ((Holder) building).mcavie$getMeasure();
     }
 
@@ -210,7 +210,7 @@ public enum BuildingQuality {
 
     public static boolean isWindow(BlockState state) {
         Block block = state.getBlock();
-        return block instanceof AbstractGlassBlock || block instanceof StainedGlassPaneBlock || state.is(Blocks.GLASS_PANE);
+        return block instanceof TransparentBlock || block instanceof StainedGlassPaneBlock || state.is(Blocks.GLASS_PANE);
     }
 
     private static boolean isNatural(BlockState state) {

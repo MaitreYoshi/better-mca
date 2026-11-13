@@ -9,12 +9,12 @@ import org.spongepowered.asm.mixin.injection.Redirect;
 import com.maitreyoshi.mcavie.client.MCAVieClient;
 import com.maitreyoshi.mcavie.life.LifeCycle;
 import com.maitreyoshi.mcavie.social.client.RelationsClient;
-import net.mca.client.gui.InteractScreen;
-import net.mca.entity.VillagerLike;
-import net.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.client.gui.InteractScreen;
+import net.conczin.mca.entity.VillagerLike;
+import net.conczin.mca.entity.ai.relationship.Gender;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -114,7 +114,7 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
 
     @Inject(method = "drawTextPopups", remap = false,
             at = @At(value = "INVOKE", target = "Lnet/mca/client/gui/InteractScreen;hoveringOverIcon(Ljava/lang/String;)Z", ordinal = 0))
-    private void mcavie$drawBirthDay(GuiGraphics context, CallbackInfo ci) {
+    private void mcavie$drawBirthDay(GuiGraphicsExtractor context, CallbackInfo ci) {
         Minecraft client = Minecraft.getInstance();
         if (client.level == null) {
             return;

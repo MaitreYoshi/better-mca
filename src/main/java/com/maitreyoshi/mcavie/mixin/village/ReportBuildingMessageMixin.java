@@ -2,12 +2,12 @@ package com.maitreyoshi.mcavie.mixin.village;
 
 import com.maitreyoshi.mcavie.village.Prestige;
 import com.maitreyoshi.mcavie.village.VillageRights;
-import net.mca.network.c2s.ReportBuildingMessage;
-import net.mca.resources.BuildingTypes;
-import net.mca.resources.data.BuildingType;
-import net.mca.server.world.data.Building;
-import net.mca.server.world.data.Village;
-import net.mca.server.world.data.VillageManager;
+import net.conczin.mca.network.c2s.ReportBuildingMessage;
+import net.conczin.mca.resources.BuildingTypes;
+import net.conczin.mca.resources.data.BuildingType;
+import net.conczin.mca.server.world.data.Building;
+import net.conczin.mca.server.world.data.Village;
+import net.conczin.mca.server.world.data.VillageManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;

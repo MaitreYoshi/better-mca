@@ -4,7 +4,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.maitreyoshi.mcavie.social.client.ChatHeads;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.ChatComponent;
 import net.minecraft.util.FormattedCharSequence;
 import org.spongepowered.asm.mixin.Mixin;
@@ -15,8 +15,8 @@ import org.spongepowered.asm.mixin.injection.ModifyConstant;
 @Mixin(ChatComponent.class)
 public abstract class ChatHudMixin {
     @WrapOperation(method = "render", at = @At(value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/GuiGraphics;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/util/FormattedCharSequence;III)I"))
-    private int mcavie$drawVillagerHead(GuiGraphics context, Font textRenderer, FormattedCharSequence text, int x, int y, int color, Operation<Integer> original) {
+            target = "Lnet/minecraft/client/gui/GuiGraphicsExtractor;drawString(Lnet/minecraft/client/gui/Font;Lnet/minecraft/util/FormattedCharSequence;III)I"))
+    private int mcavie$drawVillagerHead(GuiGraphicsExtractor context, Font textRenderer, FormattedCharSequence text, int x, int y, int color, Operation<Integer> original) {
         int end = original.call(context, textRenderer, text, x, y, color);
         ChatHeads.draw(context, text, x, y, color);
         return end;

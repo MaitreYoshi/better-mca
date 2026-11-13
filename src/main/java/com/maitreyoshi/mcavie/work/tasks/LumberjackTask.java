@@ -5,10 +5,10 @@ import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.PlacedLogs;
 import com.maitreyoshi.mcavie.work.WorkManager;
 import com.maitreyoshi.mcavie.work.WorkRegistry;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
@@ -555,9 +555,9 @@ public class LumberjackTask extends AbstractJobTask {
 
     private void replant(ServerLevel world, VillagerEntityMCA villager, BlockPos base, String namespace, String family) {
         String name = family.equals("mangrove") ? "mangrove_propagule" : family + "_sapling";
-        Item saplingItem = BuiltInRegistries.ITEM.get(new ResourceLocation(namespace, name));
+        Item saplingItem = BuiltInRegistries.ITEM.get(Identifier.fromNamespaceAndPath(namespace, name));
         if (saplingItem == Items.AIR) {
-            saplingItem = BuiltInRegistries.ITEM.get(new ResourceLocation("minecraft", name));
+            saplingItem = BuiltInRegistries.ITEM.get(Identifier.fromNamespaceAndPath("minecraft", name));
         }
         if (!(saplingItem instanceof BlockItem blockItem) || !world.getBlockState(base).isAir() || !mayAlter(world, base)) {
             return;

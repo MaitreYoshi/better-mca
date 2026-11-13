@@ -1,9 +1,9 @@
 package com.maitreyoshi.mcavie.tree.server.mixin;
 
 import com.maitreyoshi.mcavie.tree.server.SpouseRegistry;
-import net.mca.entity.ai.relationship.RelationshipState;
-import net.mca.server.world.data.FamilyTree;
-import net.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.entity.ai.relationship.RelationshipState;
+import net.conczin.mca.server.world.data.FamilyTree;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;

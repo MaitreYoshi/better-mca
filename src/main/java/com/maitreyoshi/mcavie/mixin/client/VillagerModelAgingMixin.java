@@ -1,8 +1,8 @@
 package com.maitreyoshi.mcavie.mixin.client;
 
 import com.maitreyoshi.mcavie.aging.client.AgingClient;
-import net.mca.client.model.VillagerEntityBaseModelMCA;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.client.model.VillagerEntityBaseModelMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

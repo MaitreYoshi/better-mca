@@ -1,9 +1,9 @@
 package com.maitreyoshi.mcavie.mixin.client;
 
 import com.maitreyoshi.mcavie.aging.client.AgingClient;
-import net.mca.client.render.layer.HairLayer;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.ai.Traits;
+import net.conczin.mca.client.render.layer.HairLayer;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.ai.Traits;
 import net.minecraft.world.entity.LivingEntity;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;

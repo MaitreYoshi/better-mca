@@ -9,7 +9,7 @@ import com.maitreyoshi.mcavie.life.Wellbeing;
 import com.maitreyoshi.mcavie.social.Social;
 import com.maitreyoshi.mcavie.social.SocialChat;
 import com.maitreyoshi.mcavie.work.WorkManager;
-import net.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.player.Player;

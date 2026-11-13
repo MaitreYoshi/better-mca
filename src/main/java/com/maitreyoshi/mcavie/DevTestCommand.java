@@ -22,21 +22,21 @@ import com.maitreyoshi.mcavie.life.LifeCycle;
 import com.maitreyoshi.mcavie.life.LifeRegistry;
 import com.maitreyoshi.mcavie.life.Orientation;
 import com.maitreyoshi.mcavie.life.OrientationRegistry;
-import net.mca.block.BlocksMCA;
-import net.mca.block.TombstoneBlock;
+import net.conczin.mca.registry.BlocksMCA;
+import net.conczin.mca.block.TombstoneBlock;
 import dev.architectury.event.events.common.CommandRegistrationEvent;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.VillagerFactory;
-import net.mca.entity.VillagerLike;
-import net.mca.entity.ai.relationship.Gender;
-import net.mca.server.world.data.FamilyTree;
-import net.mca.server.world.data.FamilyTreeNode;
-import net.mca.util.WorldUtils;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.VillagerFactory;
+import net.conczin.mca.entity.VillagerLike;
+import net.conczin.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.server.world.data.FamilyTree;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.util.WorldUtils;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -50,12 +50,12 @@ final class DevTestCommand {
                         .then(Commands.literal("family").executes(ctx -> {
                             ServerLevel world = ctx.getSource().getLevel();
                             BlockPos pos = world.getSharedSpawnPos();
-                            VillagerEntityMCA father = VillagerFactory.newVillager(world).withGender(Gender.MALE).withAge(0).withPosition(pos).spawn(MobSpawnType.COMMAND);
-                            VillagerEntityMCA mother = VillagerFactory.newVillager(world).withGender(Gender.FEMALE).withAge(0).withPosition(pos).spawn(MobSpawnType.COMMAND);
+                            VillagerEntityMCA father = VillagerFactory.newVillager(world).withGender(Gender.MALE).withAge(0).withPosition(pos).spawn(EntitySpawnReason.COMMAND);
+                            VillagerEntityMCA mother = VillagerFactory.newVillager(world).withGender(Gender.FEMALE).withAge(0).withPosition(pos).spawn(EntitySpawnReason.COMMAND);
                             world.getServer().execute(() -> {
                                 VillagerEntityMCA child = mother.getRelationships().getPregnancy().createChild(Gender.FEMALE, father);
                                 child.setPos(pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5);
-                                WorldUtils.spawnEntity(world, child, MobSpawnType.BREEDING);
+                                WorldUtils.spawnEntity(world, child, EntitySpawnReason.BREEDING);
                             });
                             ctx.getSource().sendSuccess(() -> Component.literal("Famille créée en " + pos.toShortString()), false);
                             return 1;
@@ -103,7 +103,7 @@ final class DevTestCommand {
                         .then(Commands.literal("rep").then(Commands.argument("value", IntegerArgumentType.integer(-5000, 5000)).executes(ctx -> {
                             net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayerOrException();
                             int value = IntegerArgumentType.getInteger(ctx, "value");
-                            net.mca.server.world.data.Village.findNearest(player).ifPresent(v -> {
+                            net.conczin.mca.server.world.data.Village.findNearest(player).ifPresent(v -> {
                                 v.pushHearts(player, value);
                                 ctx.getSource().sendSuccess(() -> Component.literal("Réputation à " + v.getName() + " : " + v.getReputation(player)), false);
                             });
@@ -111,25 +111,25 @@ final class DevTestCommand {
                         })))
                         .then(Commands.literal("levy").executes(ctx -> {
                             net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayerOrException();
-                            net.mca.server.world.data.Village.findNearest(player).ifPresent(v ->
+                            net.conczin.mca.server.world.data.Village.findNearest(player).ifPresent(v ->
                                     com.maitreyoshi.mcavie.village.VillageEconomy.devLevy(v, ctx.getSource().getLevel(), WorldCalendar.now(ctx.getSource().getLevel()).dayIndex()));
                             return 1;
                         }))
                         .then(Commands.literal("market").executes(ctx -> {
                             net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayerOrException();
-                            net.mca.server.world.data.Village.findNearest(player).ifPresent(v ->
+                            net.conczin.mca.server.world.data.Village.findNearest(player).ifPresent(v ->
                                     com.maitreyoshi.mcavie.village.VillageMarket.devHold(v, ctx.getSource().getLevel()));
                             return 1;
                         }))
                         .then(Commands.literal("crime").executes(ctx -> {
                             net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayerOrException();
-                            net.mca.server.world.data.Village.findNearest(player).ifPresent(v ->
+                            net.conczin.mca.server.world.data.Village.findNearest(player).ifPresent(v ->
                                     com.maitreyoshi.mcavie.village.VillageJustice.devCase(v, ctx.getSource().getLevel()));
                             return 1;
                         }))
                         .then(Commands.literal("village").executes(ctx -> {
                             net.minecraft.server.level.ServerPlayer player = ctx.getSource().getPlayerOrException();
-                            net.mca.server.world.data.Village.findNearest(player).ifPresent(v -> {
+                            net.conczin.mca.server.world.data.Village.findNearest(player).ifPresent(v -> {
                                 com.maitreyoshi.mcavie.village.VillageState state = com.maitreyoshi.mcavie.village.VillageState.of(v);
                                 com.maitreyoshi.mcavie.village.Prestige.Result r = com.maitreyoshi.mcavie.village.Prestige.evaluate(v, state.rank);
                                 ctx.getSource().sendSuccess(() -> Component.literal(v.getName() + " : " + state.rank + ", prestige " + r.prestige()
@@ -281,7 +281,7 @@ final class DevTestCommand {
                             int unknown = 0;
                             StringBuilder out = new StringBuilder();
                             for (FamilyTreeNode node : ((com.maitreyoshi.mcavie.tree.server.mixin.FamilyTreeAccessor) tree).mcavie$getEntries().values()) {
-                                if (node.isDeceased() || node.getRelationshipState() != net.mca.entity.ai.relationship.RelationshipState.MARRIED_TO_VILLAGER
+                                if (node.isDeceased() || node.getRelationshipState() != net.conczin.mca.entity.ai.relationship.RelationshipState.MARRIED_TO_VILLAGER
                                         || node.id().compareTo(node.partner()) > 0) {
                                     continue;
                                 }
@@ -362,7 +362,7 @@ final class DevTestCommand {
                                 .then(Commands.literal("day").executes(ctx -> {
                                     ServerLevel world = ctx.getSource().getLevel();
                                     List<VillagerEntityMCA> near = nearestVillagers(world, ctx.getSource().getPosition(), 1);
-                                    Optional<net.mca.server.world.data.Village> village = near.isEmpty() ? Optional.empty() : near.get(0).getResidency().getHomeVillage();
+                                    Optional<net.conczin.mca.server.world.data.Village> village = near.isEmpty() ? Optional.empty() : near.get(0).getResidency().getHomeVillage();
                                     if (village.isEmpty()) {
                                         ctx.getSource().sendFailure(Component.literal("Aucun village proche"));
                                         return 0;

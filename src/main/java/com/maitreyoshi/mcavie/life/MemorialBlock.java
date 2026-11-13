@@ -3,13 +3,13 @@ package com.maitreyoshi.mcavie.life;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
-import net.mca.server.world.data.Village;
+import net.conczin.mca.server.world.data.Village;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -50,9 +50,9 @@ public class MemorialBlock extends Block implements EntityBlock {
     public static final int MASTER = 4;
     public static final int TITLE_MAX = 64;
     public static final int DATES_MAX = 24;
-    public static final ResourceLocation EDIT_OPEN = MCAVie.id("war_memorial_edit_open");
-    public static final ResourceLocation EDIT_SET = MCAVie.id("war_memorial_edit_set");
-    public static final ResourceLocation LIST_OPEN = MCAVie.id("war_memorial_list_open");
+    public static final Identifier EDIT_OPEN = MCAVie.id("war_memorial_edit_open");
+    public static final Identifier EDIT_SET = MCAVie.id("war_memorial_edit_set");
+    public static final Identifier LIST_OPEN = MCAVie.id("war_memorial_list_open");
     private static final double[][] BOXES = {
             {-16, 0, -16, 32, 1, 32}, {-13, 1, -13, 29, 3, 29}, {-10, 3, -10, 26, 5, 26}, {-7, 5, -7, 23, 42, 23},
             {-8, 38, -8, 24, 42, 24}, {-3, 42, -3, 19, 48, 19}, {0, 48, 0, 16, 86, 16}, {-0.5, 86, -0.5, 16.5, 91, 16.5},
@@ -198,7 +198,7 @@ public class MemorialBlock extends Block implements EntityBlock {
 
     private static void link(ServerLevel world, MemorialBlockEntity memorial, @Nullable ServerPlayer player) {
         Optional<Village> village = player != null ? TombReservations.village(world, memorial.getBlockPos(), player)
-                : net.mca.server.world.data.VillageManager.get(world).findNearestVillage(memorial.getBlockPos(), 32);
+                : net.conczin.mca.server.world.data.VillageManager.get(world).findNearestVillage(memorial.getBlockPos(), 32);
         if (village.isEmpty()) {
             if (player != null) {
                 player.displayClientMessage(Component.translatable("tomb.mca_vie.no_village").withStyle(ChatFormatting.RED), true);

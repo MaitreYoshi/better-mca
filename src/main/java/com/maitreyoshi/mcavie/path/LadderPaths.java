@@ -23,7 +23,7 @@ import net.minecraft.world.level.block.LadderBlock;
 import net.minecraft.world.level.block.TrapDoorBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.gameevent.GameEvent;
-import net.minecraft.world.level.pathfinder.BlockPathTypes;
+import net.minecraft.world.level.pathfinder.PathType;
 import net.minecraft.world.level.pathfinder.Node;
 import net.minecraft.world.level.pathfinder.Path;
 import net.minecraft.world.phys.AABB;
@@ -120,7 +120,7 @@ public final class LadderPaths {
         for (int i = 0; i < count; i++) {
             if (successors[i] == n) return count;
         }
-        n.type = BlockPathTypes.WALKABLE;
+        n.type = PathType.WALKABLE;
         n.costMalus = Math.max(n.costMalus, 0.0f);
         successors[count] = n;
         return count + 1;

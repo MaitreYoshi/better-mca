@@ -6,11 +6,11 @@ import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
 import java.util.UUID;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 
 public final class TombstonePortraits {
-    public static final ResourceLocation REQUEST = MCAVie.id("tombstone_portrait_request");
-    public static final ResourceLocation RESULT = MCAVie.id("tombstone_portrait_result");
+    public static final Identifier REQUEST = MCAVie.id("tombstone_portrait_request");
+    public static final Identifier RESULT = MCAVie.id("tombstone_portrait_result");
 
     private TombstonePortraits() {
     }

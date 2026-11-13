@@ -7,14 +7,14 @@ import com.maitreyoshi.mcavie.life.TombstoneDetails;
 import com.maitreyoshi.mcavie.life.VaultBlock;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.architectury.registry.client.rendering.RenderTypeRegistry;
-import net.mca.block.TombstoneBlock;
+import net.conczin.mca.block.TombstoneBlock;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.MultiBufferSource;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
@@ -198,7 +198,7 @@ public final class VaultClient {
         }
 
         @Override
-        public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
+        public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
             renderBackground(context);
             context.drawCenteredString(font, title, width / 2, height / 2 - 48, 0xFFFFFF);
             context.drawCenteredString(font, Component.translatable("gui.mca_vie.vault.hint"), width / 2, height / 2 - 34, 0xA0A0A0);

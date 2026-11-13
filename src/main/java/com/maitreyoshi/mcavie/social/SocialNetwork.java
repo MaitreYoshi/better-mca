@@ -8,12 +8,12 @@ import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerLifecycleEvents;
 import com.maitreyoshi.mcavie.compat.ServerPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
-import net.mca.entity.VillagerEntityMCA;
-import net.mca.entity.ai.relationship.Gender;
-import net.mca.server.world.data.FamilyTree;
-import net.mca.server.world.data.FamilyTreeNode;
+import net.conczin.mca.entity.VillagerEntityMCA;
+import net.conczin.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.server.world.data.FamilyTree;
+import net.conczin.mca.server.world.data.FamilyTreeNode;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.Nullable;
@@ -26,8 +26,8 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class SocialNetwork {
-    public static final ResourceLocation RELATIONS_REQUEST = MCAVie.id("relations_request");
-    public static final ResourceLocation RELATIONS = MCAVie.id("relations");
+    public static final Identifier RELATIONS_REQUEST = MCAVie.id("relations_request");
+    public static final Identifier RELATIONS = MCAVie.id("relations");
 
     public static final int TAG_NONE = 0;
     public static final int TAG_SPOUSE = 1;

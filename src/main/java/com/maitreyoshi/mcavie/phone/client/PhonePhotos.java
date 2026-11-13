@@ -11,7 +11,7 @@ import javax.imageio.ImageIO;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.texture.DynamicTexture;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.resources.ResourceLocation;
+import net.minecraft.resources.Identifier;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -22,7 +22,7 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class PhonePhotos {
-    public record Picture(ResourceLocation texture, int width, int height) {
+    public record Picture(Identifier texture, int width, int height) {
     }
 
     private record Key(UUID id, boolean full) {
@@ -113,7 +113,7 @@ public final class PhonePhotos {
         }
         try {
             NativeImage image = jpeg ? decodeJpeg(data) : NativeImage.read(data);
-            ResourceLocation texture = MCAVie.id("phone_photo/" + id + (full ? "_full" : "_thumb"));
+            Identifier texture = MCAVie.id("phone_photo/" + id + (full ? "_full" : "_thumb"));
             DynamicTexture backed = new DynamicTexture(image);
             backed.setFilter(true, false);
             Minecraft.getInstance().getTextureManager().register(texture, backed);

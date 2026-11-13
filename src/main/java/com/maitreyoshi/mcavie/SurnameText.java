@@ -1,6 +1,6 @@
 package com.maitreyoshi.mcavie;
 
-import net.mca.entity.ai.relationship.Gender;
+import net.conczin.mca.entity.ai.relationship.Gender;
 
 import java.util.Locale;
 

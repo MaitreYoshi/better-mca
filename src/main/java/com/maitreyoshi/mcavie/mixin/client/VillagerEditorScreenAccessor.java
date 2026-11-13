@@ -1,6 +1,6 @@
 package com.maitreyoshi.mcavie.mixin.client;
 
-import net.mca.client.gui.VillagerEditorScreen;
+import net.conczin.mca.client.gui.VillagerEditorScreen;
 import net.minecraft.client.gui.components.EditBox;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
