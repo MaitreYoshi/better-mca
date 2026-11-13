@@ -69,7 +69,6 @@ public class GhostRenderer extends EntityRenderer<GhostEntity, GhostRenderer.Sta
             for (EquipmentSlot slot : EquipmentSlot.values()) {
                 body.setItemSlot(slot, ItemStack.EMPTY);
             }
-            body.setCustomName(null);
             ghost.clientBody = body;
             return body;
         }
