@@ -17,9 +17,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 
 public class CaneLayer extends RenderLayer<VillagerRenderState, VillagerEntityModelMCA> {
-    private static final ItemStack CANE = new ItemStack(Items.STICK);
-
     private final ItemStackRenderState item = new ItemStackRenderState();
+    private ItemStack cane;
 
     public CaneLayer(RenderLayerParent<VillagerRenderState, VillagerEntityModelMCA> context) {
         super(context);
@@ -32,7 +31,7 @@ public class CaneLayer extends RenderLayer<VillagerRenderState, VillagerEntityMo
         if (state.isInvisible || arm == null) {
             return;
         }
-        Minecraft.getInstance().getItemModelResolver().updateForLiving(item, CANE, ItemDisplayContext.NONE, villager);
+        Minecraft.getInstance().getItemModelResolver().updateForLiving(item, cane(), ItemDisplayContext.NONE, villager);
         matrices.pushPose();
         getParentModel().translateToHand(state, arm, matrices);
         matrices.translate((arm == HumanoidArm.LEFT ? 1 : -1) / 16f, 15 / 16f, -1 / 32f);
@@ -40,5 +39,12 @@ public class CaneLayer extends RenderLayer<VillagerRenderState, VillagerEntityMo
         matrices.scale(0.9f, 0.9f, 0.9f);
         item.submit(matrices, collector, light, LivingEntityRenderer.getOverlayCoords(state, 0.0F), state.outlineColor);
         matrices.popPose();
+    }
+
+    private ItemStack cane() {
+        if (cane == null) {
+            cane = new ItemStack(Items.STICK);
+        }
+        return cane;
     }
 }
