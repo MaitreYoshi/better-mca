@@ -174,7 +174,6 @@ public class JobScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        extractBackground(context, mouseX, mouseY, delta);
         context.centeredText(font, title, width / 2, top - 14, 0xFFFFFF);
         context.fill(left, top, left + panelWidth, top + panelHeight, PANEL);
         context.outline(left, top, panelWidth, panelHeight, BORDER);

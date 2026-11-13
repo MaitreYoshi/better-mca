@@ -661,7 +661,6 @@ public class PhoneScreen extends Screen {
         hits.clear();
         cells.clear();
         drops.clear();
-        extractBackground(context, realMouseX, realMouseY, delta);
         context.pose().pushMatrix();
         context.pose().scale(ui(), ui());
 

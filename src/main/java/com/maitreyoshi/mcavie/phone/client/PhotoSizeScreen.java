@@ -133,7 +133,6 @@ public class PhotoSizeScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        extractBackground(context, mouseX, mouseY, delta);
         int cx = width / 2;
         context.centeredText(font, title, cx, 10, 0xFFFFFF);
         int areaTop = 26;

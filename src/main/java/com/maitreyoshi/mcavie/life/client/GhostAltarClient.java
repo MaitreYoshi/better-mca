@@ -157,7 +157,6 @@ public final class GhostAltarClient {
 
         @Override
         public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-            extractBackground(context, mouseX, mouseY, delta);
             context.centeredText(font, title, width / 2, 10, 0xFFFFFF);
             Component hint = Component.translatable(!house ? "gui.mca_vie.ghost_altar.no_house" : entries.isEmpty() ? "gui.mca_vie.ghost_altar.empty" : "gui.mca_vie.ghost_altar.hint");
             context.centeredText(font, hint, width / 2, 21, 0xA0A0A0);

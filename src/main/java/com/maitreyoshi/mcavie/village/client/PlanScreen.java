@@ -583,7 +583,6 @@ public class PlanScreen extends BlueprintScreen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        extractBackground(context, mouseX, mouseY, delta);
         context.fill(fx, fy, fx + fw, fy + fh, 0xe0101014);
         context.outline(fx, fy, fw, fh, 0x60ffffff);
 

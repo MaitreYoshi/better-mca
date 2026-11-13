@@ -227,7 +227,6 @@ public final class MemorialClient {
 
         @Override
         public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-            extractBackground(context, mouseX, mouseY, delta);
             context.centeredText(font, title, width / 2, height / 2 - 76, 0xFFFFFF);
             context.text(font, Component.translatable("gui.mca_vie.war_memorial.inscription_hint"), width / 2 - 120, height / 2 - 48, 0xA0A0A0);
             context.text(font, Component.translatable("gui.mca_vie.war_memorial.dates_hint"), width / 2 - 120, height / 2 - 8, 0xA0A0A0);
@@ -268,7 +267,6 @@ public final class MemorialClient {
 
         @Override
         public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-            extractBackground(context, mouseX, mouseY, delta);
             context.centeredText(font, title, width / 2, 14, 0xF2CC5A);
             List<MemorialRegistry.Fallen> all = memorial.fallen();
             if (all.isEmpty()) {

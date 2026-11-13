@@ -101,7 +101,6 @@ public class TombReservationScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        extractBackground(context, mouseX, mouseY, delta);
         context.centeredText(font, title, width / 2, 10, 0xFFFFFF);
         Component hint = entries.isEmpty() ? Component.translatable("gui.mca_vie.tomb.empty") : Component.translatable("gui.mca_vie.tomb.hint");
         context.centeredText(font, hint, width / 2, 21, 0xA0A0A0);

@@ -113,7 +113,6 @@ public class RelationsScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        extractBackground(context, mouseX, mouseY, delta);
         context.centeredText(font, title, width / 2, 16, 0xFFFFFF);
         Relations relations = RelationsClient.get(villager);
         List<Row> rows = visibleRows(relations);

@@ -650,7 +650,6 @@ public class TreeScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        extractBackground(context, mouseX, mouseY, delta);
         context.fill(0, TOP, PANEL_WIDTH - 1, height, 0x80000000);
         context.fill(viewLeft(), viewTop(), viewRight(), viewBottom(), 0x66000000);
 

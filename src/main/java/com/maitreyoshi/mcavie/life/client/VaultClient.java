@@ -201,7 +201,6 @@ public final class VaultClient {
 
         @Override
         public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-            extractBackground(context, mouseX, mouseY, delta);
             context.centeredText(font, title, width / 2, height / 2 - 48, 0xFFFFFF);
             context.centeredText(font, Component.translatable("gui.mca_vie.vault.hint"), width / 2, height / 2 - 34, 0xA0A0A0);
             super.extractRenderState(context, mouseX, mouseY, delta);
