@@ -113,7 +113,7 @@ public class RelationsScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        context.centeredText(font, title, width / 2, 16, 0xFFFFFF);
+        context.centeredText(font, title, width / 2, 16, 0xFFFFFFFF);
         Relations relations = RelationsClient.get(villager);
         List<Row> rows = visibleRows(relations);
         super.extractRenderState(context, mouseX, mouseY, delta);
@@ -123,16 +123,16 @@ public class RelationsScreen extends Screen {
                 RelationsClient.request(villager);
                 requestedAt = System.currentTimeMillis();
             }
-            context.centeredText(font, Component.translatable("gui.mca_vie.relations.loading"), width / 2, TOP + 10, 0xAAAAAA);
+            context.centeredText(font, Component.translatable("gui.mca_vie.relations.loading"), width / 2, TOP + 10, 0xFFAAAAAA);
             return;
         }
         if (relations.entries().isEmpty()) {
-            context.centeredText(font, Component.translatable("gui.mca_vie.relations.empty", villagerName), width / 2, TOP + 10, 0xAAAAAA);
+            context.centeredText(font, Component.translatable("gui.mca_vie.relations.empty", villagerName), width / 2, TOP + 10, 0xFFAAAAAA);
             return;
         }
         int pages = pages(relations);
         if (pages > 1) {
-            context.centeredText(font, Component.translatable("gui.mca_vie.relations.page", page + 1, pages), width / 2, height - 40, 0xAAAAAA);
+            context.centeredText(font, Component.translatable("gui.mca_vie.relations.page", page + 1, pages), width / 2, height - 40, 0xFFAAAAAA);
         }
 
         int left = width / 2 - HALF_WIDTH;
@@ -141,7 +141,7 @@ public class RelationsScreen extends Screen {
             Row row = rows.get(i);
             int y = TOP + i * ROW;
             if (row.entry() == null) {
-                context.text(font, Component.translatable("gui.mca_vie.relations.grudges").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD), left, y + 3, 0xFFFFFF);
+                context.text(font, Component.translatable("gui.mca_vie.relations.grudges").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD), left, y + 3, 0xFFFFFFFF);
                 continue;
             }
             Entry entry = row.entry();
@@ -152,18 +152,18 @@ public class RelationsScreen extends Screen {
             }
             int x = left;
             if (row.index() == 0 && entry.score() >= Social.FRIEND) {
-                context.text(font, Component.literal("★").withStyle(ChatFormatting.GOLD), x, y + 3, 0xFFFFFF);
+                context.text(font, Component.literal("★").withStyle(ChatFormatting.GOLD), x, y + 3, 0xFFFFFFFF);
             }
             x += 10;
             int limit = left + HALF_WIDTH * 2 - HEARTS * 9 - 6;
             String trimmed = font.plainSubstrByWidth(entry.name(), limit - x);
             MutableComponent name = Component.literal(trimmed).withStyle(over && entry.openable() ? ChatFormatting.YELLOW : ChatFormatting.WHITE);
-            context.text(font, name, x, y + 3, 0xFFFFFF);
+            context.text(font, name, x, y + 3, 0xFFFFFFFF);
             x += font.width(name) + 6;
             if (entry.tag() != SocialNetwork.TAG_NONE) {
                 MutableComponent tag = tag(entry).withStyle(ChatFormatting.GRAY);
                 if (x + font.width(tag) <= limit) {
-                    context.text(font, tag, x, y + 3, 0xFFFFFF);
+                    context.text(font, tag, x, y + 3, 0xFFFFFFFF);
                 }
             }
             drawHearts(context, left + HALF_WIDTH * 2 - HEARTS * 9, y + 2, entry.score());

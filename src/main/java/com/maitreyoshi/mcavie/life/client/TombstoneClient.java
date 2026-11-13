@@ -179,10 +179,10 @@ public final class TombstoneClient {
             boolean name = i == 0 || (i == 1 && !details.lastName().isEmpty());
             float x = -text.width(line) / 2F;
             switch (look) {
-                case WOOD -> consumers.text(line.getVisualOrderText(), x, 0, name ? 0x2E1C0C : 0x4A3420, false, Font.DisplayMode.NORMAL, 0, light);
-                case ENGRAVED -> consumers.text(line.getVisualOrderText(), x, 0, name ? 0x262626 : 0x3C3C3C, false, Font.DisplayMode.NORMAL, 0, light);
-                case GOLD -> consumers.outlined(line.getVisualOrderText(), x, 0, name ? 0xF2CC5A : 0xD9B24C, 0x3E2A0A, light);
-                default -> consumers.outlined(line.getVisualOrderText(), x, 0, name ? 0xFFFFFF : 0xD8D8D8, 0x000000, light);
+                case WOOD -> consumers.text(line.getVisualOrderText(), x, 0, name ? 0xFF2E1C0C : 0xFF4A3420, false, Font.DisplayMode.NORMAL, 0, light);
+                case ENGRAVED -> consumers.text(line.getVisualOrderText(), x, 0, name ? 0xFF262626 : 0xFF3C3C3C, false, Font.DisplayMode.NORMAL, 0, light);
+                case GOLD -> consumers.outlined(line.getVisualOrderText(), x, 0, name ? 0xFFF2CC5A : 0xFFD9B24C, 0xFF3E2A0A, light);
+                default -> consumers.outlined(line.getVisualOrderText(), x, 0, name ? 0xFFFFFFFF : 0xFFD8D8D8, 0xFF000000, light);
             }
             matrices.popPose();
             y += 10 * scale;

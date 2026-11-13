@@ -36,9 +36,9 @@ import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.level.Level;
 
 public final class MemorialClient {
-    private static final int NAME_COLOR = 0xF2CC5A;
-    private static final int OUTLINE = 0x3E2A0A;
-    private static final int ENGRAVED = 0x3A3328;
+    private static final int NAME_COLOR = 0xFFF2CC5A;
+    private static final int OUTLINE = 0xFF3E2A0A;
+    private static final int ENGRAVED = 0xFF3A3328;
     private static final int PER_PLAQUE = 10;
 
     private MemorialClient() {
@@ -227,9 +227,9 @@ public final class MemorialClient {
 
         @Override
         public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-            context.centeredText(font, title, width / 2, height / 2 - 76, 0xFFFFFF);
-            context.text(font, Component.translatable("gui.mca_vie.war_memorial.inscription_hint"), width / 2 - 120, height / 2 - 48, 0xA0A0A0);
-            context.text(font, Component.translatable("gui.mca_vie.war_memorial.dates_hint"), width / 2 - 120, height / 2 - 8, 0xA0A0A0);
+            context.centeredText(font, title, width / 2, height / 2 - 76, 0xFFFFFFFF);
+            context.text(font, Component.translatable("gui.mca_vie.war_memorial.inscription_hint"), width / 2 - 120, height / 2 - 48, 0xFFA0A0A0);
+            context.text(font, Component.translatable("gui.mca_vie.war_memorial.dates_hint"), width / 2 - 120, height / 2 - 8, 0xFFA0A0A0);
             super.extractRenderState(context, mouseX, mouseY, delta);
         }
     }
@@ -267,21 +267,21 @@ public final class MemorialClient {
 
         @Override
         public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-            context.centeredText(font, title, width / 2, 14, 0xF2CC5A);
+            context.centeredText(font, title, width / 2, 14, 0xFFF2CC5A);
             List<MemorialRegistry.Fallen> all = memorial.fallen();
             if (all.isEmpty()) {
-                context.centeredText(font, Component.translatable("gui.mca_vie.war_memorial.empty"), width / 2, height / 2, 0xA0A0A0);
+                context.centeredText(font, Component.translatable("gui.mca_vie.war_memorial.empty"), width / 2, height / 2, 0xFFA0A0A0);
             }
             int x = width / 2 - 150;
             int y = 40;
             for (int i = (int) scroll; i < all.size() && i < scroll + visibleRows(); i++) {
                 MemorialRegistry.Fallen entry = all.get(all.size() - 1 - i);
                 TombstoneDetails details = entry.details();
-                context.text(font, Component.literal(name(details)).withStyle(ChatFormatting.WHITE), x, y, 0xFFFFFF);
+                context.text(font, Component.literal(name(details)).withStyle(ChatFormatting.WHITE), x, y, 0xFFFFFFFF);
                 Component killer = com.maitreyoshi.mcavie.compat.Nbt.parseText(entry.killer());
                 Component info = Component.literal(TombstoneClient.lives(details) + "  ")
                         .append(Component.translatable("gui.mca_vie.war_memorial.killed_by", killer == null ? Component.literal("?") : killer));
-                context.text(font, info, x + 8, y + 10, 0xA0A0A0);
+                context.text(font, info, x + 8, y + 10, 0xFFA0A0A0);
                 y += ROW;
             }
             super.extractRenderState(context, mouseX, mouseY, delta);

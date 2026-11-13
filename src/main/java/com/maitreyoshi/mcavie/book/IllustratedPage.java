@@ -20,12 +20,12 @@ public class IllustratedPage extends Page {
     private static final int ROW_HEIGHT = 19;
     private static final int LINE_HEIGHT = 11;
     private static final int LAST_LINE_Y = 148;
-    private static final int TITLE_COLOR = 0x6B3A0E;
-    private static final int TEXT_COLOR = 0x2B1D0E;
-    private static final int NOTE_COLOR = 0x6E5A3C;
-    private static final int GAIN_COLOR = 0x1E7A1E;
-    private static final int LOSS_COLOR = 0xB01818;
-    private static final int INFO_COLOR = 0x8A5A00;
+    private static final int TITLE_COLOR = 0xFF6B3A0E;
+    private static final int TEXT_COLOR = 0xFF2B1D0E;
+    private static final int NOTE_COLOR = 0xFF6E5A3C;
+    private static final int GAIN_COLOR = 0xFF1E7A1E;
+    private static final int LOSS_COLOR = 0xFFB01818;
+    private static final int INFO_COLOR = 0xFF8A5A00;
 
     private record Row(String icon, String key, String value, int color) {
     }

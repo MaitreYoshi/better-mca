@@ -28,7 +28,7 @@ public final class TreeTexts {
     }
 
     public static int nameColor(int gender) {
-        return Gender.byId(gender).getColor();
+        return 0xFF000000 | Gender.byId(gender).getColor();
     }
 
     public static String name(FamilyPerson person) {

@@ -134,7 +134,7 @@ public class PhotoSizeScreen extends Screen {
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         int cx = width / 2;
-        context.centeredText(font, title, cx, 10, 0xFFFFFF);
+        context.centeredText(font, title, cx, 10, 0xFFFFFFFF);
         int areaTop = 26;
         int areaBottom = height - 110;
         int areaW = width - 32;
@@ -154,10 +154,10 @@ public class PhotoSizeScreen extends Screen {
             context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, picture.texture(), px, py, uv[0] * tw, uv[1] * th, pw, ph, Math.max(1, Math.round((uv[2] - uv[0]) * tw)), Math.max(1, Math.round((uv[3] - uv[1]) * th)), tw, th);
         }
         int y = height - 102;
-        context.centeredText(font, Component.translatable("gui.mca_vie.photo_size.width", blocks(widthHalves)), cx, y + 6, 0xFFFFFF);
-        context.centeredText(font, Component.translatable("gui.mca_vie.photo_size.height", blocks(heightHalves)), cx, y + 30, 0xFFFFFF);
+        context.centeredText(font, Component.translatable("gui.mca_vie.photo_size.width", blocks(widthHalves)), cx, y + 6, 0xFFFFFFFF);
+        context.centeredText(font, Component.translatable("gui.mca_vie.photo_size.height", blocks(heightHalves)), cx, y + 30, 0xFFFFFFFF);
         if (!fits) {
-            context.centeredText(font, Component.translatable("msg.mca_vie.photo.no_support"), cx, areaBottom + 2, 0xFF5555);
+            context.centeredText(font, Component.translatable("msg.mca_vie.photo.no_support"), cx, areaBottom + 2, 0xFFFF5555);
         }
         super.extractRenderState(context, mouseX, mouseY, delta);
     }

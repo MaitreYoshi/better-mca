@@ -653,7 +653,7 @@ public class TreeScreen extends Screen {
         context.fill(0, TOP, PANEL_WIDTH - 1, height, 0x80000000);
         context.fill(viewLeft(), viewTop(), viewRight(), viewBottom(), 0x66000000);
 
-        context.centeredText(font, titleText(), (int) viewCenterX(), 8, 0xFFFFFF);
+        context.centeredText(font, titleText(), (int) viewCenterX(), 8, 0xFFFFFFFF);
 
         switch (view) {
             case TREE -> renderTree(context, mouseX, mouseY);
@@ -699,16 +699,16 @@ public class TreeScreen extends Screen {
         }
         int cx = (int) viewCenterX();
         context.fill(viewLeft(), viewTop(), viewRight(), viewTop() + 28, 0x90000000);
-        context.centeredText(font, sentence, cx, viewTop() + 4, 0xFFFF55);
+        context.centeredText(font, sentence, cx, viewTop() + 4, 0xFFFFFF55);
         MutableComponent slots = Component.translatable("tree.mca_vie.path.a", nameOf(pathA))
                 .append("   ")
                 .append(Component.translatable("tree.mca_vie.path.b", nameOf(pathB)));
         if (pathCount > 1) {
             slots.append("   ").append(Component.translatable("tree.mca_vie.path.link", pathIndex + 1, pathCount));
         }
-        context.centeredText(font, slots, cx, viewTop() + 16, 0xAAAAAA);
+        context.centeredText(font, slots, cx, viewTop() + 16, 0xFFAAAAAA);
         context.text(font, Component.translatable("tree.mca_vie.path.pick"),
-                viewLeft() + 6, viewBottom() - 12, 0x808080);
+                viewLeft() + 6, viewBottom() - 12, 0xFF808080);
     }
 
     private Component pathSentence(TreeProtocol.Response response) {
@@ -751,7 +751,7 @@ public class TreeScreen extends Screen {
     }
 
     private void centeredMessage(GuiGraphicsExtractor context, Component text) {
-        context.centeredText(font, text, (int) viewCenterX(), (int) viewCenterY() - 4, 0xAAAAAA);
+        context.centeredText(font, text, (int) viewCenterX(), (int) viewCenterY() - 4, 0xFFAAAAAA);
     }
 
     private void renderLayout(GuiGraphicsExtractor context, TreeLayout layout, int mouseX, int mouseY) {
@@ -925,7 +925,7 @@ public class TreeScreen extends Screen {
             String second = (years == null ? "" : years.getString())
                     + (years != null && !profession.isEmpty() ? "  ·  " : "")
                     + profession;
-            rows.add(new LineageRow(status, statusWidth, dead ? 0x909090 : 0x55FF55, name, TreeTexts.trim(font, second, width)));
+            rows.add(new LineageRow(status, statusWidth, dead ? 0xFF909090 : 0xFF55FF55, name, TreeTexts.trim(font, second, width)));
         }
         lineageRows = rows;
         lineageRowsSource = lineage;
@@ -938,7 +938,7 @@ public class TreeScreen extends Screen {
         Component header = lineageWaiting
                 ? Component.translatable("tree.mca_vie.loading")
                 : Component.translatable("tree.mca_vie.lineage.count", lineage.size());
-        context.centeredText(font, header, (int) viewCenterX(), viewTop() + 5, 0xAAAAAA);
+        context.centeredText(font, header, (int) viewCenterX(), viewTop() + 5, 0xFFAAAAAA);
         if (!lineageWaiting && lineage.isEmpty()) {
             centeredMessage(context, Component.translatable("tree.mca_vie.no_result"));
             return;
@@ -964,7 +964,7 @@ public class TreeScreen extends Screen {
             LineageRow row = rows.get(i);
             context.text(font, row.status(), right - row.statusWidth(), y + 2, row.statusColor());
             context.text(font, row.name(), left, y + 2, TreeTexts.nameColor(person.gender()));
-            context.text(font, row.second(), left, y + 11, 0xAAAAAA);
+            context.text(font, row.second(), left, y + 11, 0xFFAAAAAA);
         }
         context.disableScissor();
     }
@@ -975,21 +975,21 @@ public class TreeScreen extends Screen {
 
     private void renderPanel(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         int x0 = 6;
-        context.text(font, Component.translatable("tree.mca_vie.generations"), x0, TOP + 3, 0xFFFFFF);
-        context.text(font, Component.translatable("tree.mca_vie.up"), x0, TOP + 17, 0xAAAAAA);
-        context.text(font, Component.translatable("tree.mca_vie.down"), x0, TOP + 34, 0xAAAAAA);
+        context.text(font, Component.translatable("tree.mca_vie.generations"), x0, TOP + 3, 0xFFFFFFFF);
+        context.text(font, Component.translatable("tree.mca_vie.up"), x0, TOP + 17, 0xFFAAAAAA);
+        context.text(font, Component.translatable("tree.mca_vie.down"), x0, TOP + 34, 0xFFAAAAAA);
         int valueX = PANEL_WIDTH - 6 - 22;
-        context.centeredText(font, generationText(up), valueX, TOP + 17, 0xFFFFFF);
-        context.centeredText(font, generationText(down), valueX, TOP + 34, 0xFFFFFF);
-        context.text(font, Component.translatable("tree.mca_vie.search"), x0, TOP + 98, 0xFFFFFF);
+        context.centeredText(font, generationText(up), valueX, TOP + 17, 0xFFFFFFFF);
+        context.centeredText(font, generationText(down), valueX, TOP + 34, 0xFFFFFFFF);
+        context.text(font, Component.translatable("tree.mca_vie.search"), x0, TOP + 98, 0xFFFFFFFF);
 
         int top = resultsTop();
         int bottom = height - 6;
         if (searchResults.isEmpty()) {
             if (searchWaiting) {
-                context.text(font, Component.translatable("tree.mca_vie.loading"), x0, top + 2, 0x808080);
+                context.text(font, Component.translatable("tree.mca_vie.loading"), x0, top + 2, 0xFF808080);
             } else if (!searchText.isBlank() && searchDelay < 0) {
-                context.text(font, Component.translatable("tree.mca_vie.no_result"), x0, top + 2, 0x808080);
+                context.text(font, Component.translatable("tree.mca_vie.no_result"), x0, top + 2, 0xFF808080);
             }
             return;
         }
@@ -1013,7 +1013,7 @@ public class TreeScreen extends Screen {
                     x0, y + 1, TreeTexts.nameColor(person.gender()));
             Component years = TreeTexts.yearsLine(person, today);
             if (years != null) {
-                context.text(font, TreeTexts.trim(font, years.getString(), nameWidth), x0, y + 10, 0x909090);
+                context.text(font, TreeTexts.trim(font, years.getString(), nameWidth), x0, y + 10, 0xFF909090);
             }
             if (slots) {
                 drawSlot(context, "A", slotX(0), y + 4, person.id().equals(pathA), mouseX, mouseY);
@@ -1031,7 +1031,7 @@ public class TreeScreen extends Screen {
         boolean hover = mouseX >= x && mouseX < x + 12 && mouseY >= y && mouseY < y + 12;
         context.fill(x, y, x + 12, y + 12, selected ? 0xFF6040A0 : hover ? 0xFF404060 : 0xFF202030);
         context.outline(x, y, 12, 12, selected ? CARD_BORDER_ROOT : 0xFF707090);
-        context.centeredText(font, letter, x + 6, y + 2, 0xFFFFFF);
+        context.centeredText(font, letter, x + 6, y + 2, 0xFFFFFFFF);
     }
 
     private boolean clickResult(double mouseX, double mouseY) {
@@ -1072,11 +1072,11 @@ public class TreeScreen extends Screen {
             String g = TreeTexts.g(person.gender());
             add(Component.literal(TreeTexts.name(person)), TreeTexts.nameColor(person.gender()));
             if (PhoneSettings.treeRelations() && TreeTexts.isShown(person.relationToViewer())) {
-                add(Component.literal(TreeTexts.yourRelation(person.relationToViewer(), person.gender())), 0xFFFF55);
+                add(Component.literal(TreeTexts.yourRelation(person.relationToViewer(), person.gender())), 0xFFFFFF55);
             }
             String profession = TreeTexts.profession(person);
             if (!profession.isEmpty()) {
-                add(Component.literal(profession), 0xAAAAAA);
+                add(Component.literal(profession), 0xFFAAAAAA);
             }
 
             Long birth = person.birthDay();
@@ -1084,27 +1084,27 @@ public class TreeScreen extends Screen {
             boolean dead = person.deceased() || death != null;
             List<Long> lives = person.pastLives();
             if (birth != null) {
-                add(Component.translatable("tree.mca_vie.born." + g, TreeTexts.date(person.exactBirth(), birth)), 0xFFFFFF);
+                add(Component.translatable("tree.mca_vie.born." + g, TreeTexts.date(person.exactBirth(), birth)), 0xFFFFFFFF);
             } else {
-                add(Component.translatable("tree.mca_vie.born_unknown"), 0x909090);
+                add(Component.translatable("tree.mca_vie.born_unknown"), 0xFF909090);
             }
             for (int i = 0; i + 1 < lives.size(); i += 2) {
-                add(Component.translatable("tree.mca_vie.died." + g, TreeTexts.calendarDate(lives.get(i))), 0xC0C0C0);
-                add(Component.translatable("tree.mca_vie.resurrected." + g, TreeTexts.calendarDate(lives.get(i + 1))), 0xB48CFF);
+                add(Component.translatable("tree.mca_vie.died." + g, TreeTexts.calendarDate(lives.get(i))), 0xFFC0C0C0);
+                add(Component.translatable("tree.mca_vie.resurrected." + g, TreeTexts.calendarDate(lives.get(i + 1))), 0xFFB48CFF);
             }
             if (birth != null && !dead) {
-                add(Component.translatable("tree.mca_vie.details.age", TreeTexts.age(TreeTexts.liveAge(person.exactBirth(), birth, today))), 0xFFFFFF);
+                add(Component.translatable("tree.mca_vie.details.age", TreeTexts.age(TreeTexts.liveAge(person.exactBirth(), birth, today))), 0xFFFFFFFF);
             }
             if (death != null) {
                 if (birth != null) {
                     add(Component.translatable("tree.mca_vie.died_age." + g, TreeTexts.date(person.exactDeath(), death),
                             TreeTexts.age(person.exactDeath() != null ? TreeTexts.ageBetween(person.exactBirth(), birth, person.exactDeath())
-                                    : LifeCycle.ageInYears(birth, death))), 0xC0C0C0);
+                                    : LifeCycle.ageInYears(birth, death))), 0xFFC0C0C0);
                 } else {
-                    add(Component.translatable("tree.mca_vie.died." + g, TreeTexts.date(person.exactDeath(), death)), 0xC0C0C0);
+                    add(Component.translatable("tree.mca_vie.died." + g, TreeTexts.date(person.exactDeath(), death)), 0xFFC0C0C0);
                 }
             } else if (dead) {
-                add(Component.translatable("tree.mca_vie.dead." + g), 0xC0C0C0);
+                add(Component.translatable("tree.mca_vie.dead." + g), 0xFFC0C0C0);
             }
 
             List<UUID> spouses = person.spouses();
@@ -1112,7 +1112,7 @@ public class TreeScreen extends Screen {
             if (!spouses.isEmpty() && spouses.get(0).equals(person.spouse())) {
                 FamilyPerson current = findPerson(spouses.get(0));
                 String key = "tree.mca_vie.details.spouse." + (current == null ? "m" : TreeTexts.g(current.gender()));
-                add(Component.translatable(key, spouseName(spouses.get(0))), 0xFFFFFF);
+                add(Component.translatable(key, spouseName(spouses.get(0))), 0xFFFFFFFF);
                 pastFrom = 1;
             }
             if (spouses.size() > pastFrom) {
@@ -1121,13 +1121,13 @@ public class TreeScreen extends Screen {
                     names.add(spouseName(id));
                 }
                 String joined = TreeTexts.trim(font, String.join(", ", names), 200);
-                add(Component.translatable("tree.mca_vie.details.past_spouses", joined), 0xC0C0C0);
+                add(Component.translatable("tree.mca_vie.details.past_spouses", joined), 0xFFC0C0C0);
             }
             if (!person.children().isEmpty()) {
-                add(Component.translatable("tree.mca_vie.details.children", person.children().size()), 0xFFFFFF);
+                add(Component.translatable("tree.mca_vie.details.children", person.children().size()), 0xFFFFFFFF);
             }
             if (person.happiness() >= 0 && !dead) {
-                add(Component.translatable("tree.mca_vie.details.happiness", person.happiness()), 0xFFFFFF);
+                add(Component.translatable("tree.mca_vie.details.happiness", person.happiness()), 0xFFFFFFFF);
             }
 
             if (view != View.TREE || !person.id().equals(root)) {
@@ -1186,7 +1186,7 @@ public class TreeScreen extends Screen {
 
         private void addAction(Component text, Runnable action) {
             lines.add(text);
-            colors.add(0x55FFFF);
+            colors.add(0xFF55FFFF);
             actions.add(action);
         }
 
@@ -1218,7 +1218,7 @@ public class TreeScreen extends Screen {
             for (int i = 0; i < lines.size(); i++) {
                 int color = colors.get(i);
                 if (actions.get(i) != null && i == hovered) {
-                    color = 0xFFFF55;
+                    color = 0xFFFFFF55;
                 }
                 context.text(font, lines.get(i), x + 6, y + 5 + i * LINE, color);
             }

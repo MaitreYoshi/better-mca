@@ -101,9 +101,9 @@ public class TombReservationScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        context.centeredText(font, title, width / 2, 10, 0xFFFFFF);
+        context.centeredText(font, title, width / 2, 10, 0xFFFFFFFF);
         Component hint = entries.isEmpty() ? Component.translatable("gui.mca_vie.tomb.empty") : Component.translatable("gui.mca_vie.tomb.hint");
-        context.centeredText(font, hint, width / 2, 21, 0xA0A0A0);
+        context.centeredText(font, hint, width / 2, 21, 0xFFA0A0A0);
         int hovered = indexAt(mouseX, mouseY);
         context.enableScissor(0, TOP, width, height - BOTTOM);
         for (int i = 0; i < entries.size(); i++) {
@@ -116,11 +116,11 @@ public class TombReservationScreen extends Screen {
             if (i == hovered || selected) {
                 context.fill(left(), y, left() + ROW_W, y + ROW_H, selected ? 0x6050A050 : 0x40FFFFFF);
             }
-            int color = selected ? 0x80FF80 : entry.hasTomb() ? 0x909090 : 0xFFFFFF;
+            int color = selected ? 0xFF80FF80 : entry.hasTomb() ? 0xFF909090 : 0xFFFFFFFF;
             context.text(font, entry.name(), left() + 4, y + 3, color);
             if (entry.hasTomb() && !selected) {
                 Component tag = Component.translatable("gui.mca_vie.tomb.has_one");
-                context.text(font, tag, left() + ROW_W - 4 - font.width(tag), y + 3, 0x909090);
+                context.text(font, tag, left() + ROW_W - 4 - font.width(tag), y + 3, 0xFF909090);
             }
         }
         context.disableScissor();

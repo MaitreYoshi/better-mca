@@ -137,16 +137,16 @@ public final class TreeLayout {
         Component years = TreeTexts.yearsLine(person, today);
         if (years != null) {
             lines.add(TreeTexts.trim(font, years.getString(), MAX_TEXT_WIDTH));
-            colors.add(0xDDDDDD);
+            colors.add(0xFFDDDDDD);
         }
         String profession = TreeTexts.profession(person);
         if (!profession.isEmpty()) {
             lines.add(TreeTexts.trim(font, profession, MAX_TEXT_WIDTH));
-            colors.add(0xAAAAAA);
+            colors.add(0xFFAAAAAA);
         }
         if (com.maitreyoshi.mcavie.phone.client.PhoneSettings.treeRelations() && TreeTexts.isShownOnCard(person.relationToViewer())) {
             lines.add(TreeTexts.trim(font, TreeTexts.yourRelation(person.relationToViewer(), person.gender()), MAX_TEXT_WIDTH));
-            colors.add(0xFFFF55);
+            colors.add(0xFFFFFF55);
         }
 
         return card(person, lines, colors, font::width);

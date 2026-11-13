@@ -174,7 +174,7 @@ public class JobScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        context.centeredText(font, title, width / 2, top - 14, 0xFFFFFF);
+        context.centeredText(font, title, width / 2, top - 14, 0xFFFFFFFF);
         context.fill(left, top, left + panelWidth, top + panelHeight, PANEL);
         context.outline(left, top, panelWidth, panelHeight, BORDER);
         renderList(context, mouseX, mouseY);
@@ -214,7 +214,7 @@ public class JobScreen extends Screen {
             }
             context.item(iconOf(job), x + 2, rowY + 2);
             Component name = job == current ? job.getName().copy().withStyle(ChatFormatting.GOLD) : job.getName();
-            context.text(font, net.minecraft.locale.Language.getInstance().getVisualOrder(font.substrByWidth(name, w - 24)), x + 22, rowY + 6, 0xFFFFFF);
+            context.text(font, net.minecraft.locale.Language.getInstance().getVisualOrder(font.substrByWidth(name, w - 24)), x + 22, rowY + 6, 0xFFFFFFFF);
         }
         context.disableScissor();
     }
@@ -231,10 +231,10 @@ public class JobScreen extends Screen {
             InventoryScreen.extractEntityInInventoryFollowsMouse(context, x + w - 32, y + 4, x + w, y + 52, 24, 0.0625f, x + w - 16, y + 18, living);
         }
         context.item(iconOf(selected), x, y);
-        context.text(font, selected.getName().copy().withStyle(ChatFormatting.BOLD), x + 20, y + 4, 0xFFFFFF);
+        context.text(font, selected.getName().copy().withStyle(ChatFormatting.BOLD), x + 20, y + 4, 0xFFFFFFFF);
         if (isCurrent) {
             context.text(font, Component.translatable("job.mca_vie.current").withStyle(ChatFormatting.GOLD),
-                    x + 24 + font.width(selected.getName().copy().withStyle(ChatFormatting.BOLD)), y + 4, 0xFFFFFF);
+                    x + 24 + font.width(selected.getName().copy().withStyle(ChatFormatting.BOLD)), y + 4, 0xFFFFFFFF);
         }
         y += 22;
 
@@ -250,7 +250,7 @@ public class JobScreen extends Screen {
 
         int textWidth = isCurrent ? w - 40 : w;
         for (FormattedCharSequence line : font.split(Component.translatable("job.mca_vie.desc." + selected.id()), textWidth)) {
-            context.text(font, line, x, y, 0xD0D0D0);
+            context.text(font, line, x, y, 0xFFD0D0D0);
             y += 10;
         }
         y += 6;
@@ -259,13 +259,13 @@ public class JobScreen extends Screen {
         Component place = station != null
                 ? Component.translatable("job.mca_vie.workstation_label", station.getName().copy().withStyle(ChatFormatting.WHITE))
                 : Component.translatable("job.mca_vie.no_workstation_needed");
-        context.text(font, place.copy().withStyle(ChatFormatting.GRAY), x, y, 0xFFFFFF);
+        context.text(font, place.copy().withStyle(ChatFormatting.GRAY), x, y, 0xFFFFFFFF);
         y += 12;
         y = renderItems(context, x, y, "job.mca_vie.consumes", consumes(selected));
         y = renderItems(context, x, y, "job.mca_vie.produces", produces(selected));
         if (selected.isCraft()) {
             context.text(font, Component.translatable("job.mca_vie.hours", WorkManager.START_HOUR, WorkManager.END_HOUR)
-                    .withStyle(ChatFormatting.GRAY), x, y, 0xFFFFFF);
+                    .withStyle(ChatFormatting.GRAY), x, y, 0xFFFFFFFF);
             y += 14;
         }
 
@@ -289,7 +289,7 @@ public class JobScreen extends Screen {
             return y;
         }
         Component label = Component.translatable(key).withStyle(ChatFormatting.GRAY);
-        context.text(font, label, x, y + 4, 0xFFFFFF);
+        context.text(font, label, x, y + 4, 0xFFFFFFFF);
         int ix = x + font.width(label) + 4;
         for (Item item : items) {
             context.item(new ItemStack(item), ix, y);
@@ -305,19 +305,19 @@ public class JobScreen extends Screen {
         int from = WorkManager.levelExperience(level);
         Component xpText = next < 0 ? Component.translatable("job.mca_vie.max_level")
                 : Component.translatable("job.mca_vie.level_xp", info.experience() - from, next - from);
-        context.text(font, levelName, x, y, 0xFFFFFF);
-        context.text(font, xpText.copy().withStyle(ChatFormatting.GRAY), x + w - font.width(xpText), y, 0xFFFFFF);
+        context.text(font, levelName, x, y, 0xFFFFFFFF);
+        context.text(font, xpText.copy().withStyle(ChatFormatting.GRAY), x + w - font.width(xpText), y, 0xFFFFFFFF);
         y += 11;
         float progress = next < 0 ? 1F : Math.max(0F, Math.min(1F, (info.experience() - from) / (float) Math.max(1, next - from)));
         context.fill(x, y, x + w, y + 5, 0xFF2A2A2A);
         context.fill(x, y, x + (int) (w * progress), y + 5, 0xFF7FD34E);
         y += 10;
-        context.text(font, Component.translatable("job.mca_vie.status_label", WorkClient.statusText(info)), x, y, 0xFFFFFF);
+        context.text(font, Component.translatable("job.mca_vie.status_label", WorkClient.statusText(info)), x, y, 0xFFFFFFFF);
         y += 11;
         Component depot = Component.translatable(info.hasDepot() ? "job.mca_vie.has_depot" : "job.mca_vie.no_depot")
                 .withStyle(info.hasDepot() ? ChatFormatting.GREEN : ChatFormatting.GOLD);
         for (FormattedCharSequence line : font.split(depot, w)) {
-            context.text(font, line, x, y, 0xFFFFFF);
+            context.text(font, line, x, y, 0xFFFFFFFF);
             y += 10;
         }
         return y;

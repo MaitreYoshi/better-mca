@@ -34,9 +34,9 @@ import java.util.UUID;
 
 public final class VaultClient {
     private static final float FACE = 20.73f;
-    private static final int NAME_COLOR = 0xF2CC5A;
-    private static final int INFO_COLOR = 0xD9B24C;
-    private static final int OUTLINE = 0x3E2A0A;
+    private static final int NAME_COLOR = 0xFFF2CC5A;
+    private static final int INFO_COLOR = 0xFFD9B24C;
+    private static final int OUTLINE = 0xFF3E2A0A;
 
     private VaultClient() {
     }
@@ -201,8 +201,8 @@ public final class VaultClient {
 
         @Override
         public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-            context.centeredText(font, title, width / 2, height / 2 - 48, 0xFFFFFF);
-            context.centeredText(font, Component.translatable("gui.mca_vie.vault.hint"), width / 2, height / 2 - 34, 0xA0A0A0);
+            context.centeredText(font, title, width / 2, height / 2 - 48, 0xFFFFFFFF);
+            context.centeredText(font, Component.translatable("gui.mca_vie.vault.hint"), width / 2, height / 2 - 34, 0xFFA0A0A0);
             super.extractRenderState(context, mouseX, mouseY, delta);
         }
     }

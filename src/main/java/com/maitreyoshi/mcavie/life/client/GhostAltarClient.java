@@ -157,9 +157,9 @@ public final class GhostAltarClient {
 
         @Override
         public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-            context.centeredText(font, title, width / 2, 10, 0xFFFFFF);
+            context.centeredText(font, title, width / 2, 10, 0xFFFFFFFF);
             Component hint = Component.translatable(!house ? "gui.mca_vie.ghost_altar.no_house" : entries.isEmpty() ? "gui.mca_vie.ghost_altar.empty" : "gui.mca_vie.ghost_altar.hint");
-            context.centeredText(font, hint, width / 2, 21, 0xA0A0A0);
+            context.centeredText(font, hint, width / 2, 21, 0xFFA0A0A0);
             int hovered = indexAt(mouseX, mouseY);
             context.enableScissor(0, TOP, width, height - BOTTOM);
             for (int i = 0; i < entries.size(); i++) {
@@ -172,11 +172,11 @@ public final class GhostAltarClient {
                 if ((i == hovered && entry.look()) || selected) {
                     context.fill(left(), y, left() + ROW_W, y + ROW_H, selected ? 0x6050A0C0 : 0x40FFFFFF);
                 }
-                int color = selected ? 0xB0E0FF : entry.look() ? 0xFFFFFF : 0x808080;
+                int color = selected ? 0xFFB0E0FF : entry.look() ? 0xFFFFFFFF : 0xFF808080;
                 context.text(font, entry.name(), left() + 4, y + 3, color);
                 if (!entry.look()) {
                     Component tag = Component.translatable("gui.mca_vie.ghost_altar.no_look");
-                    context.text(font, tag, left() + ROW_W - 4 - font.width(tag), y + 3, 0x808080);
+                    context.text(font, tag, left() + ROW_W - 4 - font.width(tag), y + 3, 0xFF808080);
                 }
             }
             context.disableScissor();

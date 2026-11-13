@@ -102,7 +102,7 @@ public class PhotoViewerScreen extends Screen {
         PhonePhotos.Picture picture = parent == null ? PhonePhotos.print(id, true) : PhonePhotos.get(number, id, true);
         int margin = 8;
         if (picture == null) {
-            context.centeredText(font, "…", width / 2, (height - BAR) / 2, 0xAAAAAA);
+            context.centeredText(font, "…", width / 2, (height - BAR) / 2, 0xFFAAAAAA);
         } else {
             PhoneScreen.drawFitted(context, picture, margin, margin, width - 2 * margin, height - BAR - 2 * margin);
         }

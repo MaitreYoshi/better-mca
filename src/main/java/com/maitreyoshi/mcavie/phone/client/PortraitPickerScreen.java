@@ -80,11 +80,11 @@ public class PortraitPickerScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        context.centeredText(font, title, width / 2, 10, 0xFFFFFF);
+        context.centeredText(font, title, width / 2, 10, 0xFFFFFFFF);
         if (gallery.isEmpty()) {
-            context.centeredText(font, Component.translatable("gui.mca_vie.phone.no_photos"), width / 2, height / 2 - 4, 0xA0A0A0);
+            context.centeredText(font, Component.translatable("gui.mca_vie.phone.no_photos"), width / 2, height / 2 - 4, 0xFFA0A0A0);
         } else {
-            context.centeredText(font, Component.translatable("gui.mca_vie.portrait.hint"), width / 2, 20, 0xA0A0A0);
+            context.centeredText(font, Component.translatable("gui.mca_vie.portrait.hint"), width / 2, 20, 0xFFA0A0A0);
         }
         int columns = columns();
         int left = left();
