@@ -1,0 +1,10 @@
+pluginManagement {
+    repositories {
+        maven { url = 'https://maven.neoforged.net/releases' }
+        gradlePluginPortal()
+    }
+}
+
+// Build NeoForge séparé : réutilise le src/ du projet Fabric (sans le package fabric).
+// Lancer depuis la racine : gradlew.bat -p neoforge-build build
+rootProject.name = 'better-mca-neoforge-build'

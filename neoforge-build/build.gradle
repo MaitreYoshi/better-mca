@@ -1,0 +1,55 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = project.mod_version
+base.archivesName = 'better-mca-neoforge'
+
+repositories {
+    maven { url = 'https://maven.architectury.dev/' }
+    maven { url = 'https://maven.neoforged.net/releases' }
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
+
+sourceSets.main {
+    java {
+        srcDir '../src/main/java'
+        exclude 'com/maitreyoshi/mcavie/fabric/**'
+    }
+    resources {
+        srcDir '../src/main/resources'
+        exclude 'fabric.mod.json'
+    }
+}
+
+neoForge {
+    version = project.neo_version
+    runs {
+        client {
+            client()
+            programArguments.addAll('--username', 'Dev')
+        }
+    }
+    mods {
+        mca_vie { sourceSet sourceSets.main }
+    }
+}
+
+dependencies {
+    implementation "dev.architectury:architectury-neoforge:${project.architectury_version}"
+    implementation files(project.mca_jar)
+}
+
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand 'version': project.version
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.release = 25
+    options.encoding = 'UTF-8'
+}

@@ -7,7 +7,6 @@ import com.mojang.blaze3d.platform.Lighting;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import net.conczin.mca.client.gui.ExtendedBookScreen;
-import net.fabricmc.fabric.api.client.rendering.v1.PictureInPictureRendererRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.navigation.ScreenRectangle;
@@ -33,8 +32,8 @@ public final class MemorialModelRenderer {
     private MemorialModelRenderer() {
     }
 
-    public static void register() {
-        PictureInPictureRendererRegistry.register(context -> new Renderer());
+    public static PictureInPictureRenderer<State> create() {
+        return new Renderer();
     }
 
     public static void render(ExtendedBookScreen screen, GuiGraphicsExtractor context) {
