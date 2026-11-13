@@ -73,5 +73,5 @@ for p in glob.glob('src/main/java/**/mixin/**/*.java',recursive=True):
             if desc: continue
         sigs=params_of(target,name)
         if not sigs: continue
-        if not any(len(hps)<=len(sg) and all(a==b for a,b in zip(hps,sg)) for sg in sigs):
+        if hps and not any(len(hps)==len(sg) and all(a==b or len(b)<=2 for a,b in zip(hps,sg)) for sg in sigs):
             print(p.split('mcavie')[-1],name,hps,'VS',sigs[:2])

@@ -21,7 +21,7 @@ public abstract class EnterBuildingTaskMixin {
     private static final int MCAVIE$ATTEMPTS = 16;
 
     @Inject(method = "getRandomPositionIn", at = @At("HEAD"), cancellable = true)
-    private void mcavie$standingSpot(Building building, Level world, CallbackInfoReturnable<Optional<BlockPos>> cir) {
+    private void mcavie$standingSpot(Building building, Level world, net.conczin.mca.entity.VillagerEntityMCA villager, CallbackInfoReturnable<Optional<BlockPos>> cir) {
         if (building.getBuildingType().grouped()) {
             return;
         }
