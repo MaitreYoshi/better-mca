@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.mixin;
 
+import net.minecraft.world.entity.EntityTypes;
 import com.maitreyoshi.mcavie.Surnames;
 import com.maitreyoshi.mcavie.aging.AgeHolder;
 import com.maitreyoshi.mcavie.aging.Aging;
@@ -39,7 +40,7 @@ public abstract class VillagerEntityMCAMixin implements AgeHolder {
     @Inject(method = "tick", at = @At("TAIL"))
     private void mcavie$checkSurname(CallbackInfo ci) {
         VillagerEntityMCA self = (VillagerEntityMCA) (Object) this;
-        if (self.level().isClientSide || self.isDeadOrDying()) {
+        if (self.level().isClientSide() || self.isDeadOrDying()) {
             return;
         }
         WorkManager.keepWorking(self);
@@ -64,7 +65,7 @@ public abstract class VillagerEntityMCAMixin implements AgeHolder {
     @Inject(method = "convertTo", at = @At("HEAD"))
     private void mcavie$zombified(net.minecraft.world.entity.EntityType<?> type, boolean keepInventory, CallbackInfoReturnable<?> cir) {
         VillagerEntityMCA self = (VillagerEntityMCA) (Object) this;
-        if (type == net.minecraft.world.entity.EntityType.ZOMBIE_VILLAGER && self.level() instanceof ServerLevel world) {
+        if (type == net.minecraft.world.entity.EntityTypes.ZOMBIE_VILLAGER && self.level() instanceof ServerLevel world) {
             com.maitreyoshi.mcavie.village.CivilRegistry.zombified(self, world);
             com.maitreyoshi.mcavie.life.LifeRegistry.get(world.getServer()).setZombified(self.getUUID(),
                     com.maitreyoshi.mcavie.calendar.WorldCalendar.now(world).dayIndex());

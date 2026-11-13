@@ -84,7 +84,7 @@ public final class VillageDecrees {
         if (!(villager.level() instanceof ServerLevel world)) {
             return Optional.empty();
         }
-        return villager.getResidency().getHomeVillage().filter(v -> v.hasResident(villager.getUUID()));
+        return villager.getResidency().getHomeVillage().filter(v -> v.getResidentsUUIDs().anyMatch(villager.getUUID()::equals));
     }
 
     public static void launch(ServerPlayer player, int villageId, Decree decree) {

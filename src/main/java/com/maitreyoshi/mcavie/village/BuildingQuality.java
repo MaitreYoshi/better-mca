@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.village;
 
+import net.minecraft.tags.BlockItemTags;
 import net.conczin.mca.Config;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -160,7 +161,7 @@ public enum BuildingQuality {
                 if (hasRoof(world, pos, roofCache)) {
                     decor.add(state.getBlock());
                 }
-            } else if (!state.isSolidRender(world, pos) || state.hasBlockEntity()) {
+            } else if (!state.isSolidRender() || state.hasBlockEntity()) {
                 decor.add(state.getBlock());
             } else {
                 fullBlocks.merge(state.getBlock(), 1, Integer::sum);
@@ -214,7 +215,7 @@ public enum BuildingQuality {
     }
 
     private static boolean isNatural(BlockState state) {
-        return state.canBeReplaced() || state.is(BlockTags.DIRT) || state.is(BlockTags.FLOWERS) || state.is(BlockTags.SAPLINGS)
+        return state.canBeReplaced() || state.is(BlockTags.DIRT) || state.is(BlockTags.FLOWERS) || state.is(BlockItemTags.SAPLINGS.block())
                 || state.is(BlockTags.SAND) || state.is(BlockTags.BASE_STONE_OVERWORLD) || state.is(Blocks.DIRT_PATH)
                 || state.is(Blocks.GRAVEL) || state.is(Blocks.FARMLAND);
     }

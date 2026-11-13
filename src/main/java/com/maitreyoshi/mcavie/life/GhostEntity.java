@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import net.minecraft.tags.BlockItemTags;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -93,7 +94,7 @@ public class GhostEntity extends PathfinderMob {
     public void tick() {
         super.tick();
         Level world = level();
-        if (world.isClientSide) {
+        if (world.isClientSide()) {
             if (random.nextInt(12) == 0) {
                 world.addParticle(ParticleTypes.WHITE_ASH, getRandomX(0.6), getRandomY(), getRandomZ(0.6), 0, 0.02, 0);
             }
@@ -184,7 +185,7 @@ public class GhostEntity extends PathfinderMob {
                 || state.is(net.minecraft.tags.BlockTags.ICE) || state.is(net.minecraft.tags.BlockTags.TERRACOTTA)
                 || state.is(net.minecraft.world.level.block.Blocks.GRAVEL) || state.is(net.minecraft.world.level.block.Blocks.CLAY) || state.is(net.minecraft.world.level.block.Blocks.BEDROCK)
                 || state.is(net.minecraft.world.level.block.Blocks.SANDSTONE) || state.is(net.minecraft.world.level.block.Blocks.RED_SANDSTONE)
-                || state.is(net.minecraft.tags.BlockTags.COAL_ORES) || state.is(net.minecraft.tags.BlockTags.IRON_ORES)
+                || state.is(net.minecraft.tags.BlockItemTags.COAL_ORES.block()) || state.is(net.minecraft.tags.BlockTags.IRON_ORES)
                 || state.is(net.minecraft.tags.BlockTags.COPPER_ORES);
     }
 

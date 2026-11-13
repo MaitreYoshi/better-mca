@@ -221,7 +221,7 @@ public final class Surnames {
                     : node.getName();
             String first = SurnameText.firstName(oldName, previous);
             if (first.isBlank()) {
-                first = player.getGameProfile().getName();
+                first = player.getGameProfile().name();
             }
             String fullName = SurnameText.withSurname(first, surname);
 

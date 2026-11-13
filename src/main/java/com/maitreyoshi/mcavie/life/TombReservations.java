@@ -52,7 +52,7 @@ public final class TombReservations {
 
     public static void register() {
         InteractionEvent.RIGHT_CLICK_BLOCK.register((player, hand, pos, face) -> {
-            if (player.level().isClientSide || !(player instanceof ServerPlayer serverPlayer) || hand != InteractionHand.MAIN_HAND) {
+            if (player.level().isClientSide() || !(player instanceof ServerPlayer serverPlayer) || hand != InteractionHand.MAIN_HAND) {
                 return EventResult.pass();
             }
             ServerLevel world = serverPlayer.level();
@@ -152,7 +152,7 @@ public final class TombReservations {
 
     private static void choose(ServerPlayer player, BlockPos pos, UUID villager) {
         ServerLevel world = player.level();
-        if (player.distanceToSqr(pos.getCenter()) > MAX_REACH * MAX_REACH || emptyTomb(world, pos).isEmpty()) {
+        if (player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(pos)) > MAX_REACH * MAX_REACH || emptyTomb(world, pos).isEmpty()) {
             return;
         }
         GlobalPos target = GlobalPos.of(world.dimension(), pos);

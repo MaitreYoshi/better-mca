@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.work;
 
+import net.minecraft.server.permissions.Permissions;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.compat.ServerLifecycleEvents;
 import dev.architectury.event.EventResult;
@@ -102,7 +103,7 @@ public final class WorkNetwork {
 
         InteractionEvent.RIGHT_CLICK_BLOCK.register((player, hand, pos, face) -> {
             Level world = player.level();
-            if (world.isClientSide || !(player instanceof ServerPlayer serverPlayer)) {
+            if (world.isClientSide() || !(player instanceof ServerPlayer serverPlayer)) {
                 return EventResult.pass();
             }
             PendingDepot pending = PENDING_DEPOTS.get(player.getUUID());
@@ -191,7 +192,7 @@ public final class WorkNetwork {
 
     public static boolean canManage(ServerPlayer player, VillagerEntityMCA villager) {
         WorkRegistry.Record record = WorkManager.findRecord(villager);
-        if (record == null || record.employer == null || record.employer.equals(player.getUUID()) || player.hasPermissions(2)) {
+        if (record == null || record.employer == null || record.employer.equals(player.getUUID()) || player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
             return true;
         }
         java.util.Optional<Village> home = villager.getResidency().getHomeVillage();

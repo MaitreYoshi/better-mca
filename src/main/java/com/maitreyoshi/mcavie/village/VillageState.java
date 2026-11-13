@@ -375,7 +375,7 @@ public final class VillageState {
         nbt.put("cases", caseList);
         nbt.putBoolean("prisonActive", prisonActive);
         ListTag releaseList = new ListTag();
-        pendingRelease.forEach(uuid -> releaseList.add(net.minecraft.nbt.NbtUtils.createUUID(uuid)));
+        pendingRelease.forEach(uuid -> releaseList.add(com.maitreyoshi.mcavie.compat.Nbt.uuidTag(uuid)));
         nbt.put("pendingRelease", releaseList);
         CompoundTag prisonerNbt = new CompoundTag();
         prisoners.forEach((uuid, p) -> {
@@ -454,7 +454,7 @@ public final class VillageState {
         deadResidents.clear();
         for (Tag e : nbt.getListOrEmpty("deadResidents")) {
             try {
-                deadResidents.add(UUID.fromString(e.getAsString()));
+                deadResidents.add(UUID.fromString(e.asString().orElse("")));
             } catch (IllegalArgumentException ignored) {
             }
         }
@@ -490,7 +490,7 @@ public final class VillageState {
             }
         }
         pendingRelease.clear();
-        nbt.getListOrEmpty("pendingRelease").forEach(e -> pendingRelease.add(net.minecraft.nbt.NbtUtils.loadUUID(e)));
+        nbt.getListOrEmpty("pendingRelease").forEach(e -> pendingRelease.add(com.maitreyoshi.mcavie.compat.Nbt.uuidOf(e)));
         cases.clear();
         nbt.getListOrEmpty("cases").forEach(e -> {
             CompoundTag c = (CompoundTag) e;

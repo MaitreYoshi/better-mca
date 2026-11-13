@@ -75,12 +75,12 @@ public final class VillageImmigration {
         int size = config.familyMinSize + random.nextInt(Math.max(1, config.familyMaxSize - config.familyMinSize + 1));
         size = Math.min(size, freeBeds);
 
-        VillagerEntityMCA father = VillagerFactory.newVillager(world).withGender(Gender.MALE).withAge(0).withPosition(spot).spawn(EntitySpawnReason.EVENT);
-        VillagerEntityMCA mother = VillagerFactory.newVillager(world).withGender(Gender.FEMALE).withAge(0).withPosition(spot).spawn(EntitySpawnReason.EVENT);
+        VillagerEntityMCA father = VillagerFactory.newVillager(world).withGender(Gender.MALE).withAge(0).withPosition(net.minecraft.world.phys.Vec3.atBottomCenterOf(spot)).spawn(EntitySpawnReason.EVENT);
+        VillagerEntityMCA mother = VillagerFactory.newVillager(world).withGender(Gender.FEMALE).withAge(0).withPosition(net.minecraft.world.phys.Vec3.atBottomCenterOf(spot)).spawn(EntitySpawnReason.EVENT);
         List<VillagerEntityMCA> children = new ArrayList<>();
         for (int i = 2; i < size; i++) {
             int age = -(int) (AgeState.getMaxAge() * (0.1 + 0.6 * random.nextFloat()));
-            children.add(VillagerFactory.newVillager(world).withAge(age).withPosition(spot).spawn(EntitySpawnReason.EVENT));
+            children.add(VillagerFactory.newVillager(world).withAge(age).withPosition(net.minecraft.world.phys.Vec3.atBottomCenterOf(spot)).spawn(EntitySpawnReason.EVENT));
         }
 
         if (!Orientation.compatible(father, mother)) {

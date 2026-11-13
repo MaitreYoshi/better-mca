@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.work.tasks;
 
+import net.minecraft.tags.BlockItemTags;
 import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.PlacedLogs;
@@ -253,7 +254,7 @@ public class LumberjackTask extends AbstractJobTask {
         }
         for (BlockPos near : BlockPos.betweenClosed(pos.offset(-2, 0, -2), pos.offset(2, 1, 2))) {
             BlockState state = world.getBlockState(near);
-            if (isLog(state) || state.is(BlockTags.SAPLINGS)) {
+            if (isLog(state) || state.is(BlockItemTags.SAPLINGS.block())) {
                 return false;
             }
         }

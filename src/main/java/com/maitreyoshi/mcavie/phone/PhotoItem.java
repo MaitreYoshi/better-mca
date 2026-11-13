@@ -78,7 +78,7 @@ public class PhotoItem extends Item {
         if (!player.mayUseItemAt(context.getClickedPos().relative(side), side, stack)) {
             return InteractionResult.FAIL;
         }
-        if (context.getLevel().isClientSide) {
+        if (context.getLevel().isClientSide()) {
             if (placer != null) {
                 placer.open(context.getClickedPos(), side, context.getHand(), photo, PhotoFrameEntity.topFor(side, player.getDirection()));
             }

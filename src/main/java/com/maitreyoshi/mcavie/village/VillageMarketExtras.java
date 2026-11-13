@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.village;
 
+import net.minecraft.world.entity.EntityTypes;
 import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.life.Wellbeing;
 import net.conczin.mca.entity.VillagerEntityMCA;
@@ -56,7 +57,7 @@ public final class VillageMarketExtras {
             if (!world.hasChunkAt(pos)) {
                 continue;
             }
-            WanderingTrader trader = EntityType.WANDERING_TRADER.create(world);
+            WanderingTrader trader = EntityTypes.WANDERING_TRADER.create(world);
             if (trader == null) {
                 continue;
             }

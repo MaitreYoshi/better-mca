@@ -25,7 +25,7 @@ public final class VillageEconomy {
     }
 
     public static void applyMarketDiscount(VillagerEntityMCA villager, net.minecraft.world.entity.player.Player player) {
-        if (villager.level().isClientSide || (villager.getTradingPlayer() != null && villager.getTradingPlayer() != player)) {
+        if (villager.level().isClientSide() || (villager.getTradingPlayer() != null && villager.getTradingPlayer() != player)) {
             return;
         }
         villager.getResidency().getHomeVillage().ifPresent(village -> {
@@ -86,7 +86,7 @@ public final class VillageEconomy {
             return 50;
         }
         return VillageManager.get(world).findNearestVillage(villager)
-                .filter(v -> v.hasResident(villager.getUUID()))
+                .filter(v -> v.getResidentsUUIDs().anyMatch(villager.getUUID()::equals))
                 .filter(v -> VillageState.of(v).economyActive)
                 .map(v -> {
                     VillageState state = VillageState.of(v);

@@ -315,7 +315,7 @@ public final class PhoneServer {
                 }
                 long date = phone.gallery.stream().filter(p -> p.id().equals(photo)).map(Photo::time).findFirst()
                         .orElse(player.level().getServer().overworld().getOverworldClockTime());
-                ItemStack stack = PhotoItem.create(print, player.getGameProfile().getName(), date);
+                ItemStack stack = PhotoItem.create(print, player.getGameProfile().name(), date);
                 player.displayClientMessage(Component.translatable(giveToInventory(player, stack)
                         ? "msg.mca_vie.phone.printed" : "msg.mca_vie.phone.printed_ground"), true);
                 ServerPlayNetworking.send(player, PhoneNetwork.PRINTED, PacketByteBufs.empty());
@@ -643,7 +643,7 @@ public final class PhoneServer {
     }
 
     private static boolean updateOwner(Phone phone, ServerPlayer player) {
-        String name = player.getGameProfile().getName();
+        String name = player.getGameProfile().name();
         String skin = player.getGameProfile().getProperties().get("textures").stream().findFirst().map(Property::getValue).orElse("");
         if (name.equals(phone.ownerName) && skin.equals(phone.ownerSkin)) {
             return false;

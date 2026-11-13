@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.work.tasks;
 
+import net.minecraft.world.entity.EntityTypes;
 import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
@@ -29,7 +30,7 @@ import java.util.UUID;
 public class BreederTask extends AbstractJobTask {
     private static final int SPECIES_CAP = 8;
     private static final Set<EntityType<?>> SPECIES = Set.of(
-            EntityType.COW, EntityType.SHEEP, EntityType.PIG, EntityType.CHICKEN, EntityType.RABBIT);
+            EntityTypes.COW, EntityTypes.SHEEP, EntityTypes.PIG, EntityTypes.CHICKEN, EntityTypes.RABBIT);
     private static final int SCAN_INTERVAL = 400;
     private static final int AFTER_ACTION = 40;
     private static final double REACH_SQ = 6.25;

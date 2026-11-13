@@ -138,11 +138,11 @@ public class WorkRegistry extends SavedData {
             CompoundTag nbt = new CompoundTag();
             nbt.putInt("job", job.ordinal());
             if (center != null) {
-                nbt.put("center", NbtUtils.writeBlockPos(center));
+                nbt.put("center", Nbt.pos(center));
             }
             nbt.putInt("radius", radius);
             if (depot != null) {
-                nbt.put("depot", NbtUtils.writeBlockPos(depot));
+                nbt.put("depot", Nbt.pos(depot));
             }
             nbt.putInt("level", level);
             nbt.putInt("experience", experience);
@@ -160,7 +160,7 @@ public class WorkRegistry extends SavedData {
                 nbt.putString("lastName", lastName);
             }
             if (lastPos != null) {
-                nbt.put("lastPos", NbtUtils.writeBlockPos(lastPos));
+                nbt.put("lastPos", Nbt.pos(lastPos));
             }
             if (lastDimension != null) {
                 nbt.putString("lastDimension", lastDimension.toString());
@@ -192,9 +192,9 @@ public class WorkRegistry extends SavedData {
         static Record fromNbt(CompoundTag nbt) {
             Record record = new Record();
             record.job = Job.byId(nbt.getIntOr("job", 0));
-            record.center = nbt.contains("center") ? NbtUtils.readBlockPos(nbt.getCompoundOrEmpty("center")) : null;
+            record.center = nbt.contains("center") ? Nbt.readPos(nbt.getCompoundOrEmpty("center")) : null;
             record.radius = nbt.contains("radius") ? nbt.getIntOr("radius", 0) : DEFAULT_RADIUS;
-            record.depot = nbt.contains("depot") ? NbtUtils.readBlockPos(nbt.getCompoundOrEmpty("depot")) : null;
+            record.depot = nbt.contains("depot") ? Nbt.readPos(nbt.getCompoundOrEmpty("depot")) : null;
             record.level = Math.max(1, nbt.getIntOr("level", 0));
             record.experience = nbt.getIntOr("experience", 0);
             record.apprenticeChosen = nbt.getBooleanOr("apprenticeChosen", false);
@@ -202,7 +202,7 @@ public class WorkRegistry extends SavedData {
             record.employer = Nbt.hasUUID(nbt, "employer") ? Nbt.getUUID(nbt, "employer") : null;
             record.depotDimension = nbt.contains("depotDimension") ? Identifier.tryParse(nbt.getStringOr("depotDimension", "")) : null;
             record.lastName = nbt.contains("lastName") ? nbt.getStringOr("lastName", "") : null;
-            record.lastPos = nbt.contains("lastPos") ? NbtUtils.readBlockPos(nbt.getCompoundOrEmpty("lastPos")) : null;
+            record.lastPos = nbt.contains("lastPos") ? Nbt.readPos(nbt.getCompoundOrEmpty("lastPos")) : null;
             record.lastDimension = nbt.contains("lastDimension") ? Identifier.tryParse(nbt.getStringOr("lastDimension", "")) : null;
             record.lastHealth = nbt.getFloatOr("lastHealth", 0f);
             record.lastMaxHealth = nbt.contains("lastMaxHealth") ? nbt.getFloatOr("lastMaxHealth", 0f) : 20;

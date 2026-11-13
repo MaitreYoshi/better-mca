@@ -244,7 +244,7 @@ public final class Wellbeing {
     }
 
     private static void showSickness(VillagerEntityMCA villager, ServerLevel world) {
-        villager.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 0, false, false));
+        villager.addEffect(new MobEffectInstance(MobEffects.SLOWNESS, 40, 0, false, false));
         if (world.getRandom().nextInt(4) == 0) {
             world.sendParticles(ParticleTypes.SNEEZE, villager.getX(), villager.getEyeY(), villager.getZ(), 3, 0.2, 0.1, 0.2, 0.01);
         }
@@ -262,7 +262,7 @@ public final class Wellbeing {
         record.sick = false;
         record.sickUntil = 0;
         registry.setDirty();
-        villager.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
+        villager.removeEffect(MobEffects.SLOWNESS);
         syncIfChanged(villager, record);
         return true;
     }

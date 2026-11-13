@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.work.tasks;
 
+import net.minecraft.tags.BlockItemTags;
 import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.work.WorkGesture;
 import com.maitreyoshi.mcavie.work.WorkManager;
@@ -45,8 +46,8 @@ public class MinerTask extends AbstractJobTask {
     private static final long BLACKLIST_TICKS = 600;
     private static final int RETRY_TICKS = 100;
     private static final long ORE_SCAN_INTERVAL = 200;
-    private static final List<TagKey<net.minecraft.world.level.block.Block>> ORES = List.of(BlockTags.COAL_ORES, BlockTags.IRON_ORES, BlockTags.COPPER_ORES,
-            BlockTags.GOLD_ORES, BlockTags.REDSTONE_ORES, BlockTags.LAPIS_ORES, BlockTags.DIAMOND_ORES, BlockTags.EMERALD_ORES);
+    private static final List<TagKey<net.minecraft.world.level.block.Block>> ORES = List.of(BlockItemTags.COAL_ORES.block(), BlockTags.IRON_ORES, BlockTags.COPPER_ORES,
+            BlockTags.GOLD_ORES, BlockItemTags.REDSTONE_ORES.block(), BlockItemTags.LAPIS_ORES.block(), BlockItemTags.DIAMOND_ORES.block(), BlockItemTags.EMERALD_ORES.block());
 
     private record Segment(List<BlockPos> blocks, boolean vital) {
     }
@@ -433,7 +434,7 @@ public class MinerTask extends AbstractJobTask {
 
     private boolean canDig(ServerLevel world, VillagerEntityMCA villager, BlockPos pos) {
         if (!isLoaded(world, pos) || !inMineZone(villager, pos) || pos.equals(villager.blockPosition().below())
-                || pos.equals(planCart) || pos.getY() <= world.getMinBuildHeight() + 1) {
+                || pos.equals(planCart) || pos.getY() <= world.getMinY() + 1) {
             return false;
         }
         BlockState state = world.getBlockState(pos);

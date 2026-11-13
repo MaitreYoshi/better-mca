@@ -73,7 +73,7 @@ public final class CivilRegistry {
         String parents = node.getParents().map(FamilyTreeNode::getName).filter(n -> n != null && !n.isBlank())
                 .collect(Collectors.joining(" & "));
         Optional<Village> village = node.getParents()
-                .map(parent -> VillageManager.get(world).findVillages(v -> v.hasResident(parent.id())).findFirst())
+                .map(parent -> VillageManager.get(world).findVillages(v -> v.getResidentsUUIDs().anyMatch(parent.id()::equals)).findFirst())
                 .flatMap(Optional::stream)
                 .findFirst();
         add(village.isPresent() ? village : village(baby, world), exact(new Entry(BIRTH, today(world), name(baby), parents, 0),

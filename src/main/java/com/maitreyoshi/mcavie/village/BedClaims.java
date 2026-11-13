@@ -58,7 +58,7 @@ public final class BedClaims {
     public static void register() {
         ServerTickEvents.END_WORLD_TICK.register(BedClaims::tick);
         InteractionEvent.RIGHT_CLICK_BLOCK.register((player, hand, pos, face) -> {
-            if (player.level().isClientSide || !(player instanceof ServerPlayer serverPlayer)) {
+            if (player.level().isClientSide() || !(player instanceof ServerPlayer serverPlayer)) {
                 return EventResult.pass();
             }
             return onBedClick(serverPlayer, pos);
@@ -128,7 +128,7 @@ public final class BedClaims {
             reserve(world, head);
         }
         villager.getBrain().setMemory(MemoryModuleType.HOME, target);
-        villager.getBrain().setMemory(MemoryModuleTypeMCA.FORCED_HOME.get(), true);
+        villager.getBrain().setMemory(MemoryModuleTypeMCA.FORCED_HOME, true);
         registry.claim(target, villager.getUUID(), villager.getName().getString());
         villager.getResidency().seekHome();
         villager.sendChatMessage(player, "interaction.sethome.success");
@@ -168,7 +168,7 @@ public final class BedClaims {
             if (owner != null && owner.getBrain().getMemoryInternal(MemoryModuleType.HOME).filter(bed::equals).isEmpty()) {
                 // MCA lui a fait oublier son lit : on le lui rend
                 owner.getBrain().setMemory(MemoryModuleType.HOME, bed);
-                owner.getBrain().setMemory(MemoryModuleTypeMCA.FORCED_HOME.get(), true);
+                owner.getBrain().setMemory(MemoryModuleTypeMCA.FORCED_HOME, true);
                 byBed.computeIfAbsent(bed, k -> new ArrayList<>()).add(owner);
             }
             List<VillagerEntityMCA> rememberers = byBed.getOrDefault(bed, List.of());
@@ -192,7 +192,7 @@ public final class BedClaims {
     }
 
     private static boolean forced(VillagerEntityMCA villager) {
-        Optional<Boolean> forced = villager.getBrain().getMemoryInternal(MemoryModuleTypeMCA.FORCED_HOME.get());
+        Optional<Boolean> forced = villager.getBrain().getMemoryInternal(MemoryModuleTypeMCA.FORCED_HOME);
         //noinspection OptionalAssignedToNull
         return forced != null && forced.isPresent();
     }
@@ -200,7 +200,7 @@ public final class BedClaims {
     /** Oublie le lit sans rendre sa réservation (elle appartient au PNJ qui le garde). */
     private static void evict(VillagerEntityMCA villager) {
         villager.getBrain().eraseMemory(MemoryModuleType.HOME);
-        villager.getBrain().eraseMemory(MemoryModuleTypeMCA.FORCED_HOME.get());
+        villager.getBrain().eraseMemory(MemoryModuleTypeMCA.FORCED_HOME);
     }
 
     private static List<VillagerEntityMCA> rememberers(ServerLevel world, GlobalPos bed, VillagerEntityMCA except) {

@@ -190,7 +190,7 @@ public final class PhoneMap {
 
     /** Remplit column = {hauteur, profondeur d'eau, id couleur} comme une carte vanilla. */
     private static void surface(LevelChunk chunk, int x, int z, BlockPos.MutableBlockPos mutable, int[] column) {
-        int bottom = world.getMinBuildHeight();
+        int bottom = world.getMinY();
         int y = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, x, z) + 1;
         int startX = chunk.getPos().getMinBlockX() + x;
         int startZ = chunk.getPos().getMinBlockZ() + z;

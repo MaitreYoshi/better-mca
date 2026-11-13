@@ -113,7 +113,7 @@ public class GhostAltarBlock extends BaseEntityBlock {
     @Nullable
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level world, BlockState state, BlockEntityType<T> type) {
-        return world.isClientSide ? null : createTickerHelper(type, TombstoneBlocks.GHOST_ALTAR_ENTITY, GhostAltarBlockEntity::tick);
+        return world.isClientSide() ? null : createTickerHelper(type, TombstoneBlocks.GHOST_ALTAR_ENTITY, GhostAltarBlockEntity::tick);
     }
 
     @Override
@@ -121,7 +121,7 @@ public class GhostAltarBlock extends BaseEntityBlock {
         if (!(world.getBlockEntity(pos) instanceof GhostAltarBlockEntity altar)) {
             return InteractionResult.PASS;
         }
-        if (world.isClientSide) {
+        if (world.isClientSide()) {
             return InteractionResult.SUCCESS;
         }
         if (player.isShiftKeyDown()) {

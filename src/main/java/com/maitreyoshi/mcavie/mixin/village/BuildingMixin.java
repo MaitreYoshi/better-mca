@@ -55,7 +55,7 @@ public abstract class BuildingMixin implements BuildingQuality.Holder {
     @Inject(method = "validateBuilding", at = @At("RETURN"))
     private void mcavie$measure(Level world, Set<?> blocked, CallbackInfoReturnable<Building.validationResult> cir) {
         Building self = (Building) (Object) this;
-        if (cir.getReturnValue() != Building.validationResult.SUCCESS || world == null || world.isClientSide) {
+        if (cir.getReturnValue() != Building.validationResult.SUCCESS || world == null || world.isClientSide()) {
             return;
         }
         if (self.getBuildingType().grouped()) {

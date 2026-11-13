@@ -419,7 +419,7 @@ public final class WorkManager {
         }
         if (villager.getProfession() != profession) {
             villager.setProfession(profession);
-            villager.setVillagerData(villager.getVillagerData().setLevel(1));
+            villager.setVillagerData(villager.getVillagerData().withLevel(1));
             villager.setVillagerXp(0);
         }
         if (villager.getVillagerXp() == 0) {

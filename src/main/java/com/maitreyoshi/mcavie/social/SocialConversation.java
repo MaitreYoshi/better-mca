@@ -77,7 +77,7 @@ public final class SocialConversation {
         Component empty = Component.empty();
         if (world.isRaining()) {
             topics.add(new Topic("rain", empty));
-        } else if (world.isNight()) {
+        } else if (world.isDarkOutside()) {
             topics.add(new Topic("night", empty));
         } else {
             topics.add(new Topic("sun", empty));

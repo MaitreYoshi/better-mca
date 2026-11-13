@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import net.minecraft.server.permissions.Permissions;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
@@ -179,7 +180,7 @@ public class MemorialBlock extends Block implements EntityBlock {
 
     @Override
     public void setPlacedBy(Level world, BlockPos pos, BlockState state, @Nullable LivingEntity placer, ItemStack stack) {
-        if (world.isClientSide) {
+        if (world.isClientSide()) {
             return;
         }
         Direction facing = state.getValue(FACING);
@@ -214,7 +215,7 @@ public class MemorialBlock extends Block implements EntityBlock {
 
     @Override
     public void onRemove(BlockState state, Level world, BlockPos pos, BlockState newState, boolean moved) {
-        if (!world.isClientSide && !state.is(newState.getBlock())) {
+        if (!world.isClientSide() && !state.is(newState.getBlock())) {
             BlockPos master = master(pos, state);
             Direction facing = state.getValue(FACING);
             if (state.getValue(PART) == MASTER && world.getBlockEntity(pos) instanceof MemorialBlockEntity memorial && memorial.village() >= 0) {
@@ -235,7 +236,7 @@ public class MemorialBlock extends Block implements EntityBlock {
 
     @Override
     public void playerWillDestroy(Level world, BlockPos pos, BlockState state, Player player) {
-        if (!world.isClientSide && !player.isCreative() && player.hasCorrectToolForDrops(state)) {
+        if (!world.isClientSide() && !player.isCreative() && player.hasCorrectToolForDrops(state)) {
             Block.popResource(world, pos, new ItemStack(this));
         }
         super.playerWillDestroy(world, pos, state, player);
@@ -265,11 +266,11 @@ public class MemorialBlock extends Block implements EntityBlock {
                 ServerPlayNetworking.send(serverPlayer, LIST_OPEN, out);
             }
         }
-        return InteractionResult.sidedSuccess(world.isClientSide);
+        return InteractionResult.sidedSuccess(world.isClientSide());
     }
 
     private static boolean canEdit(ServerPlayer player, MemorialBlockEntity memorial) {
-        return memorial.owner() == null || memorial.owner().equals(player.getUUID()) || player.hasPermissions(2);
+        return memorial.owner() == null || memorial.owner().equals(player.getUUID()) || player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
     }
 
     private static void openEdit(ServerPlayer player, MemorialBlockEntity memorial) {
@@ -291,7 +292,7 @@ public class MemorialBlock extends Block implements EntityBlock {
 
     private static void setTexts(ServerPlayer player, BlockPos pos, String title, String dates) {
         ServerLevel world = player.level();
-        if (player.distanceToSqr(pos.getCenter()) > 100 || !(world.getBlockEntity(pos) instanceof MemorialBlockEntity memorial)
+        if (player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(pos)) > 100 || !(world.getBlockEntity(pos) instanceof MemorialBlockEntity memorial)
                 || !canEdit(player, memorial)) {
             return;
         }

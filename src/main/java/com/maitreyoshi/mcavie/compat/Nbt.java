@@ -1,6 +1,9 @@
 package com.maitreyoshi.mcavie.compat;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.UUIDUtil;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
@@ -39,5 +42,26 @@ public final class Nbt {
     /** Modifie les données perso de l'objet (ancien getOrCreateTag puis écriture). */
     public static void update(ItemStack stack, Consumer<CompoundTag> editor) {
         CustomData.update(DataComponents.CUSTOM_DATA, stack, editor);
+    }
+
+    /** Position au format 1.20 (compound X/Y/Z), lisible par les anciennes sauvegardes. */
+    public static CompoundTag pos(BlockPos pos) {
+        CompoundTag tag = new CompoundTag();
+        tag.putInt("X", pos.getX());
+        tag.putInt("Y", pos.getY());
+        tag.putInt("Z", pos.getZ());
+        return tag;
+    }
+
+    public static BlockPos readPos(CompoundTag tag) {
+        return new BlockPos(tag.getIntOr("X", 0), tag.getIntOr("Y", 0), tag.getIntOr("Z", 0));
+    }
+
+    public static Tag uuidTag(UUID uuid) {
+        return UUIDUtil.CODEC.encodeStart(NbtOps.INSTANCE, uuid).getOrThrow();
+    }
+
+    public static UUID uuidOf(Tag tag) {
+        return UUIDUtil.CODEC.parse(NbtOps.INSTANCE, tag).result().orElse(null);
     }
 }

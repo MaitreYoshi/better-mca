@@ -47,7 +47,7 @@ public final class VillageJustice {
     public static void daily(Village village, ServerLevel world, VillageState state, Prestige.Result result, long today) {
         VillageConfig config = VillageConfig.get();
         boolean hasPrison = prison(village, result).isPresent();
-        state.cases.removeIf(c -> !village.hasResident(c.suspect));
+        state.cases.removeIf(c -> !village.getResidentsUUIDs().anyMatch(c.suspect::equals));
 
         for (Iterator<VillageState.Case> it = state.cases.iterator(); it.hasNext(); ) {
             VillageState.Case c = it.next();
@@ -58,7 +58,7 @@ public final class VillageJustice {
         }
         for (Iterator<Map.Entry<UUID, VillageState.Prisoner>> it = state.prisoners.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<UUID, VillageState.Prisoner> entry = it.next();
-            if (today >= entry.getValue().releaseDay || !hasPrison || !village.hasResident(entry.getKey())) {
+            if (today >= entry.getValue().releaseDay || !hasPrison || !village.getResidentsUUIDs().anyMatch(entry.getKey()::equals)) {
                 it.remove();
                 state.pendingRelease.add(entry.getKey());
                 VillageServer.notify(world, village, Component.translatable("msg.mca_vie.justice.released", entry.getValue().name).withStyle(ChatFormatting.GRAY));
@@ -241,7 +241,7 @@ public final class VillageJustice {
                 return;
             }
             VillageState state = VillageState.of(village);
-            state.cases.removeIf(c -> !village.hasResident(c.suspect));
+            state.cases.removeIf(c -> !village.getResidentsUUIDs().anyMatch(c.suspect::equals));
             Optional<VillageState.Case> found = state.cases.stream().filter(c -> c.suspect.equals(suspect)).findFirst();
             if (found.isEmpty() || (verdict != PRISON && verdict != PARDON)) {
                 return;

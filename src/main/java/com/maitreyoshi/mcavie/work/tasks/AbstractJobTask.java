@@ -64,7 +64,7 @@ public abstract class AbstractJobTask extends Behavior<VillagerEntityMCA> {
         if (status != null) {
         } else if (isSearching()) {
             status = WorkStatus.SEARCHING;
-        } else if (altersBlocks() && !world.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) {
+        } else if (altersBlocks() && !world.getGameRules().get(GameRules.MOB_GRIEFING)) {
             status = WorkStatus.NO_GRIEFING;
         } else {
             status = WorkStatus.NOTHING_TO_DO;
@@ -351,7 +351,7 @@ public abstract class AbstractJobTask extends Behavior<VillagerEntityMCA> {
     }
 
     protected static boolean mayAlter(ServerLevel world, BlockPos pos) {
-        if (!world.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING)) {
+        if (!world.getGameRules().get(GameRules.MOB_GRIEFING)) {
             return false;
         }
         MinecraftServer server = world.getServer();

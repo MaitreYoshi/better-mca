@@ -185,7 +185,7 @@ public class Ghosts extends SavedData {
             UUID person = buf.readBoolean() ? buf.readUUID() : null;
             server.execute(() -> {
                 Level world = player.level();
-                if (player.distanceToSqr(pos.getCenter()) > 64 || !(world.getBlockEntity(pos) instanceof GhostAltarBlockEntity altar)) {
+                if (player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(pos)) > 64 || !(world.getBlockEntity(pos) instanceof GhostAltarBlockEntity altar)) {
                     return;
                 }
                 if (person != null && !canReturn(server, person)) {

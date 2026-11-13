@@ -80,7 +80,7 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
             score++;
         }
         score += villager.getResidency().getHomeVillage()
-                .filter(village -> village.hasResident(villager.getUUID()))
+                .filter(village -> village.getResidentsUUIDs().anyMatch(villager.getUUID()::equals))
                 .map(village -> VillageState.of(village).rank.ordinal())
                 .orElse(0);
         AgingConfig config = AgingConfig.get();

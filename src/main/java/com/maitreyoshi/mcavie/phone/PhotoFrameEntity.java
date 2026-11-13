@@ -165,7 +165,7 @@ public class PhotoFrameEntity extends HangingEntity {
 
     @Override
     public InteractionResult interact(Player player, InteractionHand hand) {
-        if (level().isClientSide) {
+        if (level().isClientSide()) {
             return InteractionResult.SUCCESS;
         }
         if (player instanceof ServerPlayer serverPlayer) {

@@ -183,7 +183,7 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
         computedName = null;
         BlockEntity self = (BlockEntity) (Object) this;
         Level world = self.getLevel();
-        if (world != null && world.isClientSide && !java.util.Objects.equals(previous, mcavie$details)) {
+        if (world != null && world.isClientSide() && !java.util.Objects.equals(previous, mcavie$details)) {
             world.sendBlockUpdated(self.getBlockPos(), self.getBlockState(), self.getBlockState(), 8);
         }
     }

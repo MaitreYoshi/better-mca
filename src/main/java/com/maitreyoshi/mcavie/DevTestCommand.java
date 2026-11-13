@@ -51,8 +51,8 @@ final class DevTestCommand {
                         .then(Commands.literal("family").executes(ctx -> {
                             ServerLevel world = ctx.getSource().getLevel();
                             BlockPos pos = world.getRespawnData().pos();
-                            VillagerEntityMCA father = VillagerFactory.newVillager(world).withGender(Gender.MALE).withAge(0).withPosition(pos).spawn(EntitySpawnReason.COMMAND);
-                            VillagerEntityMCA mother = VillagerFactory.newVillager(world).withGender(Gender.FEMALE).withAge(0).withPosition(pos).spawn(EntitySpawnReason.COMMAND);
+                            VillagerEntityMCA father = VillagerFactory.newVillager(world).withGender(Gender.MALE).withAge(0).withPosition(net.minecraft.world.phys.Vec3.atBottomCenterOf(pos)).spawn(EntitySpawnReason.COMMAND);
+                            VillagerEntityMCA mother = VillagerFactory.newVillager(world).withGender(Gender.FEMALE).withAge(0).withPosition(net.minecraft.world.phys.Vec3.atBottomCenterOf(pos)).spawn(EntitySpawnReason.COMMAND);
                             world.getServer().execute(() -> {
                                 VillagerEntityMCA child = mother.getRelationships().getPregnancy().createChild(Gender.FEMALE, father);
                                 child.setPos(pos.getX() + 0.5, pos.getY() + 1, pos.getZ() + 0.5);

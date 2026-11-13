@@ -317,7 +317,7 @@ public final class Social {
     }
 
     public static Optional<House> house(VillagerEntityMCA villager) {
-        Optional<Village> village = villager.getResidency().getHomeVillage().filter(v -> v.hasResident(villager.getUUID()));
+        Optional<Village> village = villager.getResidency().getHomeVillage().filter(v -> v.getResidentsUUIDs().anyMatch(villager.getUUID()::equals));
         if (village.isEmpty()) {
             return Optional.empty();
         }

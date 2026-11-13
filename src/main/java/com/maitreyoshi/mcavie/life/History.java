@@ -431,7 +431,7 @@ public final class History {
                 history.removeSpawn(spawn.uuid());
                 continue;
             }
-            VillagerEntityMCA child = VillagerFactory.newVillager(world).withGender(spawn.gender()).withName(spawn.name()).withAge(0).withPosition(center).build();
+            VillagerEntityMCA child = VillagerFactory.newVillager(world).withGender(spawn.gender()).withName(spawn.name()).withAge(0).withPosition(net.minecraft.world.phys.Vec3.atBottomCenterOf(center)).build();
             UUID temporary = child.getUUID();
             child.setUUID(spawn.uuid());
             FamilyTree.get(world).remove(temporary);

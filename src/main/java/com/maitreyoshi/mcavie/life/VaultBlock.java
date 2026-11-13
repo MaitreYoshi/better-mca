@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import net.minecraft.server.permissions.Permissions;
 import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
@@ -207,7 +208,7 @@ public class VaultBlock extends TombstoneBlock {
 
     @Override
     public void setPlacedBy(Level world, BlockPos pos, BlockState state, LivingEntity placer, ItemStack stack) {
-        if (world.isClientSide) {
+        if (world.isClientSide()) {
             return;
         }
         BlockPos master = master(pos, state);
@@ -243,7 +244,7 @@ public class VaultBlock extends TombstoneBlock {
     @Override
     public void onRemove(BlockState state, Level world, BlockPos pos, BlockState newState, boolean moved) {
         super.onRemove(state, world, pos, newState, moved);
-        if (world.isClientSide || state.is(newState.getBlock())) {
+        if (world.isClientSide() || state.is(newState.getBlock())) {
             return;
         }
         BlockPos master = master(pos, state);
@@ -283,7 +284,7 @@ public class VaultBlock extends TombstoneBlock {
 
     @Override
     public void attack(BlockState state, Level world, BlockPos pos, Player player) {
-        if (!world.isClientSide && !silkTouch(player) && occupied(world, master(pos, state), state.getValue(BlockStateProperties.HORIZONTAL_FACING))) {
+        if (!world.isClientSide() && !silkTouch(player) && occupied(world, master(pos, state), state.getValue(BlockStateProperties.HORIZONTAL_FACING))) {
             player.sendOverlayMessage(Component.translatable("tomb.mca_vie.vault.occupied").withStyle(ChatFormatting.GOLD));
         }
     }
@@ -293,7 +294,7 @@ public class VaultBlock extends TombstoneBlock {
         BlockPos master = master(pos, state);
         Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING);
         boolean occupied = occupied(world, master, facing);
-        if (!world.isClientSide && (occupied ? silkTouch(player) : !player.isCreative() && player.hasCorrectToolForDrops(state))) {
+        if (!world.isClientSide() && (occupied ? silkTouch(player) : !player.isCreative() && player.hasCorrectToolForDrops(state))) {
             ItemStack stack = new ItemStack(this);
             if (occupied) {
                 ListTag slots = new ListTag();
@@ -346,7 +347,7 @@ public class VaultBlock extends TombstoneBlock {
                     TombReservations.openAt(serverPlayer, server, partPos(master, facing, SLOTS[slot]));
                 }
             }
-            return InteractionResult.sidedSuccess(world.isClientSide);
+            return InteractionResult.sidedSuccess(world.isClientSide());
         }
         if (slot == TITLE) {
             return InteractionResult.PASS;
@@ -367,7 +368,7 @@ public class VaultBlock extends TombstoneBlock {
 
     private static boolean canEdit(ServerPlayer player, Data holder) {
         UUID owner = ((TombstoneDetails.Holder) holder).mcavie$vaultOwner();
-        return owner == null || owner.equals(player.getUUID()) || player.hasPermissions(2);
+        return owner == null || owner.equals(player.getUUID()) || player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
     }
 
     private static void openTitle(ServerPlayer player, ServerLevel world, BlockPos master, Direction facing) {
@@ -387,7 +388,7 @@ public class VaultBlock extends TombstoneBlock {
     private static void setTitle(ServerPlayer player, BlockPos pos, String title) {
         ServerLevel world = player.level();
         BlockState state = world.getBlockState(pos);
-        if (player.distanceToSqr(pos.getCenter()) > 64 || !(state.getBlock() instanceof VaultBlock) || state.getValue(PART) != SLOTS[0]) {
+        if (player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(pos)) > 64 || !(state.getBlock() instanceof VaultBlock) || state.getValue(PART) != SLOTS[0]) {
             return;
         }
         Data.of(world.getBlockEntity(pos)).filter(holder -> canEdit(player, holder)).ifPresent(holder -> {

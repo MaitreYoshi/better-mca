@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.compat.Saved;
 import net.conczin.mca.entity.VillagerEntityMCA;
 import net.conczin.mca.server.world.data.Village;
@@ -81,7 +82,7 @@ public class MemorialRegistry extends SavedData {
             Set<GlobalPos> set = new LinkedHashSet<>();
             for (Tag element : village.getListOrEmpty("monuments")) {
                 CompoundTag pos = (CompoundTag) element;
-                set.add(GlobalPos.of(ResourceKey.create(Registries.DIMENSION, Identifier.parse(pos.getStringOr("dim", ""))), NbtUtils.readBlockPos(pos)));
+                set.add(GlobalPos.of(ResourceKey.create(Registries.DIMENSION, Identifier.parse(pos.getStringOr("dim", ""))), Nbt.readPos(pos)));
                 list.addAll(readList(pos));
             }
             registry.fallen.put(id, list);
@@ -101,7 +102,7 @@ public class MemorialRegistry extends SavedData {
             village.put("fallen", list);
             ListTag positions = new ListTag();
             for (GlobalPos pos : monuments.getOrDefault(id, Set.of())) {
-                CompoundTag tag = NbtUtils.writeBlockPos(pos.pos());
+                CompoundTag tag = Nbt.pos(pos.pos());
                 tag.putString("dim", pos.dimension().identifier().toString());
                 positions.add(tag);
             }
@@ -154,7 +155,7 @@ public class MemorialRegistry extends SavedData {
     public static Component killer(DamageSource cause) {
         Entity attacker = cause.getEntity();
         if (attacker instanceof Player player) {
-            return Component.literal(player.getGameProfile().getName());
+            return Component.literal(player.getGameProfile().name());
         }
         if (attacker instanceof Enemy) {
             return attacker.getType().getDescription();
@@ -193,7 +194,7 @@ public class MemorialRegistry extends SavedData {
             ServerLevel target = server.getLevel(pos.dimension());
             if (target != null && target.hasChunkAt(pos.pos())) {
                 target.playSound(null, pos.pos(), net.minecraft.sounds.SoundEvents.BELL_BLOCK, net.minecraft.sounds.SoundSource.BLOCKS, 1.5f, 0.6f);
-                told.addAll(target.getPlayers(p -> p.distanceToSqr(pos.pos().getCenter()) < 64 * 64));
+                told.addAll(target.getPlayers(p -> p.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(pos.pos())) < 64 * 64));
             }
         }
         told.forEach(p -> p.sendSystemMessage(message.copy().withStyle(net.minecraft.ChatFormatting.GRAY, net.minecraft.ChatFormatting.ITALIC)));
