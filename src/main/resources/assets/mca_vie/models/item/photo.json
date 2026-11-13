@@ -2,7 +2,7 @@
   "parent": "builtin/entity",
   "gui_light": "front",
   "textures": {
-    "particle": "mca_vie:entity/photo_paper"
+    "particle": "minecraft:item/paper"
   },
   "display": {
     "gui": {
