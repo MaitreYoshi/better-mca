@@ -45,7 +45,7 @@ public abstract class DestinyScreenMixin extends VillagerEditorScreen implements
 
     @Inject(method = "setPage", at = @At("HEAD"), remap = false)
     private void mcavie$commitOnLeave(String newPage, CallbackInfo ci) {
-        if ("general".equals(page) && !"general".equals(newPage)) {
+        if ("intro".equals(page) && !"intro".equals(newPage)) {
             mcavie$commitSurname();
         }
     }
@@ -69,7 +69,7 @@ public abstract class DestinyScreenMixin extends VillagerEditorScreen implements
 
     @Inject(method = "setPage", at = @At("TAIL"), remap = false)
     private void mcavie$addSurnameField(String newPage, CallbackInfo ci) {
-        if (!"general".equals(page)) {
+        if (!"intro".equals(page)) {
             mcavie$surnameField = null;
             return;
         }
@@ -109,7 +109,7 @@ public abstract class DestinyScreenMixin extends VillagerEditorScreen implements
 
     @Inject(method = "extractRenderState", at = @At("HEAD"))
     private void mcavie$updateAcceptButton(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        if ("general".equals(page) && acceptWidget != null && mcavie$surnameField != null) {
+        if ("intro".equals(page) && acceptWidget != null && mcavie$surnameField != null) {
             EditBox nameField = ((VillagerEditorScreenAccessor) this).mcavie$getNameField();
             boolean nameOk = nameField != null && !MCA.isBlankString(nameField.getValue());
             boolean surnameOk = !MCA.isBlankString(mcavie$surnameField.getValue());
