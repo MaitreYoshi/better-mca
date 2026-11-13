@@ -80,6 +80,7 @@ public final class EmployeeLooks {
                     villager = female;
                 }
             }
+            villager.setId(com.maitreyoshi.mcavie.compat.client.GuiEntity.fakeId());
             villager.setAge(look.getIntOr("Age", 0));
             villager.refreshDimensions();
             return villager;

@@ -10,7 +10,13 @@ import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
 public final class GuiEntity {
+    private static int nextFakeId = -2_000_000;
+
     private GuiEntity() {
+    }
+
+    public static int fakeId() {
+        return nextFakeId--;
     }
 
     public static void head(GuiGraphicsExtractor context, LivingEntity entity, int x0, int y0, int x1, int y1, float scale) {

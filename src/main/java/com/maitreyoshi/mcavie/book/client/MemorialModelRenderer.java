@@ -69,7 +69,7 @@ public final class MemorialModelRenderer {
             client.gameRenderer.lighting().setupFor(Lighting.Entry.ITEMS_3D);
             BlockModelResolver resolver = new BlockModelResolver(client.getModelManager());
             matrices.pushPose();
-            matrices.scale(1, -1, 1);
+            matrices.scale(1, -1, -1);
             matrices.mulPose(Axis.XP.rotationDegrees(25));
             matrices.mulPose(Axis.YP.rotationDegrees(225));
             matrices.translate(-0.5, -3.7, -0.5);

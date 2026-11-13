@@ -65,6 +65,7 @@ public class GhostRenderer extends EntityRenderer<GhostEntity, GhostRenderer.Sta
         nbt.remove("isPanicking"); // mort en panique : le fantôme revient apaisé
         Entity entity = EntityType.create(com.maitreyoshi.mcavie.compat.Nbt.input(nbt, ghost.registryAccess()), ghost.level(), new net.minecraft.world.entity.EntitySpawnRequest(net.minecraft.world.entity.EntitySpawnReason.LOAD, false)).orElse(null);
         if (entity instanceof LivingEntity body) {
+            body.setId(com.maitreyoshi.mcavie.compat.client.GuiEntity.fakeId());
             for (EquipmentSlot slot : EquipmentSlot.values()) {
                 body.setItemSlot(slot, ItemStack.EMPTY);
             }
