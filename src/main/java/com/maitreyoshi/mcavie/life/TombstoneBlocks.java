@@ -74,14 +74,9 @@ public final class TombstoneBlocks {
                     dev.architectury.registry.level.entity.EntityAttributeRegistry.register(() -> type, GhostEntity::createAttributes);
                 });
         Ghosts.registerNetwork();
-        CreativeTabRegistry.modify(CreativeTabRegistry.defer(CreativeModeTabs.FUNCTIONAL_BLOCKS), (flags, entries, operator) -> {
-            entries.accept(WOODEN_CROSS);
-            entries.accept(STELE);
-            entries.accept(MARBLE);
-            entries.accept(VAULT);
-            entries.accept(MEMORIAL);
-            entries.accept(GHOST_ALTAR);
-        });
+        CreativeTabRegistry.append(CreativeModeTabs.FUNCTIONAL_BLOCKS,
+                (java.util.function.Supplier<net.minecraft.world.level.ItemLike>) () -> WOODEN_CROSS,
+                () -> STELE, () -> MARBLE, () -> VAULT, () -> MEMORIAL, () -> GHOST_ALTAR);
     }
 
     public static Tomb forTier(int tier) {

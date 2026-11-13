@@ -90,7 +90,7 @@ public final class PhoneServer {
                 () -> EntityType.Builder.<PhotoFrameEntity>of(PhotoFrameEntity::new, MobCategory.MISC)
                         .sized(0.5f, 0.5f).clientTrackingRange(10).updateInterval(Integer.MAX_VALUE).build(Registration.entity("photo_frame")),
                 type -> PHOTO_FRAME = type);
-        CreativeTabRegistry.modify(CreativeTabRegistry.defer(CreativeModeTabs.TOOLS_AND_UTILITIES), (flags, entries, operator) -> entries.accept(PHONE));
+        CreativeTabRegistry.append(CreativeModeTabs.TOOLS_AND_UTILITIES, (java.util.function.Supplier<net.minecraft.world.level.ItemLike>) () -> PHONE);
         ServerPlayNetworking.registerGlobalReceiver(PhoneNetwork.ACTION, (server, player, handler, buf, responseSender) -> {
             int number = buf.readVarInt();
             int op = buf.readVarInt();

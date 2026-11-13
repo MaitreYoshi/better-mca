@@ -31,6 +31,7 @@ public final class WorkBlocks {
         }, block -> BY_JOB.put(job, block));
         Registration.register(Registries.ITEM, name, () -> new BlockItem(BY_JOB.get(job), Registration.blockItem(name)), item -> {
         });
+        CreativeTabRegistry.append(CreativeModeTabs.FUNCTIONAL_BLOCKS, (java.util.function.Supplier<net.minecraft.world.level.ItemLike>) () -> BY_JOB.get(job));
     }
 
     @Nullable
@@ -56,7 +57,6 @@ public final class WorkBlocks {
         Registration.register(Registries.BLOCK_ENTITY_TYPE, "workstation",
                 () -> new BlockEntityType<>(WorkstationBlockEntity::new, java.util.Set.copyOf(BY_JOB.values())),
                 type -> WORKSTATION_ENTITY = type);
-        CreativeTabRegistry.modify(CreativeTabRegistry.defer(CreativeModeTabs.FUNCTIONAL_BLOCKS), (flags, entries, operator) -> BY_JOB.values().forEach(entries::accept));
     }
 
     private static final class Shapes {
