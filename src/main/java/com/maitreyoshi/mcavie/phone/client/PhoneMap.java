@@ -76,7 +76,7 @@ public final class PhoneMap {
             if (texture != null) {
                 texture.close();
             }
-            texture = new DynamicTexture(new NativeImage(size(), size(), true));
+            texture = new DynamicTexture(TEXTURE::toString, new NativeImage(size(), size(), true));
             client.getTextureManager().register(TEXTURE, texture);
             centerX = Integer.MIN_VALUE;
         }
@@ -177,7 +177,7 @@ public final class PhoneMap {
                     brightness = d > 0.6 ? MapColor.Brightness.HIGH : d < -0.6 ? MapColor.Brightness.LOW : MapColor.Brightness.NORMAL;
                 }
                 previous = height;
-                colors[z * 16 + x] = color == MapColor.NONE ? 0 : color.calculateRGBColor(brightness);
+                colors[z * 16 + x] = color == MapColor.NONE ? 0 : color.calculateARGBColor(brightness);
             }
         }
         int[] old = CACHE.put(pos.pack(), colors);
@@ -231,7 +231,7 @@ public final class PhoneMap {
         }
         for (int z = 0; z < 16; z++) {
             for (int x = 0; x < 16; x++) {
-                image.setPixelRGBA(baseX + x, baseZ + z, colors[z * 16 + x]);
+                image.setPixel(baseX + x, baseZ + z, colors[z * 16 + x]);
             }
         }
     }

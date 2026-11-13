@@ -65,7 +65,6 @@
     "client.CreateWorldGameTabMixin",
     "client.DestinyScreenMixin",
     "client.EntityRendererMixin",
-    "client.FamilyTreeSearchScreenMixin",
     "client.HairLayerMixin",
     "client.InteractScreenMixin",
     "client.NameBabyScreenMixin",

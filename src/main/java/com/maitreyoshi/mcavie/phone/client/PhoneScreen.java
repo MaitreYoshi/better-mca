@@ -238,9 +238,6 @@ public class PhoneScreen extends Screen {
             pendingChat = null;
             scroll = 0;
         }
-        if (mainField != null) {
-            mainField.tick();
-        }
     }
 
     @Override
@@ -408,11 +405,15 @@ public class PhoneScreen extends Screen {
         field.setBordered(false);
         field.setMaxLength(max);
         field.setTextColor(TEXT);
-        if (digits) {
-            field.setFilter(s -> s.chars().allMatch(c -> c >= '0' && c <= '9'));
-        }
         field.setValue(value);
-        field.setResponder(listener);
+        field.setResponder(digits ? s -> {
+            String clean = s.replaceAll("[^0-9]", "");
+            if (!clean.equals(s)) {
+                field.setValue(clean);
+            } else {
+                listener.accept(s);
+            }
+        } : listener);
         addRenderableWidget(field);
         return field;
     }
@@ -769,7 +770,7 @@ public class PhoneScreen extends Screen {
         scissor(context, sx, top, sx + sw, bottom);
         context.pose().pushMatrix();
         context.pose().translate(cx, cy);
-        context.pose().mulPose(Axis.ZP.rotationDegrees(mapAngle));
+        context.pose().rotate((float) Math.toRadians(mapAngle));
         context.pose().scale(scale, scale);
         context.pose().translate((float) (PhoneMap.originX() - viewX), (float) (PhoneMap.originZ() - viewZ));
         context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, PhoneMap.TEXTURE, 0, 0, 0, 0, size, size, size, size);
@@ -783,14 +784,14 @@ public class PhoneScreen extends Screen {
         context.pose().pushMatrix();
         context.pose().translate(hx, hz);
         context.fill(-7, -7, 7, 7, 0xFFFFFFFF);
-        PlayerFaceExtractor.draw(context, minecraft.player.getSkinTextureLocation(), -6, -6, 12);
+        PlayerFaceExtractor.extractRenderState(context, minecraft.player.getSkin().body().texturePath(), -6, -6, 12, true, false, -1);
         context.pose().popMatrix();
         context.disableScissor();
 
         round(context, sx + 4, top + 4, 12, 12, 6, 0xC0000000);
         context.pose().pushMatrix();
         context.pose().translate(sx + 10, top + 10);
-        context.pose().mulPose(Axis.ZP.rotationDegrees(mapAngle));
+        context.pose().rotate((float) Math.toRadians(mapAngle));
         centered(context, "N", 0, -4, mapAngle == 0f ? WHITE : 0xFFFF6B6B);
         context.pose().popMatrix();
         String coords = "X " + Mth.floor(px) + "  Z " + Mth.floor(pz);
@@ -2249,16 +2250,16 @@ public class PhoneScreen extends Screen {
         context.text(font, fit(Component.translatable("gui.mca_vie.phone.employees.report_total", total).getString(), w), x, y, TEXT, false);
         y += 12;
         List<String> keys = new ArrayList<>(report.keySet());
-        keys.sort(Comparator.comparingInt(report::getInt).reversed());
+        keys.sort(Comparator.comparingInt((String k) -> report.getIntOr(k, 0)).reversed());
         int cell = 34;
         int perRow = Math.max(1, w / cell);
         int shown = Math.min(keys.size(), perRow * 2);
         for (int i = 0; i < shown; i++) {
             int cx = x + (i % perRow) * cell;
             int cy = y + (i / perRow) * 20;
-            var item = BuiltInRegistries.ITEM.get(Identifier.tryParse(keys.get(i)));
-            context.renderItem(new ItemStack(item), cx, cy);
-            context.text(font, String.valueOf(report.getInt(keys.get(i))), cx + 17, cy + 5, TEXT, false);
+            var item = BuiltInRegistries.ITEM.getValue(Identifier.tryParse(keys.get(i)));
+            context.item(new ItemStack(item), cx, cy);
+            context.text(font, String.valueOf(report.getIntOr(keys.get(i), 0)), cx + 17, cy + 5, TEXT, false);
         }
         return y + ((shown + perRow - 1) / perRow) * 20 + 4;
     }
@@ -2447,7 +2448,7 @@ public class PhoneScreen extends Screen {
         Identifier head = PhoneSkins.head(state.person(number));
         if (head != null) {
             round(context, x - 1, y - 1, size + 2, size + 2, 3, 0xFF000000);
-            PlayerFaceExtractor.draw(context, head, x, y, size);
+            PlayerFaceExtractor.extractRenderState(context, head, x, y, size, true, false, -1);
             return;
         }
         round(context, x, y, size, size, size / 2, AVATARS[number % AVATARS.length]);

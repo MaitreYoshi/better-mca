@@ -322,7 +322,7 @@ public class PlanScreen extends BlueprintScreen {
             if (y + 20 > cy + ch) {
                 break;
             }
-            ImageButton widget = new ImageButton(x, y, 20, 20, bt.iconU(), bt.iconV() + 20, 20, ICONS, 256, 256, b -> {
+            net.conczin.mca.client.gui.widget.LegacyImageButton widget = new net.conczin.mca.client.gui.widget.LegacyImageButton(x, y, 20, 20, bt.iconU(), bt.iconV() + 20, 20, ICONS, 256, 256, b -> {
                 selectedBuilding = bt;
                 scroll = 0;
             }, Component.translatable("buildingType." + bt.name()));
@@ -605,7 +605,7 @@ public class PlanScreen extends BlueprintScreen {
 
         for (GuiEventListener child : children()) {
             if (child instanceof Renderable drawable) {
-                drawable.render(context, mouseX, mouseY, delta);
+                drawable.extractRenderState(context, mouseX, mouseY, delta);
             }
         }
         if (village != null && !renaming) {
@@ -775,9 +775,9 @@ public class PlanScreen extends BlueprintScreen {
         float sc = Math.min((float) half / (village.getBox().getMaxBlockCount() + 3) * 2, 2.0f);
         var matrices = context.pose();
         matrices.pushMatrix();
-        matrices.translate(cx + half, cy + half, 0);
-        matrices.scale(sc, sc, 1.0f);
-        matrices.translate(-village.getCenter().getX(), -village.getCenter().getZ(), 0);
+        matrices.translate(cx + half, cy + half);
+        matrices.scale(sc, sc);
+        matrices.translate(-village.getCenter().getX(), -village.getCenter().getZ());
         if (minecraft != null && minecraft.player != null) {
             int px = (int) minecraft.player.getX();
             int pz = (int) minecraft.player.getZ();
@@ -875,7 +875,7 @@ public class PlanScreen extends BlueprintScreen {
 
     private static Component blockName(Identifier id) {
         if (BuiltInRegistries.BLOCK.containsKey(id)) {
-            return Component.translatable(BuiltInRegistries.BLOCK.get(id).getDescriptionId());
+            return BuiltInRegistries.BLOCK.getValue(id).getName();
         }
         return Component.translatable("tag." + id);
     }
@@ -1109,7 +1109,7 @@ public class PlanScreen extends BlueprintScreen {
             int colW = (cw - 10) / 2;
             for (int i = 0; i < products.size(); i++) {
                 String id = products.get(i);
-                Component line = Component.translatable("gui.mca_vie.market.price", config.unitsPerEmerald(id), BuiltInRegistries.ITEM.get(Identifier.tryParse(id)).getDescription());
+                Component line = Component.translatable("gui.mca_vie.market.price", config.unitsPerEmerald(id), Component.translatable(BuiltInRegistries.ITEM.getValue(Identifier.tryParse(id)).getDescriptionId()));
                 context.text(font, Language.getInstance().getVisualOrder(font.substrByWidth(line, colW)), cx + (i % 2) * (colW + 4), y + (i / 2) * LINE, GRAY);
             }
             y += (products.size() + 1) / 2 * LINE;
@@ -1241,7 +1241,7 @@ public class PlanScreen extends BlueprintScreen {
             }
         }
         for (GuiEventListener child : children()) {
-            if (child.mouseClicked(mouseX, mouseY, button)) {
+            if (child.mouseClicked(event, doubleClick)) {
                 setFocused(child);
                 if (button == 0) {
                     setDragging(true);

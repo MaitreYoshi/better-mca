@@ -17,16 +17,12 @@ import net.minecraft.world.entity.EntityType;
 @Mixin(EntityRenderDispatcher.class)
 public abstract class EntityRenderDispatcherMixin {
     @Shadow
-    private Map<EntityType<?>, EntityRenderer<?>> renderers;
+    private Map<EntityType<?>, EntityRenderer<?, ?>> renderers;
 
-    @Shadow
-    @Final
-    private ItemInHandRenderer itemInHandRenderer;
-
-    @Inject(method = "reload", at = @At("TAIL"))
+    @Inject(method = "onResourceManagerReload", at = @At("TAIL"))
     private void mcavie$addLayers(CallbackInfo ci) {
-        for (EntityRenderer<?> renderer : renderers.values()) {
-            AgingClient.addLayers(renderer, itemInHandRenderer);
+        for (EntityRenderer<?, ?> renderer : renderers.values()) {
+            AgingClient.addLayers(renderer);
         }
     }
 }

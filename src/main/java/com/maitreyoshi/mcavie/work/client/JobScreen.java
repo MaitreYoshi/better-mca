@@ -229,7 +229,7 @@ public class JobScreen extends Screen {
         boolean isCurrent = selected == current;
 
         if (isCurrent && villager instanceof LivingEntity living) {
-            InventoryScreen.renderEntityInInventoryFollowsMouse(context, x + w - 16, y + 52, 24, 0, 0, living);
+            InventoryScreen.extractEntityInInventoryFollowsMouse(context, x + w - 32, y + 4, x + w, y + 52, 24, 0.0625f, x + w - 16, y + 18, living);
         }
         context.item(iconOf(selected), x, y);
         context.text(font, selected.getName().copy().withStyle(ChatFormatting.BOLD), x + 20, y + 4, 0xFFFFFF);

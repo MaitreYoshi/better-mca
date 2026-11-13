@@ -67,7 +67,7 @@ public abstract class NameBabyScreenMixin extends Screen implements SurnameField
         mcavie$surnameFocused = false;
         addRenderableWidget(field);
         if (previous.isEmpty()) {
-            MCAVieClient.requestBabySurname(player.getInventory().selected);
+            MCAVieClient.requestBabySurname(player.getInventory().getSelectedSlot());
         }
     }
 
@@ -104,12 +104,6 @@ public abstract class NameBabyScreenMixin extends Screen implements SurnameField
         mcavie$applyFocus();
     }
 
-    @Inject(method = "tick", at = @At("TAIL"))
-    private void mcavie$tickSurname(CallbackInfo ci) {
-        if (mcavie$surnameField != null) {
-            mcavie$surnameField.tick();
-        }
-    }
 
     @Unique
     private void mcavie$applyFocus() {

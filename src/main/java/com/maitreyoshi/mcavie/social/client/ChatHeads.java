@@ -37,33 +37,9 @@ public final class ChatHeads {
         if (villager == null) {
             return;
         }
-        Matrix4f matrix = context.pose().last().pose();
-        Vector3f from = matrix.transformPosition(x, y, 0, new Vector3f());
-        Vector3f to = matrix.transformPosition(x + SIZE, y + SIZE, 0, new Vector3f());
         float height = villager.getBbHeight();
         int scale = Math.max(1, Math.round(SIZE / (height * 0.25f)));
-        float bodyYaw = villager.yBodyRot;
-        float yaw = villager.getYRot();
-        float pitch = villager.getXRot();
-        float headYaw = villager.yHeadRot;
-        float prevHeadYaw = villager.yHeadRotO;
-        villager.yBodyRot = 180;
-        villager.setYRot(180);
-        villager.setXRot(0);
-        villager.yHeadRot = 180;
-        villager.yHeadRotO = 180;
-        context.enableScissor(Mth.floor(from.x), Mth.floor(from.y), Mth.ceil(to.x), Mth.ceil(to.y));
-        try {
-            InventoryScreen.renderEntityInInventory(context, x + SIZE / 2, y + Math.round(height * scale), scale,
-                    new Quaternionf().rotateZ((float) Math.PI), new Quaternionf(), villager);
-        } finally {
-            context.disableScissor();
-            villager.yBodyRot = bodyYaw;
-            villager.setYRot(yaw);
-            villager.setXRot(pitch);
-            villager.yHeadRot = headYaw;
-            villager.yHeadRotO = prevHeadYaw;
-        }
+        com.maitreyoshi.mcavie.compat.client.GuiEntity.head(context, villager, x, y, x + SIZE, y + SIZE, scale);
     }
 
     public static Component withHead(Component text, UUID uuid) {

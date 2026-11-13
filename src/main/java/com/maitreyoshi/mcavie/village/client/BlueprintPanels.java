@@ -278,7 +278,7 @@ public final class BlueprintPanels {
 
     public static Component productLabel(String id) {
         VillageConfig config = VillageConfig.get();
-        return Component.translatable("gui.mca_vie.market.product", config.unitsPerEmerald(id), item(id).getDescription(), config.orderLotPrice);
+        return Component.translatable("gui.mca_vie.market.product", config.unitsPerEmerald(id), Component.translatable(item(id).getDescriptionId()), config.orderLotPrice);
     }
 
     public static Component productTooltip(VillageState state, String id) {

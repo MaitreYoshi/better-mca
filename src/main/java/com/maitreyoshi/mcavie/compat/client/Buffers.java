@@ -51,7 +51,7 @@ public final class Buffers {
     }
 
     /** Ancien LevelRenderer.getLightColor(monde, position). */
-    public static int light(net.minecraft.world.level.BlockAndTintGetter world, net.minecraft.core.BlockPos pos) {
+    public static int light(net.minecraft.world.level.BlockAndLightGetter world, net.minecraft.core.BlockPos pos) {
         return net.minecraft.util.LightCoordsUtil.pack(world.getBrightness(net.minecraft.world.level.LightLayer.BLOCK, pos),
                 world.getBrightness(net.minecraft.world.level.LightLayer.SKY, pos));
     }

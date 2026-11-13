@@ -27,7 +27,7 @@ public final class CalendarHud {
     private static void render(GuiGraphicsExtractor context, float tickDelta) {
         Minecraft client = Minecraft.getInstance();
         LocalPlayer player = client.player;
-        if (player == null || client.level == null || client.options.hideGui) {
+        if (player == null || client.level == null || client.gui.hud.isHidden()) {
             return;
         }
         if (!player.getMainHandItem().is(Items.CLOCK) && !player.getOffhandItem().is(Items.CLOCK)) {

@@ -6,6 +6,11 @@ import com.maitreyoshi.mcavie.aging.AgingConfig;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import net.conczin.mca.client.model.VillagerEntityBaseModelMCA;
+import net.conczin.mca.client.model.VillagerEntityModelMCA;
+import net.conczin.mca.client.render.VillagerRenderState;
+import net.conczin.mca.client.render.VillagerStateHolder;
+import net.conczin.mca.client.render.VillagerVisuals;
+import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.conczin.mca.client.render.VillagerEntityMCARenderer;
 import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.client.model.geom.ModelPart;
@@ -36,12 +41,27 @@ public final class AgingClient {
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> AgingConfig.load());
     }
 
-    public static void addLayers(net.minecraft.client.renderer.entity.EntityRenderer<?> renderer, net.minecraft.client.renderer.ItemInHandRenderer heldItemRenderer) {
+    @SuppressWarnings("unchecked")
+    public static void addLayers(net.minecraft.client.renderer.entity.EntityRenderer<?, ?> renderer) {
         if (renderer instanceof VillagerEntityMCARenderer villagerRenderer) {
             com.maitreyoshi.mcavie.mixin.compat.client.LivingEntityRendererInvoker features = (com.maitreyoshi.mcavie.mixin.compat.client.LivingEntityRendererInvoker) villagerRenderer;
-            features.mcavie$addFeature(new AgingLayer(villagerRenderer));
-            features.mcavie$addFeature(new CaneLayer(villagerRenderer, heldItemRenderer));
+            RenderLayerParent<VillagerRenderState, VillagerEntityModelMCA> parent = (RenderLayerParent<VillagerRenderState, VillagerEntityModelMCA>) (Object) villagerRenderer;
+            features.mcavie$addFeature(new AgingLayer(parent));
+            features.mcavie$addFeature(new CaneLayer(parent));
         }
+    }
+
+    @Nullable
+    public static VillagerEntityMCA villager(Object state) {
+        if (!(state instanceof VillagerStateHolder holder)) {
+            return null;
+        }
+        VillagerVisuals visuals = holder.mca$getVisuals();
+        net.minecraft.client.multiplayer.ClientLevel level = net.minecraft.client.Minecraft.getInstance().level;
+        if (visuals == null || level == null) {
+            return null;
+        }
+        return level.getEntity(visuals.entityId()) instanceof VillagerEntityMCA villager ? villager : null;
     }
 
     public static float hash(UUID uuid, int salt) {
@@ -95,7 +115,7 @@ public final class AgingClient {
         return villager.getOffhandItem().isEmpty() ? main.getOpposite() : null;
     }
 
-    public static void pose(VillagerEntityBaseModelMCA<?> model, VillagerEntityMCA villager) {
+    public static void pose(VillagerEntityBaseModelMCA model, VillagerEntityMCA villager, float attackTime) {
         float stoop = stoopAmount(villager);
         boolean free = !villager.isSleeping() && !villager.isPassenger() && !villager.isCrouching()
                 && !villager.isSwimming() && !villager.isFallFlying();
@@ -121,10 +141,9 @@ public final class AgingClient {
                 part.xRot += angle;
             }
         }
-        model.hat.copyFrom(model.head);
 
         HumanoidArm caneArm = free ? caneArm(villager) : null;
-        if (caneArm != null && (caneArm != villager.getMainArm() || model.attackTime <= 0)) {
+        if (caneArm != null && (caneArm != villager.getMainArm() || attackTime <= 0)) {
             ModelPart arm = caneArm == HumanoidArm.LEFT ? model.leftArm : model.rightArm;
             arm.xRot = -0.15f;
             arm.yRot = 0;

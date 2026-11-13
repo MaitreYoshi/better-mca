@@ -90,8 +90,10 @@ public final class CameraMode {
         zoom = 1;
         targetZoom = 1;
         Minecraft client = Minecraft.getInstance();
-        hudWasHidden = client.options.hideGui;
-        client.options.hideGui = false;
+        hudWasHidden = client.gui.hud.isHidden();
+        if (hudWasHidden) {
+            client.gui.hud.toggle();
+        }
         selfie = false;
         previousPerspective = client.options.getCameraType();
         client.options.setCameraType(CameraType.FIRST_PERSON);
@@ -108,7 +110,9 @@ public final class CameraMode {
         State phone = state;
         if (phone != null) {
             Minecraft client = Minecraft.getInstance();
-            client.options.hideGui = hudWasHidden;
+            if (client.gui.hud.isHidden() != hudWasHidden) {
+                client.gui.hud.toggle();
+            }
             if (previousPerspective != null) {
                 client.options.setCameraType(previousPerspective);
             }
@@ -180,18 +184,28 @@ public final class CameraMode {
         if (phone == null) {
             return;
         }
+        Screenshot.takeScreenshot(client.gameRenderer.mainRenderTarget(), screen -> {
+            try (screen) {
+                upload(client, phone, screen);
+            }
+        });
+    }
+
+    private static void upload(Minecraft client, State phone, NativeImage screen) {
         byte[] thumbnail;
         byte[] full;
-        try (NativeImage screen = Screenshot.takeScreenshot(client.getMainRenderTarget());
-             NativeImage big = new NativeImage(PhoneNetwork.FULL_WIDTH, PhoneNetwork.FULL_HEIGHT, false);
+        try (NativeImage big = new NativeImage(PhoneNetwork.FULL_WIDTH, PhoneNetwork.FULL_HEIGHT, false);
              NativeImage small = new NativeImage(PhoneNetwork.THUMB_WIDTH, PhoneNetwork.THUMB_HEIGHT, false)) {
             int[] crop = crop(screen.getWidth(), screen.getHeight());
             screen.resizeSubRectTo(crop[0], crop[1], crop[2], crop[3], big);
             screen.resizeSubRectTo(crop[0], crop[1], crop[2], crop[3], small);
-            thumbnail = small.asByteArray();
+            thumbnail = png(small);
             full = jpeg(big);
         } catch (IOException | RuntimeException e) {
             MCAVie.LOGGER.warn("Photo impossible", e);
+            return;
+        }
+        if (client.player == null) {
             return;
         }
         if (thumbnail.length > PhoneNetwork.MAX_THUMB_BYTES || full.length > PhoneNetwork.MAX_FULL_BYTES) {
@@ -217,6 +231,16 @@ public final class CameraMode {
         }
     }
 
+    private static byte[] png(NativeImage image) throws IOException {
+        java.nio.file.Path file = java.nio.file.Files.createTempFile("mca_vie_photo", ".png");
+        try {
+            image.writeToFile(file);
+            return java.nio.file.Files.readAllBytes(file);
+        } finally {
+            java.nio.file.Files.deleteIfExists(file);
+        }
+    }
+
     private static byte[] jpeg(NativeImage image) throws IOException {
         int width = image.getWidth();
         int height = image.getHeight();
@@ -224,8 +248,7 @@ public final class CameraMode {
         int[] pixels = new int[width * height];
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
-                int abgr = image.getPixelRGBA(x, y);
-                pixels[y * width + x] = (abgr & 0xFF) << 16 | (abgr & 0xFF00) | (abgr >> 16 & 0xFF);
+                pixels[y * width + x] = image.getPixel(x, y) & 0xFFFFFF;
             }
         }
         buffered.setRGB(0, 0, width, height, pixels, 0, width);

@@ -16,7 +16,7 @@ public abstract class CameraMouseMixin {
     @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
     private void mcavie$zoomScroll(long window, double horizontal, double vertical, CallbackInfo ci) {
         Minecraft client = Minecraft.getInstance();
-        if (CameraMode.active() && client.gui.screen() == null && window == client.getWindow().getWindow()) {
+        if (CameraMode.active() && client.gui.screen() == null && window == client.getWindow().handle()) {
             CameraMode.scroll(Math.signum(vertical));
             ci.cancel();
         }

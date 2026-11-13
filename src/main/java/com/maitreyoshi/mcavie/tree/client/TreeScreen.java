@@ -223,7 +223,6 @@ public class TreeScreen extends Screen {
 
     @Override
     public void tick() {
-        searchField.tick();
         if (searchDelay > 0 && --searchDelay == 0) {
             sendSearch();
         }
@@ -758,11 +757,11 @@ public class TreeScreen extends Screen {
 
     private void renderLayout(GuiGraphicsExtractor context, TreeLayout layout, int mouseX, int mouseY) {
         context.enableScissor(viewLeft(), viewTop(), viewRight(), viewBottom());
-        PoseStack matrices = context.pose();
-        matrices.pushPose();
-        matrices.translate(viewCenterX(), viewCenterY(), 0);
-        matrices.scale(zoom, zoom, 1);
-        matrices.translate(-camX, -camY, 0);
+        org.joml.Matrix3x2fStack matrices = context.pose();
+        matrices.pushMatrix();
+        matrices.translate((float) viewCenterX(), (float) viewCenterY());
+        matrices.scale((float) zoom, (float) zoom);
+        matrices.translate((float) -camX, (float) -camY);
 
         double x0 = worldX(viewLeft()) - 2;
         double x1 = worldX(viewRight()) + 2;
@@ -783,13 +782,7 @@ public class TreeScreen extends Screen {
         for (Mark mark : layout.marks) {
             if (mark.x() >= x0 && mark.x() <= x1 && mark.y() >= y0 && mark.y() <= y1) {
                 boolean past = "married_past".equals(mark.icon());
-                if (past) {
-                    RenderSystem.setShaderColor(0.55f, 0.55f, 0.55f, 1);
-                }
-                drawIcon(context, past ? "married" : mark.icon(), mark.x() - 5, mark.y() - 5, 10);
-                if (past) {
-                    RenderSystem.setShaderColor(1, 1, 1, 1);
-                }
+                drawIcon(context, past ? "married" : mark.icon(), mark.x() - 5, mark.y() - 5, 10, past ? 0xFF8C8C8C : 0xFFFFFFFF);
             }
         }
 
@@ -802,7 +795,7 @@ public class TreeScreen extends Screen {
             drawCard(context, card, card == hovered, text);
         }
 
-        matrices.popPose();
+        matrices.popMatrix();
         context.disableScissor();
     }
 
@@ -828,8 +821,12 @@ public class TreeScreen extends Screen {
     }
 
     private static void drawIcon(GuiGraphicsExtractor context, String key, int x, int y, int size) {
+        drawIcon(context, key, x, y, size, 0xFFFFFFFF);
+    }
+
+    private static void drawIcon(GuiGraphicsExtractor context, String key, int x, int y, int size, int color) {
         Icon icon = MCAScreens.getInstance().getIcon(key);
-        context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, InteractScreen.ICON_TEXTURES, x, y, icon.u(), icon.v(), size, size, 16, 16, 256, 256);
+        context.blit(net.minecraft.client.renderer.RenderPipelines.GUI_TEXTURED, InteractScreen.ICON_TEXTURES, x, y, icon.u(), icon.v(), size, size, 16, 16, 256, 256, color);
     }
 
     private void drawCard(GuiGraphicsExtractor context, Card card, boolean hovered, boolean text) {
@@ -1213,9 +1210,7 @@ public class TreeScreen extends Screen {
         }
 
         private void render(GuiGraphicsExtractor context, int mouseX, int mouseY) {
-            PoseStack matrices = context.pose();
-            matrices.pushPose();
-            matrices.translate(0, 0, 400);
+            context.nextStratum();
             context.fill(x, y + 1, x + w, y + h - 1, CARD_BG);
             context.fill(x + 1, y, x + w - 1, y + 1, CARD_BG);
             context.fill(x + 1, y + h - 1, x + w - 1, y + h, CARD_BG);
@@ -1228,7 +1223,6 @@ public class TreeScreen extends Screen {
                 }
                 context.text(font, lines.get(i), x + 6, y + 5 + i * LINE, color);
             }
-            matrices.popPose();
         }
     }
 }

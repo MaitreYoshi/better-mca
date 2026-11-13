@@ -11,7 +11,6 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.alchemy.PotionUtils;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -115,8 +114,8 @@ public class IllustratedPage extends Page {
         if (at < 0) {
             return new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(id)));
         }
-        ItemStack stack = new ItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(id.substring(0, at))));
-        return PotionUtils.setPotion(stack, BuiltInRegistries.POTION.get(Identifier.parse(id.substring(at + 1))));
+        return net.minecraft.world.item.alchemy.PotionContents.createItemStack(BuiltInRegistries.ITEM.getValue(Identifier.parse(id.substring(0, at))),
+                BuiltInRegistries.POTION.get(Identifier.parse(id.substring(at + 1))).orElseThrow());
     }
 
     @Override

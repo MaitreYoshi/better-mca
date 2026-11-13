@@ -68,13 +68,13 @@ public final class EmployeeLooks {
     @Nullable
     private static VillagerEntityMCA build(ClientLevel world, CompoundTag look) {
         try {
-            VillagerEntityMCA villager = EntitiesMCA.MALE_VILLAGER.create(world);
+            VillagerEntityMCA villager = EntitiesMCA.MALE_VILLAGER.create(world, net.minecraft.world.entity.EntitySpawnReason.LOAD);
             if (villager == null) {
                 return null;
             }
             villager.getTypeDataManager().load(villager, look);
             if (villager.getGenetics().getGender() == Gender.FEMALE) {
-                VillagerEntityMCA female = EntitiesMCA.FEMALE_VILLAGER.create(world);
+                VillagerEntityMCA female = EntitiesMCA.FEMALE_VILLAGER.create(world, net.minecraft.world.entity.EntitySpawnReason.LOAD);
                 if (female != null) {
                     female.getTypeDataManager().load(female, look);
                     villager = female;
@@ -92,35 +92,14 @@ public final class EmployeeLooks {
     public static void drawBody(GuiGraphicsExtractor context, LivingEntity entity, int x, int y, int w, int h, int mouseX, int mouseY) {
         float height = Math.max(0.5f, entity.getBbHeight());
         int size = Math.max(1, Math.round((h - 8) / height));
-        int cx = x + w / 2;
-        int feet = y + h - 4;
         entity.tickCount = (int) (System.currentTimeMillis() / 50L);
-        InventoryScreen.renderEntityInInventoryFollowsMouse(context, cx, feet, size, cx - mouseX, feet - Math.round(height * size * 0.85f) - mouseY, entity);
+        InventoryScreen.extractEntityInInventoryFollowsMouse(context, x, y, x + w, y + h, size, 0.0625f, mouseX, mouseY, entity);
     }
 
     // tête seule, de face, dans un carré (le rognage est à la charge de l'appelant)
     public static void drawHead(GuiGraphicsExtractor context, LivingEntity entity, int x, int y, int box) {
         float height = Math.max(0.5f, entity.getBbHeight());
         int scale = Math.max(1, Math.round(box / (height * 0.25f)));
-        float bodyYaw = entity.yBodyRot;
-        float yaw = entity.getYRot();
-        float pitch = entity.getXRot();
-        float headYaw = entity.yHeadRot;
-        float prevHeadYaw = entity.yHeadRotO;
-        entity.yBodyRot = 180;
-        entity.setYRot(180);
-        entity.setXRot(0);
-        entity.yHeadRot = 180;
-        entity.yHeadRotO = 180;
-        try {
-            InventoryScreen.renderEntityInInventory(context, x + box / 2, y + Math.round(height * scale) - Math.round(box * 0.05f), scale,
-                    new Quaternionf().rotateZ((float) Math.PI), new Quaternionf(), entity);
-        } finally {
-            entity.yBodyRot = bodyYaw;
-            entity.setYRot(yaw);
-            entity.setXRot(pitch);
-            entity.yHeadRot = headYaw;
-            entity.yHeadRotO = prevHeadYaw;
-        }
+        com.maitreyoshi.mcavie.compat.client.GuiEntity.head(context, entity, x, y, x + box, y + box, scale);
     }
 }

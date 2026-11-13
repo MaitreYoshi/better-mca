@@ -114,8 +114,11 @@ public final class PhonePhotos {
         try {
             NativeImage image = jpeg ? decodeJpeg(data) : NativeImage.read(data);
             Identifier texture = MCAVie.id("phone_photo/" + id + (full ? "_full" : "_thumb"));
-            DynamicTexture backed = new DynamicTexture(image);
-            backed.setFilter(true, false);
+            DynamicTexture backed = new DynamicTexture(texture::toString, image) {
+                {
+                    sampler = com.mojang.blaze3d.systems.RenderSystem.getSamplerCache().getClampToEdge(com.mojang.blaze3d.textures.FilterMode.LINEAR);
+                }
+            };
             Minecraft.getInstance().getTextureManager().register(texture, backed);
             PICTURES.put(key, new Picture(texture, image.getWidth(), image.getHeight()));
         } catch (IOException | RuntimeException e) {
@@ -135,7 +138,7 @@ public final class PhonePhotos {
         for (int y = 0; y < height; y++) {
             for (int x = 0; x < width; x++) {
                 int rgb = pixels[y * width + x];
-                image.setPixelRGBA(x, y, 0xFF000000 | (rgb & 0xFF) << 16 | (rgb & 0xFF00) | (rgb >> 16 & 0xFF));
+                image.setPixel(x, y, 0xFF000000 | rgb);
             }
         }
         return image;

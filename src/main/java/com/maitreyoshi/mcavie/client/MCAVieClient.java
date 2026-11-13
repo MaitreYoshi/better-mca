@@ -21,8 +21,6 @@ public final class MCAVieClient {
     }
 
     public static void init() {
-        dev.architectury.registry.client.rendering.RenderTypeRegistry.register(net.minecraft.client.renderer.RenderType.cutout(),
-                com.maitreyoshi.mcavie.work.block.WorkBlocks.all().toArray(new net.minecraft.world.level.block.Block[0]));
         CalendarHud.register();
         TreeClient.register();
         WorkClient.register();

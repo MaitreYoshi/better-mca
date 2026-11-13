@@ -24,9 +24,9 @@ public abstract class CreateWorldGameTabMixin extends GridLayoutTab {
     @Inject(method = "<init>", at = @At("TAIL"))
     private void mcavie$addTimeSpeed(CreateWorldScreen screen, CallbackInfo ci) {
         WorldCreationUiState creator = screen.getUiState();
-        CycleButton<TimeSpeed> button = CycleButton.<TimeSpeed>builder(speed -> Component.translatable("gamerule.mcaVieTimeSpeed." + speed.name().toLowerCase(Locale.ROOT)))
+        CycleButton<TimeSpeed> button = CycleButton.<TimeSpeed>builder(speed -> Component.translatable("gamerule.mcaVieTimeSpeed." + speed.name().toLowerCase(Locale.ROOT)),
+                        WorldCalendar.TIME_SPEED.get(creator.getGameRules()))
                 .withValues(TimeSpeed.values())
-                .withInitialValue(WorldCalendar.TIME_SPEED.get(creator.getGameRules()))
                 .withTooltip(speed -> Tooltip.create(Component.translatable("gamerule.mcaVieTimeSpeed.description")))
                 .create(0, 0, 210, 20, Component.translatable("gamerule.mcaVieTimeSpeed"),
                         (widget, speed) -> WorldCalendar.TIME_SPEED.set(creator.getGameRules(), speed, null));

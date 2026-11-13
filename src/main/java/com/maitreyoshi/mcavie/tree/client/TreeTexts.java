@@ -58,7 +58,7 @@ public final class TreeTexts {
             case "cousin" -> key = PREFIX + "rel.cousin." + Math.min(3, Math.max(1, info.count())) + "." + gen;
             default -> key = PREFIX + "rel." + code + "." + gen;
         }
-        if (!I18n.exists(key)) {
+        if (!net.minecraft.locale.Language.getInstance().has(key)) {
             key = PREFIX + "rel.distant_relative." + gen;
         }
         String label = I18n.get(key);
@@ -159,9 +159,9 @@ public final class TreeTexts {
         String key = person.professionKey();
         if (key != null && key.startsWith(WorkRegistry.RETIRED_PREFIX)) {
             String former = key.substring(WorkRegistry.RETIRED_PREFIX.length());
-            return I18n.exists(former) ? I18n.get("job.mca_vie.retired_as", I18n.get(former)) : I18n.get("job.mca_vie.retired");
+            return net.minecraft.locale.Language.getInstance().has(former) ? I18n.get("job.mca_vie.retired_as", I18n.get(former)) : I18n.get("job.mca_vie.retired");
         }
-        if (key == null || key.isBlank() || !I18n.exists(key)) {
+        if (key == null || key.isBlank() || !net.minecraft.locale.Language.getInstance().has(key)) {
             return "";
         }
         return I18n.get(key);
