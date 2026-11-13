@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.life.client;
 
+import com.maitreyoshi.mcavie.compat.client.SimpleBlockEntityRenderer;
+import com.maitreyoshi.mcavie.compat.client.Buffers;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import com.maitreyoshi.mcavie.life.MemorialBlock;
@@ -9,7 +11,6 @@ import com.maitreyoshi.mcavie.life.TombstoneBlocks;
 import com.maitreyoshi.mcavie.life.TombstoneDetails;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.architectury.registry.client.rendering.BlockEntityRendererRegistry;
-import dev.architectury.registry.client.rendering.RenderTypeRegistry;
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 
@@ -24,7 +25,6 @@ import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.renderer.LevelRenderer;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.core.BlockPos;
@@ -45,7 +45,6 @@ public final class MemorialClient {
     }
 
     public static void register() {
-        RenderTypeRegistry.register(RenderType.cutout(), TombstoneBlocks.MEMORIAL);
         BlockEntityRendererRegistry.register(TombstoneBlocks.MEMORIAL_ENTITY, context -> new Renderer());
         ClientPlayNetworking.registerGlobalReceiver(MemorialBlock.EDIT_OPEN, (client, handler, buf, responseSender) -> {
             BlockPos pos = buf.readBlockPos();
@@ -75,9 +74,9 @@ public final class MemorialClient {
                 : Component.translatable("block.mca_vie.war_memorial.inscription", memorial.villageName());
     }
 
-    private static final class Renderer implements BlockEntityRenderer<MemorialBlockEntity> {
+    private static final class Renderer extends SimpleBlockEntityRenderer<MemorialBlockEntity> {
         @Override
-        public boolean shouldRenderOffScreen(MemorialBlockEntity entity) {
+        public boolean shouldRenderOffScreen() {
             return true;
         }
 
@@ -87,7 +86,7 @@ public final class MemorialClient {
         }
 
         @Override
-        public void render(MemorialBlockEntity memorial, float tickDelta, PoseStack matrices, MultiBufferSource consumers, int light, int overlay) {
+        protected void render(MemorialBlockEntity memorial, float tickDelta, PoseStack matrices, Buffers consumers, int light, int overlay) {
             Level world = memorial.getLevel();
             if (world == null) {
                 return;
@@ -98,13 +97,13 @@ public final class MemorialClient {
             BlockPos pos = memorial.getBlockPos();
             Font text = Minecraft.getInstance().font;
             matrices.pushPose();
-            matrices.mulPoseMatrix(new Matrix4f(
+            matrices.mulPose(new Matrix4f(
                     back.getStepX() / 16f, 0, back.getStepZ() / 16f, 0,
                     0, 1 / 16f, 0, 0,
                     left.getStepX() / 16f, 0, left.getStepZ() / 16f, 0,
                     0.5f - 0.5f * back.getStepX() - 0.5f * left.getStepX(), 0, 0.5f - 0.5f * back.getStepZ() - 0.5f * left.getStepZ(), 1));
 
-            int frontLight = LevelRenderer.getLightColor(world, pos.relative(facing, 2).above(3));
+            int frontLight = com.maitreyoshi.mcavie.compat.client.Buffers.light(world, pos.relative(facing, 2).above(3));
             face(matrices, new Vector3f(1.13f, 84, 2.5f), new Vector3f(0, 0, 1), new Vector3f(1, 0, 0));
             block(inscription(memorial), 110, 104, 1.6f, text, matrices, consumers, frontLight);
             matrices.popPose();
@@ -119,12 +118,12 @@ public final class MemorialClient {
             List<MemorialRegistry.Fallen> shown = all.subList(start, Math.min(all.size(), start + 2 * PER_PLAQUE));
             face(matrices, new Vector3f(-3, 36, 22.52f), new Vector3f(1, 0, 0), new Vector3f(0, 0, -1));
             names(shown.subList(0, Math.min(PER_PLAQUE, shown.size())), text, matrices, consumers,
-                    LevelRenderer.getLightColor(world, pos.relative(left, 2).above()));
+                    com.maitreyoshi.mcavie.compat.client.Buffers.light(world, pos.relative(left, 2).above()));
             matrices.popPose();
             if (shown.size() > PER_PLAQUE) {
                 face(matrices, new Vector3f(19, 36, -6.52f), new Vector3f(-1, 0, 0), new Vector3f(0, 0, 1));
                 names(shown.subList(PER_PLAQUE, shown.size()), text, matrices, consumers,
-                        LevelRenderer.getLightColor(world, pos.relative(left.getOpposite(), 2).above()));
+                        com.maitreyoshi.mcavie.compat.client.Buffers.light(world, pos.relative(left.getOpposite(), 2).above()));
                 matrices.popPose();
             }
             matrices.popPose();
@@ -133,7 +132,7 @@ public final class MemorialClient {
 
     private static void face(PoseStack matrices, Vector3f origin, Vector3f right, Vector3f inward) {
         matrices.pushPose();
-        matrices.mulPoseMatrix(new Matrix4f(
+        matrices.mulPose(new Matrix4f(
                 right.x, right.y, right.z, 0,
                 0, -1, 0, 0,
                 inward.x, inward.y, inward.z, 0,
@@ -142,7 +141,7 @@ public final class MemorialClient {
     }
 
     private static void block(Component content, float width, float height, float maxScale, Font text, PoseStack matrices,
-                              MultiBufferSource consumers, int light) {
+                              Buffers consumers, int light) {
         float scale = maxScale;
         List<FormattedCharSequence> lines = text.split(content, (int) (width / scale));
         while (scale > 0.4f && lines.size() * 10 * scale > height) {
@@ -154,14 +153,13 @@ public final class MemorialClient {
             matrices.pushPose();
             matrices.translate(width / 2, y, 0);
             matrices.scale(scale, scale, scale);
-            text.drawInBatch(line, -text.width(line) / 2f, 0, ENGRAVED, false, matrices.last().pose(), consumers,
-                    Font.DisplayMode.NORMAL, 0, light);
+            consumers.text(line, -text.width(line) / 2f, 0, ENGRAVED, false, Font.DisplayMode.NORMAL, 0, light);
             matrices.popPose();
             y += 10 * scale;
         }
     }
 
-    private static void names(List<MemorialRegistry.Fallen> list, Font text, PoseStack matrices, MultiBufferSource consumers, int light) {
+    private static void names(List<MemorialRegistry.Fallen> list, Font text, PoseStack matrices, Buffers consumers, int light) {
         float margin = 16;
         float row = (255 - 2 * margin) / PER_PLAQUE;
         for (int i = 0; i < list.size(); i++) {
@@ -179,7 +177,7 @@ public final class MemorialClient {
             matrices.pushPose();
             matrices.translate(margin + 20, top + (row - 8 * scale) / 2, 0);
             matrices.scale(scale, scale, scale);
-            text.drawInBatch8xOutline(line.getVisualOrderText(), 0, 0, NAME_COLOR, OUTLINE, matrices.last().pose(), consumers, light);
+            consumers.outlined(line.getVisualOrderText(), 0, 0, NAME_COLOR, OUTLINE, light);
             matrices.popPose();
         }
     }
@@ -282,7 +280,7 @@ public final class MemorialClient {
                 MemorialRegistry.Fallen entry = all.get(all.size() - 1 - i);
                 TombstoneDetails details = entry.details();
                 context.text(font, Component.literal(name(details)).withStyle(ChatFormatting.WHITE), x, y, 0xFFFFFF);
-                Component killer = Component.Serializer.fromJson(entry.killer());
+                Component killer = com.maitreyoshi.mcavie.compat.Nbt.parseText(entry.killer());
                 Component info = Component.literal(TombstoneClient.lives(details) + "  ")
                         .append(Component.translatable("gui.mca_vie.war_memorial.killed_by", killer == null ? Component.literal("?") : killer));
                 context.text(font, info, x + 8, y + 10, 0xA0A0A0);

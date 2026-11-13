@@ -8,7 +8,10 @@ import com.mojang.math.Axis;
 import net.conczin.mca.block.TombstoneBlock;
 import net.conczin.mca.client.render.TombstoneBlockEntityRenderer;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.MultiBufferSource;
+import com.maitreyoshi.mcavie.compat.client.Buffers;
+import net.conczin.mca.client.render.TombstoneBlockEntityRenderState;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -26,10 +29,15 @@ public abstract class TombstoneRendererMixin {
     @Final
     private Font text;
 
-    @Inject(method = "render(Lnet/mca/block/TombstoneBlock$Data;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;II)V",
-            at = @At("HEAD"), cancellable = true)
-    private void mcavie$renderDetails(TombstoneBlock.Data entity, float tickDelta, PoseStack matrices, MultiBufferSource consumers,
-                                      int light, int overlay, CallbackInfo ci) {
+    @Inject(method = "submit", at = @At("HEAD"), cancellable = true)
+    private void mcavie$renderDetails(TombstoneBlockEntityRenderState renderState, PoseStack matrices, SubmitNodeCollector collector,
+                                      CameraRenderState camera, CallbackInfo ci) {
+        TombstoneBlock.Data entity = renderState.data;
+        if (entity == null) {
+            return;
+        }
+        int light = renderState.lightCoords;
+        Buffers consumers = new Buffers(collector, matrices);
         TombstoneDetails details = ((TombstoneDetails.Holder) entity).mcavie$details();
         BlockState state = entity.getBlockState();
         if (state.getBlock() instanceof com.maitreyoshi.mcavie.life.VaultBlock) {

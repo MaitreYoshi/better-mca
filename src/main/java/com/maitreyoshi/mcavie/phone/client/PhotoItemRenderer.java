@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.phone.client;
 
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.phone.PhotoItem;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -29,12 +30,12 @@ public final class PhotoItemRenderer implements BuiltinItemRendererRegistry.Dyna
         Matrix4f position = entry.pose();
         Matrix3f normal = entry.normal();
         if (picture == null) {
-            quad(consumers.getBuffer(RenderType.entityCutoutNoCull(PAPER)), position, normal, 0, bottom, 1, bottom + CARD_HEIGHT, 0.5f,
+            quad(consumers.getBuffer(RenderTypes.entityCutoutNoCull(PAPER)), position, normal, 0, bottom, 1, bottom + CARD_HEIGHT, 0.5f,
                     0, 0, 1, 1, light, overlay);
             return;
         }
         float[] uv = cover(picture, 1 / CARD_HEIGHT);
-        quad(consumers.getBuffer(RenderType.entityCutoutNoCull(picture.texture())), position, normal, 0, bottom, 1, bottom + CARD_HEIGHT, 0.5f,
+        quad(consumers.getBuffer(RenderTypes.entityCutoutNoCull(picture.texture())), position, normal, 0, bottom, 1, bottom + CARD_HEIGHT, 0.5f,
                 uv[0], uv[1], uv[2], uv[3], light, overlay);
     }
 
@@ -63,19 +64,19 @@ public final class PhotoItemRenderer implements BuiltinItemRendererRegistry.Dyna
         UUID photo = PhotoItem.photoOf(stack);
         PhonePhotos.Picture picture = photo == null ? null : PhonePhotos.print(photo, true);
         if (picture == null) {
-            mapQuad(consumers.getBuffer(RenderType.text(PAPER)), position, x0, y0, x1, y1, 0, 0, 0, 1, 1, light);
+            mapQuad(consumers.getBuffer(RenderTypes.text(PAPER)), position, x0, y0, x1, y1, 0, 0, 0, 1, 1, light);
             return;
         }
         float[] uv = cover(picture, 1 / CARD_HEIGHT);
-        mapQuad(consumers.getBuffer(RenderType.text(picture.texture())), position, x0, y0, x1, y1, 0, uv[0], uv[1], uv[2], uv[3], light);
+        mapQuad(consumers.getBuffer(RenderTypes.text(picture.texture())), position, x0, y0, x1, y1, 0, uv[0], uv[1], uv[2], uv[3], light);
     }
 
     private static void mapQuad(VertexConsumer buffer, Matrix4f position, float x0, float y0, float x1, float y1, float z,
                                 float u0, float v0, float u1, float v1, int light) {
-        buffer.addVertex(position, x0, y1, z).color(255, 255, 255, 255).uv(u0, v1).uv2(light).endVertex();
-        buffer.addVertex(position, x1, y1, z).color(255, 255, 255, 255).uv(u1, v1).uv2(light).endVertex();
-        buffer.addVertex(position, x1, y0, z).color(255, 255, 255, 255).uv(u1, v0).uv2(light).endVertex();
-        buffer.addVertex(position, x0, y0, z).color(255, 255, 255, 255).uv(u0, v0).uv2(light).endVertex();
+        buffer.addVertex(position, x0, y1, z).setColor(255, 255, 255, 255).setUv(u0, v1).setLight(light);
+        buffer.addVertex(position, x1, y1, z).setColor(255, 255, 255, 255).setUv(u1, v1).setLight(light);
+        buffer.addVertex(position, x1, y0, z).setColor(255, 255, 255, 255).setUv(u1, v0).setLight(light);
+        buffer.addVertex(position, x0, y0, z).setColor(255, 255, 255, 255).setUv(u0, v0).setLight(light);
     }
 
     private static void quad(VertexConsumer buffer, Matrix4f position, Matrix3f normal, float x0, float y0, float x1, float y1, float z,
@@ -87,6 +88,6 @@ public final class PhotoItemRenderer implements BuiltinItemRendererRegistry.Dyna
     }
 
     private static void vertex(VertexConsumer buffer, Matrix4f position, Matrix3f normal, float x, float y, float z, float u, float v, int light, int overlay) {
-        buffer.addVertex(position, x, y, z).color(255, 255, 255, 255).uv(u, v).overlayCoords(overlay).uv2(light).normal(normal, 0, 0, 1).endVertex();
+        buffer.addVertex(position, x, y, z).setColor(255, 255, 255, 255).setUv(u, v).setOverlay(overlay).setLight(light).setNormal(0, 0, 1);
     }
 }

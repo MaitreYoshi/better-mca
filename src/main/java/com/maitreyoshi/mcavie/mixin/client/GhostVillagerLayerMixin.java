@@ -16,4 +16,11 @@ public abstract class GhostVillagerLayerMixin {
             cir.setReturnValue(true);
         }
     }
+
+    @org.spongepowered.asm.mixin.injection.ModifyArg(method = "renderModel", at = @At(value = "INVOKE",
+            target = "Lnet/minecraft/client/renderer/SubmitNodeCollector;submitModel(Lnet/minecraft/client/model/Model;Ljava/lang/Object;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/rendertype/RenderType;IIILnet/minecraft/client/renderer/texture/TextureAtlasSprite;ILnet/minecraft/client/renderer/feature/ModelFeatureRenderer$CrumblingOverlay;)V"),
+            index = 6)
+    private int mcavie$paleColor(int color) {
+        return GhostRenderer.active ? GhostRenderer.pale(color) : color;
+    }
 }

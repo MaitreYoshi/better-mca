@@ -1,12 +1,14 @@
 package com.maitreyoshi.mcavie.life.client;
 
+import net.minecraft.util.LightCoordsUtil;
 import com.maitreyoshi.mcavie.life.GhostEntity;
 import com.maitreyoshi.mcavie.mixin.client.LimbAnimatorAccessor;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.SubmitNodeCollector;
+import net.minecraft.client.renderer.entity.state.EntityRenderState;
+import net.minecraft.client.renderer.state.level.CameraRenderState;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.entity.EntityRenderer;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
@@ -20,10 +22,16 @@ import net.minecraft.world.inventory.InventoryMenu;
 import net.minecraft.world.item.ItemStack;
 
 /** Dessine le fantôme avec le rendu MCA du défunt, blanchâtre et translucide. */
-public class GhostRenderer extends EntityRenderer<GhostEntity> {
-    /** Lu par le mixin de VillagerLayer : les couches MCA passent en translucide. */
+public class GhostRenderer extends EntityRenderer<GhostEntity, GhostRenderer.State> {
+    /** Lus par le mixin de VillagerLayer : les couches MCA passent en translucide et pâlissent. */
     public static boolean active;
+    public static float alpha = 0.45f;
     private static final float ALPHA = 0.45f;
+
+    public static class State extends EntityRenderState {
+        GhostEntity ghost;
+        float tickDelta;
+    }
 
     public GhostRenderer(EntityRendererProvider.Context context) {
         super(context);
@@ -31,8 +39,15 @@ public class GhostRenderer extends EntityRenderer<GhostEntity> {
     }
 
     @Override
-    public Identifier getTextureLocation(GhostEntity entity) {
-        return InventoryMenu.BLOCK_ATLAS;
+    public State createRenderState() {
+        return new State();
+    }
+
+    @Override
+    public void extractRenderState(GhostEntity ghost, State state, float tickDelta) {
+        super.extractRenderState(ghost, state, tickDelta);
+        state.ghost = ghost;
+        state.tickDelta = tickDelta;
     }
 
     private static LivingEntity body(GhostEntity ghost) {
@@ -47,7 +62,7 @@ public class GhostRenderer extends EntityRenderer<GhostEntity> {
         ghost.clientBody = null;
         CompoundTag nbt = look.copy();
         nbt.remove("isPanicking"); // mort en panique : le fantôme revient apaisé
-        Entity entity = EntityType.create(nbt, ghost.level()).orElse(null);
+        Entity entity = EntityType.create(com.maitreyoshi.mcavie.compat.Nbt.input(nbt, ghost.registryAccess()), ghost.level(), new net.minecraft.world.entity.EntitySpawnRequest(net.minecraft.world.entity.EntitySpawnReason.LOAD, false)).orElse(null);
         if (entity instanceof LivingEntity body) {
             for (EquipmentSlot slot : EquipmentSlot.values()) {
                 body.setItemSlot(slot, ItemStack.EMPTY);
@@ -85,16 +100,17 @@ public class GhostRenderer extends EntityRenderer<GhostEntity> {
     }
 
     @Override
-    public void render(GhostEntity ghost, float yaw, float tickDelta, PoseStack matrices, MultiBufferSource consumers, int light) {
-        LivingEntity body = body(ghost);
+    public void submit(State state, PoseStack matrices, SubmitNodeCollector collector, CameraRenderState camera) {
+        GhostEntity ghost = state.ghost;
+        LivingEntity body = ghost == null ? null : body(ghost);
         if (body == null) {
             return;
         }
         sync(ghost, body);
+        alpha = ALPHA * Math.min(1f, (ghost.tickCount + state.tickDelta) / 30f);
         active = true;
         try {
-            Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(body)
-                    .render(body, yaw, tickDelta, matrices, new Ghostly(consumers, ALPHA * Math.min(1f, (ghost.tickCount + tickDelta) / 30f)), LightTexture.FULL_BRIGHT);
+            submitBody(Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(body), body, state.tickDelta, matrices, collector, camera);
         } catch (RuntimeException e) {
             ghost.clientBody = null;
         } finally {
@@ -102,75 +118,23 @@ public class GhostRenderer extends EntityRenderer<GhostEntity> {
         }
     }
 
-    private record Ghostly(MultiBufferSource inner, float alpha) implements MultiBufferSource {
-        @Override
-        public VertexConsumer getBuffer(RenderType layer) {
-            return new Pale(inner.getBuffer(layer), alpha);
-        }
+    private static <S extends EntityRenderState> void submitBody(EntityRenderer<? super LivingEntity, S> renderer, LivingEntity body, float tickDelta,
+                                                                PoseStack matrices, SubmitNodeCollector collector, CameraRenderState camera) {
+        S bodyState = renderer.createRenderState(body, tickDelta);
+        bodyState.lightCoords = LightCoordsUtil.FULL_BRIGHT;
+        renderer.submit(bodyState, matrices, collector, camera);
     }
 
-    /** Couleurs tirées vers un blanc bleuté, alpha réduit. */
-    private record Pale(VertexConsumer delegate, float alpha) implements VertexConsumer {
-        private static int pale(int c, int extra) {
-            return Math.min(255, 140 + c * 115 / 255 + extra);
-        }
+    /** Couleur ARVB tirée vers un blanc bleuté, avec l'alpha du fantôme. */
+    public static int pale(int color) {
+        int r = color >> 16 & 0xFF;
+        int g = color >> 8 & 0xFF;
+        int b = color & 0xFF;
+        int a = (int) (255 * alpha);
+        return a << 24 | pale(r, 0) << 16 | pale(g, 5) << 8 | pale(b, 20);
+    }
 
-        @Override
-        public VertexConsumer vertex(double x, double y, double z) {
-            delegate.addVertex(x, y, z);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer color(int red, int green, int blue, int alpha) {
-            delegate.color(pale(red, 0), pale(green, 5), pale(blue, 20), (int) (alpha * this.alpha));
-            return this;
-        }
-
-        @Override
-        public VertexConsumer uv(float u, float v) {
-            delegate.uv(u, v);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer overlayCoords(int u, int v) {
-            delegate.overlayCoords(u, v);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer uv2(int u, int v) {
-            delegate.uv2(u, v);
-            return this;
-        }
-
-        @Override
-        public VertexConsumer normal(float x, float y, float z) {
-            delegate.normal(x, y, z);
-            return this;
-        }
-
-        @Override
-        public void endVertex() {
-            delegate.endVertex();
-        }
-
-        @Override
-        public void defaultColor(int red, int green, int blue, int alpha) {
-            delegate.defaultColor(pale(red, 0), pale(green, 5), pale(blue, 20), (int) (alpha * this.alpha));
-        }
-
-        @Override
-        public void unsetDefaultColor() {
-            delegate.unsetDefaultColor();
-        }
-
-        @Override
-        public void vertex(float x, float y, float z, float red, float green, float blue, float alpha, float u, float v, int overlay, int light,
-                           float normalX, float normalY, float normalZ) {
-            delegate.addVertex(x, y, z, pale((int) (red * 255), 0) / 255f, pale((int) (green * 255), 5) / 255f, pale((int) (blue * 255), 20) / 255f,
-                    alpha * this.alpha, u, v, overlay, light, normalX, normalY, normalZ);
-        }
+    private static int pale(int c, int extra) {
+        return Math.min(255, 140 + c * 115 / 255 + extra);
     }
 }

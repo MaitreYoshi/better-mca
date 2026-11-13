@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.phone.client;
 
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.phone.PhotoFrameEntity;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -43,11 +44,11 @@ public class PhotoFrameRenderer extends EntityRenderer<PhotoFrameEntity> {
         UUID photo = entity.photo();
         PhonePhotos.Picture picture = photo == null ? null : PhonePhotos.print(photo, true);
         if (picture == null) {
-            quad(consumers.getBuffer(RenderType.entitySolid(PAPER)), entry.pose(), entry.normal(),
+            quad(consumers.getBuffer(RenderTypes.entitySolid(PAPER)), entry.pose(), entry.normal(),
                     w / 2, h / 2, 0, 0, 0, 1, 1, light);
         } else {
             float[] uv = PhotoItemRenderer.cover(picture, w / h);
-            quad(consumers.getBuffer(RenderType.entitySolid(picture.texture())), entry.pose(), entry.normal(),
+            quad(consumers.getBuffer(RenderTypes.entitySolid(picture.texture())), entry.pose(), entry.normal(),
                     w / 2, h / 2, 0, uv[0], uv[1], uv[2], uv[3], light);
         }
         matrices.popPose();
@@ -63,8 +64,8 @@ public class PhotoFrameRenderer extends EntityRenderer<PhotoFrameEntity> {
     }
 
     private static void vertex(VertexConsumer buffer, Matrix4f position, Matrix3f normal, float x, float y, float z, float u, float v, int light) {
-        buffer.addVertex(position, x, y, z).color(255, 255, 255, 255).uv(u, v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light)
-                .normal(normal, 0, 0, -1).endVertex();
+        buffer.addVertex(position, x, y, z).setColor(255, 255, 255, 255).setUv(u, v).setOverlay(OverlayTexture.NO_OVERLAY).setLight(light)
+                .setNormal(0, 0, -1);
     }
 
     @Override

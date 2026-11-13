@@ -1,5 +1,8 @@
 package com.maitreyoshi.mcavie.life.client;
 
+import com.maitreyoshi.mcavie.compat.client.SimpleBlockEntityRenderer;
+import com.maitreyoshi.mcavie.compat.client.Buffers;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.input.MouseButtonEvent;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
@@ -12,7 +15,6 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import dev.architectury.registry.client.level.entity.EntityRendererRegistry;
 import dev.architectury.registry.client.rendering.BlockEntityRendererRegistry;
-import dev.architectury.registry.client.rendering.RenderTypeRegistry;
 import org.jetbrains.annotations.Nullable;
 import org.joml.Matrix4f;
 
@@ -22,7 +24,6 @@ import java.util.UUID;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.core.BlockPos;
@@ -40,7 +41,6 @@ public final class GhostAltarClient {
     }
 
     public static void register() {
-        RenderTypeRegistry.register(RenderType.cutout(), TombstoneBlocks.GHOST_ALTAR);
         BlockEntityRendererRegistry.register(TombstoneBlocks.GHOST_ALTAR_ENTITY, context -> new Renderer());
         EntityRendererRegistry.register(() -> TombstoneBlocks.GHOST, GhostRenderer::new);
         ClientPlayNetworking.registerGlobalReceiver(Ghosts.OPEN, (client, handler, buf, responseSender) -> {
@@ -56,9 +56,9 @@ public final class GhostAltarClient {
         });
     }
 
-    private static final class Renderer implements BlockEntityRenderer<GhostAltarBlockEntity> {
+    private static final class Renderer extends SimpleBlockEntityRenderer<GhostAltarBlockEntity> {
         @Override
-        public void render(GhostAltarBlockEntity altar, float tickDelta, PoseStack matrices, MultiBufferSource consumers, int light, int overlay) {
+        protected void render(GhostAltarBlockEntity altar, float tickDelta, PoseStack matrices, Buffers consumers, int light, int overlay) {
             UUID person = altar.person();
             UUID image = person == null ? null : TombstoneClient.portrait(person);
             PhonePhotos.Picture picture = image == null ? null : PhonePhotos.portrait(image);
@@ -75,19 +75,19 @@ public final class GhostAltarClient {
             float du = target < ratio ? target / ratio : 1;
             float dv = target < ratio ? 1 : ratio / target;
             float u0 = 0.5f - du / 2, u1 = 0.5f + du / 2, v0 = 0.5f - dv / 2, v1 = 0.5f + dv / 2;
-            Matrix4f m = matrices.last().pose();
-            VertexConsumer buffer = consumers.getBuffer(RenderType.text(picture.texture()));
             float z = Z / 16;
             // vu depuis le nord, la gauche de l'image est du côté x+
-            vertex(buffer, m, X1 / 16, Y1 / 16, z, u0, v0, light);
-            vertex(buffer, m, X1 / 16, Y0 / 16, z, u0, v1, light);
-            vertex(buffer, m, X0 / 16, Y0 / 16, z, u1, v1, light);
-            vertex(buffer, m, X0 / 16, Y1 / 16, z, u1, v0, light);
+            consumers.draw(RenderTypes.text(picture.texture()), (buffer, m) -> {
+                vertex(buffer, m, X1 / 16, Y1 / 16, z, u0, v0, light);
+                vertex(buffer, m, X1 / 16, Y0 / 16, z, u0, v1, light);
+                vertex(buffer, m, X0 / 16, Y0 / 16, z, u1, v1, light);
+                vertex(buffer, m, X0 / 16, Y1 / 16, z, u1, v0, light);
+            });
             matrices.popPose();
         }
 
         private static void vertex(VertexConsumer buffer, Matrix4f m, float x, float y, float z, float u, float v, int light) {
-            buffer.addVertex(m, x, y, z).color(235, 225, 205, 255).uv(u, v).uv2(light).endVertex();
+            buffer.addVertex(m, x, y, z).setColor(235, 225, 205, 255).setUv(u, v).setLight(light);
         }
     }
 

@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.life.client;
 
+import net.minecraft.util.LightCoordsUtil;
+import net.minecraft.client.renderer.rendertype.RenderTypes;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.life.TombstoneBlocks;
 import com.maitreyoshi.mcavie.life.TombstoneDetails;
@@ -8,15 +10,13 @@ import com.maitreyoshi.mcavie.phone.client.PhonePhotos;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
-import dev.architectury.registry.client.rendering.RenderTypeRegistry;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import net.conczin.mca.block.TombstoneBlock;
 import net.minecraft.util.Util;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.renderer.LightTexture;
-import net.minecraft.client.renderer.MultiBufferSource;
+import com.maitreyoshi.mcavie.compat.client.Buffers;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.core.Direction;
 import net.minecraft.network.FriendlyByteBuf;
@@ -54,7 +54,6 @@ public final class TombstoneClient {
     }
 
     public static void register() {
-        RenderTypeRegistry.register(RenderType.cutout(), TombstoneBlocks.WOODEN_CROSS, TombstoneBlocks.STELE, TombstoneBlocks.MARBLE);
         ClientPlayNetworking.registerGlobalReceiver(TombstonePortraits.RESULT, (client, handler, buf, responseSender) -> {
             UUID person = buf.readUUID();
             UUID image = buf.readBoolean() ? buf.readUUID() : null;
@@ -107,12 +106,12 @@ public final class TombstoneClient {
     }
 
     public static void render(TombstoneDetails details, TombstoneBlock block, Font text, PoseStack matrices,
-                              MultiBufferSource consumers, int light) {
+                              Buffers consumers, int light) {
         layout(details, TombstoneModels.Look.MCA, block.getLineWidth(), block.getMaxNameHeight() + 30, text, matrices, consumers, light);
     }
 
     public static void renderStyled(TombstoneDetails details, int tier, BlockState state, Font text, PoseStack matrices,
-                                    MultiBufferSource consumers, int light) {
+                                    Buffers consumers, int light) {
         matrices.pushPose();
         matrices.translate(0.5, 0, 0.5);
         Direction facing = state.getValue(BlockStateProperties.HORIZONTAL_FACING).getOpposite();
@@ -126,7 +125,7 @@ public final class TombstoneClient {
     }
 
     private static void layout(TombstoneDetails details, TombstoneModels.Look look, float width, float height, Font text,
-                               PoseStack matrices, MultiBufferSource consumers, int light) {
+                               PoseStack matrices, Buffers consumers, int light) {
         UUID image = portrait(details.person());
 
         List<Component> lines = new ArrayList<>();
@@ -179,61 +178,61 @@ public final class TombstoneClient {
             matrices.scale(lineScale, lineScale, lineScale);
             boolean name = i == 0 || (i == 1 && !details.lastName().isEmpty());
             float x = -text.width(line) / 2F;
-            Matrix4f position = matrices.last().pose();
             switch (look) {
-                case WOOD -> text.drawInBatch(line.getVisualOrderText(), x, 0, name ? 0x2E1C0C : 0x4A3420, false, position, consumers,
-                        Font.DisplayMode.NORMAL, 0, light);
-                case ENGRAVED -> text.drawInBatch(line.getVisualOrderText(), x, 0, name ? 0x262626 : 0x3C3C3C, false, position, consumers,
-                        Font.DisplayMode.NORMAL, 0, light);
-                case GOLD -> text.drawInBatch8xOutline(line.getVisualOrderText(), x, 0, name ? 0xF2CC5A : 0xD9B24C, 0x3E2A0A, position, consumers, light);
-                default -> text.drawInBatch8xOutline(line.getVisualOrderText(), x, 0, name ? 0xFFFFFF : 0xD8D8D8, 0x000000, position, consumers, light);
+                case WOOD -> consumers.text(line.getVisualOrderText(), x, 0, name ? 0x2E1C0C : 0x4A3420, false, Font.DisplayMode.NORMAL, 0, light);
+                case ENGRAVED -> consumers.text(line.getVisualOrderText(), x, 0, name ? 0x262626 : 0x3C3C3C, false, Font.DisplayMode.NORMAL, 0, light);
+                case GOLD -> consumers.outlined(line.getVisualOrderText(), x, 0, name ? 0xF2CC5A : 0xD9B24C, 0x3E2A0A, light);
+                default -> consumers.outlined(line.getVisualOrderText(), x, 0, name ? 0xFFFFFF : 0xD8D8D8, 0x000000, light);
             }
             matrices.popPose();
             y += 10 * scale;
         }
     }
 
-    static void drawOval(UUID image, PoseStack matrices, MultiBufferSource consumers, float y, float size, int light) {
-        Matrix4f position = matrices.last().pose();
+    static void drawOval(UUID image, PoseStack matrices, Buffers consumers, float y, float size, int light) {
         float border = Math.max(1, size / 14);
         float height = size;
         float width = size * 0.78f;
         float cy = y + height / 2;
-        VertexConsumer frame = consumers.getBuffer(RenderType.textBackground());
-        for (int i = 0; i < OVAL_STRIPS; i++) {
-            float y0 = y + height * i / OVAL_STRIPS;
-            float y1 = y + height * (i + 1) / OVAL_STRIPS;
-            float half = halfWidth(width / 2, height / 2, (y0 + y1) / 2 - cy);
-            rect(frame, position, -half, y0, half, y1, 0, OVAL_RIM_COLOR, light);
-        }
         PhonePhotos.Picture picture = PhonePhotos.portrait(image);
         float innerW = width / 2 - border;
         float innerH = height / 2 - border;
         float top = cy - innerH;
         float ratio = innerW / innerH;
+        consumers.draw(RenderTypes.textBackground(), (frame, position) -> {
+            for (int i = 0; i < OVAL_STRIPS; i++) {
+                float y0 = y + height * i / OVAL_STRIPS;
+                float y1 = y + height * (i + 1) / OVAL_STRIPS;
+                float half = halfWidth(width / 2, height / 2, (y0 + y1) / 2 - cy);
+                rect(frame, position, -half, y0, half, y1, 0, OVAL_RIM_COLOR, light);
+            }
+            if (picture == null) {
+                for (int i = 0; i < OVAL_STRIPS; i++) {
+                    float y0 = top + 2 * innerH * i / OVAL_STRIPS;
+                    float y1 = top + 2 * innerH * (i + 1) / OVAL_STRIPS;
+                    float half = halfWidth(innerW, innerH, (y0 + y1) / 2 - cy);
+                    rect(frame, position, -half, y0, half, y1, -0.15f, EMPTY_COLOR, light);
+                }
+            }
+        });
         if (picture == null) {
+            return;
+        }
+        consumers.draw(RenderTypes.text(picture.texture()), (buffer, position) -> {
             for (int i = 0; i < OVAL_STRIPS; i++) {
                 float y0 = top + 2 * innerH * i / OVAL_STRIPS;
                 float y1 = top + 2 * innerH * (i + 1) / OVAL_STRIPS;
                 float half = halfWidth(innerW, innerH, (y0 + y1) / 2 - cy);
-                rect(frame, position, -half, y0, half, y1, -0.15f, EMPTY_COLOR, light);
+                float u0 = 0.5f - ratio / 2 * half / innerW;
+                float u1 = 0.5f + ratio / 2 * half / innerW;
+                float v0 = (y0 - top) / (2 * innerH);
+                float v1 = (y1 - top) / (2 * innerH);
+                vertex(buffer, position, -half, y0, -0.15f, u0, v0);
+                vertex(buffer, position, -half, y1, -0.15f, u0, v1);
+                vertex(buffer, position, half, y1, -0.15f, u1, v1);
+                vertex(buffer, position, half, y0, -0.15f, u1, v0);
             }
-            return;
-        }
-        VertexConsumer buffer = consumers.getBuffer(RenderType.text(picture.texture()));
-        for (int i = 0; i < OVAL_STRIPS; i++) {
-            float y0 = top + 2 * innerH * i / OVAL_STRIPS;
-            float y1 = top + 2 * innerH * (i + 1) / OVAL_STRIPS;
-            float half = halfWidth(innerW, innerH, (y0 + y1) / 2 - cy);
-            float u0 = 0.5f - ratio / 2 * half / innerW;
-            float u1 = 0.5f + ratio / 2 * half / innerW;
-            float v0 = (y0 - top) / (2 * innerH);
-            float v1 = (y1 - top) / (2 * innerH);
-            vertex(buffer, position, -half, y0, -0.15f, u0, v0);
-            vertex(buffer, position, -half, y1, -0.15f, u0, v1);
-            vertex(buffer, position, half, y1, -0.15f, u1, v1);
-            vertex(buffer, position, half, y0, -0.15f, u1, v0);
-        }
+        });
     }
 
     private static float halfWidth(float a, float b, float dy) {
@@ -241,31 +240,33 @@ public final class TombstoneClient {
         return a * (float) Math.sqrt(Math.max(0, 1 - t * t));
     }
 
-    private static void drawMedallion(UUID image, PoseStack matrices, MultiBufferSource consumers, float x, float y, float size, int frameColor, int light) {
-        Matrix4f position = matrices.last().pose();
+    private static void drawMedallion(UUID image, PoseStack matrices, Buffers consumers, float x, float y, float size, int frameColor, int light) {
         float border = Math.max(1, size / 14);
         float x1 = x + size;
         float y1 = y + size;
-        VertexConsumer frame = consumers.getBuffer(RenderType.textBackground());
-        rect(frame, position, x, y, x1, y + border, 0, frameColor, light);
-        rect(frame, position, x, y1 - border, x1, y1, 0, frameColor, light);
-        rect(frame, position, x, y + border, x + border, y1 - border, 0, frameColor, light);
-        rect(frame, position, x1 - border, y + border, x1, y1 - border, 0, frameColor, light);
-
-        PhonePhotos.Picture picture = PhonePhotos.portrait(image);
         float ix = x + border;
         float iy = y + border;
         float ix1 = x1 - border;
         float iy1 = y1 - border;
+        PhonePhotos.Picture picture = PhonePhotos.portrait(image);
+        consumers.draw(RenderTypes.textBackground(), (frame, position) -> {
+            rect(frame, position, x, y, x1, y + border, 0, frameColor, light);
+            rect(frame, position, x, y1 - border, x1, y1, 0, frameColor, light);
+            rect(frame, position, x, y + border, x + border, y1 - border, 0, frameColor, light);
+            rect(frame, position, x1 - border, y + border, x1, y1 - border, 0, frameColor, light);
+            if (picture == null) {
+                rect(frame, position, ix, iy, ix1, iy1, 0, EMPTY_COLOR, light);
+            }
+        });
         if (picture == null) {
-            rect(frame, position, ix, iy, ix1, iy1, 0, EMPTY_COLOR, light);
             return;
         }
-        VertexConsumer buffer = consumers.getBuffer(RenderType.text(picture.texture()));
-        vertex(buffer, position, ix, iy, 0, 0, 0);
-        vertex(buffer, position, ix, iy1, 0, 0, 1);
-        vertex(buffer, position, ix1, iy1, 0, 1, 1);
-        vertex(buffer, position, ix1, iy, 0, 1, 0);
+        consumers.draw(RenderTypes.text(picture.texture()), (buffer, position) -> {
+            vertex(buffer, position, ix, iy, 0, 0, 0);
+            vertex(buffer, position, ix, iy1, 0, 0, 1);
+            vertex(buffer, position, ix1, iy1, 0, 1, 1);
+            vertex(buffer, position, ix1, iy, 0, 1, 0);
+        });
     }
 
     private static void rect(VertexConsumer buffer, Matrix4f position, float x0, float y0, float x1, float y1, float z, int color, int light) {
@@ -273,17 +274,17 @@ public final class TombstoneClient {
         int r = color >> 16 & 0xFF;
         int g = color >> 8 & 0xFF;
         int b = color & 0xFF;
-        buffer.addVertex(position, x0, y0, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.addVertex(position, x0, y1, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.addVertex(position, x1, y1, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.addVertex(position, x1, y0, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.addVertex(position, x1, y0, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.addVertex(position, x1, y1, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.addVertex(position, x0, y1, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.addVertex(position, x0, y0, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.addVertex(position, x0, y0, z).setColor(r, g, b, a).setLight(light);
+        buffer.addVertex(position, x0, y1, z).setColor(r, g, b, a).setLight(light);
+        buffer.addVertex(position, x1, y1, z).setColor(r, g, b, a).setLight(light);
+        buffer.addVertex(position, x1, y0, z).setColor(r, g, b, a).setLight(light);
+        buffer.addVertex(position, x1, y0, z).setColor(r, g, b, a).setLight(light);
+        buffer.addVertex(position, x1, y1, z).setColor(r, g, b, a).setLight(light);
+        buffer.addVertex(position, x0, y1, z).setColor(r, g, b, a).setLight(light);
+        buffer.addVertex(position, x0, y0, z).setColor(r, g, b, a).setLight(light);
     }
 
     private static void vertex(VertexConsumer buffer, Matrix4f position, float x, float y, float z, float u, float v) {
-        buffer.addVertex(position, x, y, z).color(255, 255, 255, 255).uv(u, v).uv2(LightTexture.FULL_BRIGHT).endVertex();
+        buffer.addVertex(position, x, y, z).setColor(255, 255, 255, 255).setUv(u, v).setLight(LightCoordsUtil.FULL_BRIGHT);
     }
 }

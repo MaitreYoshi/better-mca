@@ -121,4 +121,16 @@ public final class Nbt {
     public static net.minecraft.world.level.storage.ValueInput input(CompoundTag tag, HolderLookup.Provider registries) {
         return net.minecraft.world.level.storage.TagValueInput.create(net.minecraft.util.ProblemReporter.DISCARDING, registries, tag);
     }
+
+    /** Ancien Component.Serializer.fromJson. */
+    public static Component parseText(String json) {
+        if (json == null || json.isEmpty()) {
+            return null;
+        }
+        try {
+            return ComponentSerialization.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(json)).result().orElse(null);
+        } catch (RuntimeException e) {
+            return null;
+        }
+    }
 }

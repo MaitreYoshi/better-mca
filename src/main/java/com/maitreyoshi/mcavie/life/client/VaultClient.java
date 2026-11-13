@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life.client;
 
+import com.maitreyoshi.mcavie.compat.client.Buffers;
 import net.minecraft.client.input.KeyEvent;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
@@ -7,14 +8,12 @@ import com.maitreyoshi.mcavie.life.TombstoneBlocks;
 import com.maitreyoshi.mcavie.life.TombstoneDetails;
 import com.maitreyoshi.mcavie.life.VaultBlock;
 import com.mojang.blaze3d.vertex.PoseStack;
-import dev.architectury.registry.client.rendering.RenderTypeRegistry;
 import net.conczin.mca.block.TombstoneBlock;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -43,7 +42,6 @@ public final class VaultClient {
     }
 
     public static void register() {
-        RenderTypeRegistry.register(RenderType.cutout(), TombstoneBlocks.VAULT);
         ClientPlayNetworking.registerGlobalReceiver(VaultBlock.TITLE_OPEN, (client, handler, buf, responseSender) -> {
             BlockPos pos = buf.readBlockPos();
             String title = buf.readUtf();
@@ -52,7 +50,7 @@ public final class VaultClient {
     }
 
     public static void render(TombstoneBlock.Data entity, @Nullable TombstoneDetails details, BlockState state, Font text,
-                              PoseStack matrices, MultiBufferSource consumers, int light) {
+                              PoseStack matrices, Buffers consumers, int light) {
         int part = state.getValue(VaultBlock.PART);
         int slot = VaultBlock.slotOf(part);
         if (slot < 0) {
@@ -66,7 +64,7 @@ public final class VaultClient {
         float ty = -offset.getY();
         float tz = -offset.getZ() + 0.5f - 0.5f * back.getStepZ() - 0.5f * left.getStepZ();
         matrices.pushPose();
-        matrices.mulPoseMatrix(new Matrix4f(
+        matrices.mulPose(new Matrix4f(
                 back.getStepX() / 16f, 0, back.getStepZ() / 16f, 0,
                 0, 1 / 16f, 0, 0,
                 left.getStepX() / 16f, 0, left.getStepZ() / 16f, 0,
@@ -87,11 +85,11 @@ public final class VaultClient {
 
     private static void plaque(PoseStack matrices, float top, float left) {
         matrices.pushPose();
-        matrices.mulPoseMatrix(new Matrix4f(0, 0, 1, 0, 0, -1, 0, 0, 1, 0, 0, 0, FACE, top, left, 1));
+        matrices.mulPose(new Matrix4f(0, 0, 1, 0, 0, -1, 0, 0, 1, 0, 0, 0, FACE, top, left, 1));
         matrices.scale(0.1f, 0.1f, 0.1f);
     }
 
-    private static void person(TombstoneDetails details, int slot, Font text, PoseStack matrices, MultiBufferSource consumers, int light) {
+    private static void person(TombstoneDetails details, int slot, Font text, PoseStack matrices, Buffers consumers, int light) {
         float z0 = slot % 2 == 0 ? 4.5f : 16.5f;
         float y0 = slot < 2 ? 22.6f : 16.6f;
 
@@ -120,12 +118,12 @@ public final class VaultClient {
     }
 
     private static void line(Component line, float center, float y, float scale, float width, int color, Font text,
-                             PoseStack matrices, MultiBufferSource consumers, int light) {
+                             PoseStack matrices, Buffers consumers, int light) {
         float lineScale = Math.min(scale, width / Math.max(1, text.width(line)));
         matrices.pushPose();
         matrices.translate(center, y + (10 * scale - 10 * lineScale) / 2, 0);
         matrices.scale(lineScale, lineScale, lineScale);
-        text.drawInBatch8xOutline(line.getVisualOrderText(), -text.width(line) / 2f, 0, color, OUTLINE, matrices.last().pose(), consumers, light);
+        consumers.outlined(line.getVisualOrderText(), -text.width(line) / 2f, 0, color, OUTLINE, light);
         matrices.popPose();
     }
 
