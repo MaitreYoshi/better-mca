@@ -53,6 +53,7 @@ public class GhostRenderer extends EntityRenderer<GhostEntity, GhostRenderer.Sta
     private static LivingEntity body(GhostEntity ghost) {
         CompoundTag look = ghost.look();
         if (look.isEmpty()) {
+            com.maitreyoshi.mcavie.life.Ghosts.debug("client : apparence vide (données synchronisées trop grosses ou illisibles)");
             return null;
         }
         if (ghost.clientBody instanceof LivingEntity body && look == ghost.clientLook) {
@@ -71,6 +72,7 @@ public class GhostRenderer extends EntityRenderer<GhostEntity, GhostRenderer.Sta
             ghost.clientBody = body;
             return body;
         }
+        com.maitreyoshi.mcavie.life.Ghosts.debug("client : corps non recréé depuis l'apparence (id " + look.getStringOr("id", "?") + ")");
         return null;
     }
 
@@ -112,6 +114,7 @@ public class GhostRenderer extends EntityRenderer<GhostEntity, GhostRenderer.Sta
         try {
             submitBody(Minecraft.getInstance().getEntityRenderDispatcher().getRenderer(body), body, state.tickDelta, matrices, collector, camera);
         } catch (RuntimeException e) {
+            com.maitreyoshi.mcavie.MCAVie.LOGGER.warn("Fantôme : rendu du corps impossible", e);
             ghost.clientBody = null;
         } finally {
             active = false;

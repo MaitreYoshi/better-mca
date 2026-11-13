@@ -31,6 +31,7 @@ public final class MCAVieClient {
         com.maitreyoshi.mcavie.life.client.VaultClient.register();
         com.maitreyoshi.mcavie.life.client.MemorialClient.register();
         com.maitreyoshi.mcavie.life.client.GhostAltarClient.register();
+        com.maitreyoshi.mcavie.book.client.MemorialModelRenderer.register();
         com.maitreyoshi.mcavie.aging.client.AgingClient.register();
         ClientPlayNetworking.registerGlobalReceiver(VillageNetwork.CONFIG, (client, handler, buf, responseSender) -> {
             String json = buf.readUtf(1 << 20);

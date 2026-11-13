@@ -75,6 +75,7 @@
     "compat.client.ClientEntityHandlerMixin",
     "compat.client.WorldRendererMixin",
     "compat.client.LivingEntityRendererInvoker",
+    "compat.client.GuiGraphicsAccessor",
     "compat.client.EntityRenderDispatcherMixin",
     "client.GhostVillagerLayerMixin",
     "client.LimbAnimatorAccessor"

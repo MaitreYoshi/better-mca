@@ -44,7 +44,13 @@ public class GhostAltarBlockEntity extends BlockEntity {
             return;
         }
         Entity current = altar.ghost == null ? null : server.getEntity(altar.ghost);
-        if (current != null && current.isAlive() || !Ghosts.isNight(world) || !Ghosts.canReturn(server.getServer(), altar.person)) {
+        if (current != null && current.isAlive() || !Ghosts.isNight(world)) {
+            return;
+        }
+        if (!Ghosts.canReturn(server.getServer(), altar.person)) {
+            Ghosts.debug("autel : retour impossible (apparence " + (Ghosts.get(server.getServer()).look(altar.person) != null)
+                    + ", photo " + (com.maitreyoshi.mcavie.phone.PortraitRegistry.get(server.getServer()).get(altar.person) != null)
+                    + ", mort dans l'arbre " + net.conczin.mca.server.world.data.FamilyTree.get(server).getOrEmpty(altar.person).map(net.conczin.mca.server.world.data.FamilyTreeNode::isDeceased).orElse(false) + ")");
             return;
         }
         CompoundTag look = Ghosts.get(server.getServer()).look(altar.person);
@@ -55,6 +61,9 @@ public class GhostAltarBlockEntity extends BlockEntity {
         ghost.snapTo(spawn.getX() + 0.5, spawn.getY(), spawn.getZ() + 0.5, facing.toYRot(), 0);
         if (server.addFreshEntity(ghost)) {
             altar.ghost = ghost.getUUID();
+            Ghosts.debug("autel : fantôme apparu (" + look.size() + " clés, " + look.toString().length() + " caractères)");
+        } else {
+            Ghosts.debug("autel : apparition refusée par le monde");
         }
     }
 

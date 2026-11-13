@@ -86,6 +86,9 @@ public class Ghosts extends SavedData {
     /** Appelé à la mort d'un PNJ : on garde son apparence de ce moment-là. */
     public static void died(VillagerEntityMCA villager, ServerLevel world) {
         CompoundTag nbt = Nbt.saveEntity(villager);
+        if (nbt == null) {
+            debug("apparence non enregistrée à la mort (sauvegarde du PNJ vide)");
+        }
         if (nbt != null) {
             get(world.getServer()).put(villager.getUUID(), strip(nbt));
         }
@@ -123,6 +126,14 @@ public class Ghosts extends SavedData {
             if (Nbt.hasUUID(data, "UUID") && missing.remove(Nbt.getUUID(data, "UUID"))) {
                 put(Nbt.getUUID(data, "UUID"), strip(data));
             }
+        }
+    }
+
+    private static final java.util.Set<String> DEBUGGED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    public static void debug(String reason) {
+        if (DEBUGGED.add(reason)) {
+            com.maitreyoshi.mcavie.MCAVie.LOGGER.info("Fantôme : {}", reason);
         }
     }
 

@@ -23,7 +23,12 @@ public final class GuiEntity {
             living.yRot = 0;
             living.xRot = 0;
         }
-        context.entity(state, scale, new Vector3f(0, entity.getBbHeight() * 0.875f, 0),
-                new Quaternionf().rotateZ((float) Math.PI), new Quaternionf(), x0, y0, x1, y1);
+        org.joml.Matrix3x2f pose = context.pose();
+        org.joml.Vector2f a = pose.transformPosition(x0, y0, new org.joml.Vector2f());
+        org.joml.Vector2f b = pose.transformPosition(x1, y1, new org.joml.Vector2f());
+        float factor = (float) Math.sqrt(pose.m00() * pose.m00() + pose.m01() * pose.m01());
+        context.entity(state, scale * factor, new Vector3f(0, entity.getBbHeight() * 0.875f, 0),
+                new Quaternionf().rotateZ((float) Math.PI), new Quaternionf(),
+                Math.round(Math.min(a.x, b.x)), Math.round(Math.min(a.y, b.y)), Math.round(Math.max(a.x, b.x)), Math.round(Math.max(a.y, b.y)));
     }
 }
