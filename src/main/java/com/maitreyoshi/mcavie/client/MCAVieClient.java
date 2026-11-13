@@ -17,6 +17,9 @@ import net.minecraft.network.FriendlyByteBuf;
 public final class MCAVieClient {
     private static String ownSurname = "";
 
+    /** Plateforme : exécute plus tard (NeoForge : après l'enregistrement des registres) ; Fabric : tout de suite. */
+    public static java.util.function.Consumer<Runnable> AFTER_REGISTRIES = Runnable::run;
+
     private MCAVieClient() {
     }
 

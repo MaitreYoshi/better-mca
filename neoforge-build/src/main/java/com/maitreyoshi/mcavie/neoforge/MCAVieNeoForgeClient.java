@@ -14,6 +14,9 @@ final class MCAVieNeoForgeClient {
         modBus.addListener(RegisterPictureInPictureRenderersEvent.class,
                 event -> event.register(MemorialModelRenderer.State.class, MemorialModelRenderer::create));
         // Les types de blocs ne sont disponibles qu'après l'enregistrement des registres.
-        modBus.addListener(FMLClientSetupEvent.class, event -> event.enqueueWork(MCAVieClient::init));
+        java.util.List<Runnable> late = new java.util.ArrayList<>();
+        MCAVieClient.AFTER_REGISTRIES = late::add;
+        modBus.addListener(FMLClientSetupEvent.class, event -> event.enqueueWork(() -> late.forEach(Runnable::run)));
+        MCAVieClient.init();
     }
 }

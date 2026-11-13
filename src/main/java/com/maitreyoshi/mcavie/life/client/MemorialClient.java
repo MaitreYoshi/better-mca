@@ -45,7 +45,7 @@ public final class MemorialClient {
     }
 
     public static void register() {
-        BlockEntityRendererRegistry.register(TombstoneBlocks.MEMORIAL_ENTITY, context -> new Renderer());
+        com.maitreyoshi.mcavie.client.MCAVieClient.AFTER_REGISTRIES.accept(() -> BlockEntityRendererRegistry.register(TombstoneBlocks.MEMORIAL_ENTITY, context -> new Renderer()));
         ClientPlayNetworking.registerGlobalReceiver(MemorialBlock.EDIT_OPEN, (client, handler, buf, responseSender) -> {
             BlockPos pos = buf.readBlockPos();
             String title = buf.readUtf();

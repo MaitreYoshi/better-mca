@@ -41,7 +41,7 @@ public final class GhostAltarClient {
     }
 
     public static void register() {
-        BlockEntityRendererRegistry.register(TombstoneBlocks.GHOST_ALTAR_ENTITY, context -> new Renderer());
+        com.maitreyoshi.mcavie.client.MCAVieClient.AFTER_REGISTRIES.accept(() -> BlockEntityRendererRegistry.register(TombstoneBlocks.GHOST_ALTAR_ENTITY, context -> new Renderer()));
         EntityRendererRegistry.register(() -> TombstoneBlocks.GHOST, GhostRenderer::new);
         ClientPlayNetworking.registerGlobalReceiver(Ghosts.OPEN, (client, handler, buf, responseSender) -> {
             BlockPos pos = buf.readBlockPos();
