@@ -258,8 +258,7 @@ public class PhoneScreen extends Screen {
     }
 
     private void scissor(GuiGraphicsExtractor context, int x1, int y1, int x2, int y2) {
-        float s = ui();
-        context.enableScissor(Math.round(x1 * s), Math.round(y1 * s), Math.round(x2 * s), Math.round(y2 * s));
+        context.enableScissor(x1, y1, x2, y2);
     }
 
     // Ombre seulement pour les textes clairs : en theme clair, l'ombre noire sous un texte fonce le rend illisible.
