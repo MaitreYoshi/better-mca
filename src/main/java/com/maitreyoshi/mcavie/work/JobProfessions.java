@@ -92,8 +92,8 @@ public final class JobProfessions {
                 List.of(sell(Items.LEAD, 1, 2)),
                 List.of(sell(Items.SADDLE, 1, 6)));
         trades(Job.DOCTOR,
-                List.of(buy(Items.ROTTEN_FLESH, 32, 1), sell(potion(Potions.HEALING), 3)),
-                List.of(buy(Items.GLASS_BOTTLE, 9, 1), sell(potion(Potions.REGENERATION), 5)),
+                List.of(buy(Items.ROTTEN_FLESH, 32, 1), sell(() -> potion(Potions.HEALING), 3)),
+                List.of(buy(Items.GLASS_BOTTLE, 9, 1), sell(() -> potion(Potions.REGENERATION), 5)),
                 List.of(buy(Items.SUGAR, 20, 1), sell(Items.GOLDEN_APPLE, 1, 8)),
                 List.of(sell(Items.MILK_BUCKET, 1, 2)),
                 List.of(sell(Items.GLISTERING_MELON_SLICE, 3, 4)));
@@ -191,11 +191,11 @@ public final class JobProfessions {
     }
 
     private static Factory sell(Item item, int count, int emeralds) {
-        return sell(new ItemStack(item, count), emeralds);
+        return sell(() -> new ItemStack(item, count), emeralds);
     }
 
-    private static Factory sell(ItemStack stack, int emeralds) {
-        return xp -> new MerchantOffer(new ItemCost(Items.EMERALD, emeralds), stack.copy(), 12, xp, 0.05F);
+    private static Factory sell(java.util.function.Supplier<ItemStack> stack, int emeralds) {
+        return xp -> new MerchantOffer(new ItemCost(Items.EMERALD, emeralds), stack.get(), 12, xp, 0.05F);
     }
 
     private static ItemStack potion(Holder<Potion> potion) {
