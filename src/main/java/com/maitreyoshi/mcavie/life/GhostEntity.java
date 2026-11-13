@@ -98,6 +98,7 @@ public class GhostEntity extends PathfinderMob {
 
     @Override
     protected void registerGoals() {
+        goalSelector.addGoal(0, new net.minecraft.world.entity.ai.goal.FloatGoal(this));
         goalSelector.addGoal(3, new LookAtPlayerGoal(this, Player.class, 6));
         goalSelector.addGoal(4, new RandomLookAroundGoal(this));
     }
