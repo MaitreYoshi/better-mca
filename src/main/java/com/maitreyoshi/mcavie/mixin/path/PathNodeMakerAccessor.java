@@ -10,8 +10,8 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(NodeEvaluator.class)
 public interface PathNodeMakerAccessor {
-    @Accessor("level")
-    PathNavigationRegion mcavie$world();
+    @Accessor("currentContext")
+    net.minecraft.world.level.pathfinder.PathfindingContext mcavie$context();
 
     @Accessor("mob")
     Mob mcavie$entity();

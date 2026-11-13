@@ -82,7 +82,7 @@ public final class LadderPaths {
     }
 
     public static int addSuccessors(PathNodeMakerAccessor maker, Node[] successors, Node node, int count) {
-        BlockGetter world = maker.mcavie$world();
+        BlockGetter world = maker.mcavie$context() == null ? null : maker.mcavie$context().level();
         Mob entity = maker.mcavie$entity();
         if (world == null || entity == null) return count;
         int height = Math.max(1, Mth.ceil(entity.getBbHeight()));
