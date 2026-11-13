@@ -71,7 +71,7 @@ public final class MemorialModelRenderer {
             matrices.pushPose();
             matrices.scale(1, -1, -1);
             matrices.mulPose(Axis.XP.rotationDegrees(25));
-            matrices.mulPose(Axis.YP.rotationDegrees(225));
+            matrices.mulPose(Axis.YP.rotationDegrees(315));
             matrices.translate(-0.5, -3.7, -0.5);
             for (int i = 0; i < SLICES.length; i++) {
                 BlockState part = TombstoneBlocks.MEMORIAL.defaultBlockState()
