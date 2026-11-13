@@ -1,5 +1,8 @@
 package com.maitreyoshi.mcavie.work.block;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
 import net.minecraft.nbt.CompoundTag;
@@ -47,8 +50,9 @@ public class WorkstationBlockEntity extends RandomizableContainerBlockEntity {
     }
 
     @Override
-    public void load(CompoundTag nbt) {
-        super.load(nbt);
+    protected void loadAdditional(ValueInput mcavieInput) {
+        CompoundTag nbt = Nbt.in(mcavieInput);
+        super.loadAdditional(mcavieInput);
         items = NonNullList.withSize(getContainerSize(), ItemStack.EMPTY);
         if (!tryLoadLootTable(nbt)) {
             ContainerHelper.loadAllItems(nbt, items);
@@ -56,8 +60,9 @@ public class WorkstationBlockEntity extends RandomizableContainerBlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    protected void saveAdditional(ValueOutput mcavieOutput) {
+        CompoundTag nbt = Nbt.out(mcavieOutput);
+        super.saveAdditional(mcavieOutput);
         if (!trySaveLootTable(nbt)) {
             ContainerHelper.saveAllItems(nbt, items);
         }

@@ -30,9 +30,9 @@ public final class GuideBooks {
 
     public static void register() {
         Registration.register(Registries.ITEM, "memory_book",
-                () -> new ExtendedWrittenBookItem(new Item.Properties().stacksTo(1), memoryBook()), item -> MEMORY_BOOK = item);
+                () -> new ExtendedWrittenBookItem(com.maitreyoshi.mcavie.compat.Registration.item("memory_book").stacksTo(1), memoryBook()), item -> MEMORY_BOOK = item);
         Registration.register(Registries.ITEM, "tombs_book",
-                () -> new ExtendedWrittenBookItem(new Item.Properties().stacksTo(1), tombsBook()), item -> TOMBS_BOOK = item);
+                () -> new ExtendedWrittenBookItem(com.maitreyoshi.mcavie.compat.Registration.item("tombs_book").stacksTo(1), tombsBook()), item -> TOMBS_BOOK = item);
         VillagerTrades.ItemListing memory = sell(() -> MEMORY_BOOK);
         VillagerTrades.ItemListing tombs = sell(() -> TOMBS_BOOK);
         TradeRegistry.registerVillagerTrade(VillagerProfession.CLERIC, 1, memory, tombs);

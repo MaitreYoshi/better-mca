@@ -79,9 +79,9 @@ public class GhostEntity extends PathfinderMob {
     }
 
     @Override
-    protected void defineSynchedData() {
-        super.defineSynchedData();
-        entityData.define(LOOK, new CompoundTag());
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        super.defineSynchedData(builder);
+        builder.define(LOOK, new CompoundTag());
     }
 
     @Override

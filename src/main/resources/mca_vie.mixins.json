@@ -6,6 +6,8 @@
   "mixins": [
     "BlockEntityTypeMixin",
     "VillagerTradesMixin",
+    "compat.TagValueInputAccessor",
+    "compat.TagValueOutputAccessor",
     "GhostCollisionMixin",
     "BlockItemMixin",
     "BreedableRelationshipMixin",

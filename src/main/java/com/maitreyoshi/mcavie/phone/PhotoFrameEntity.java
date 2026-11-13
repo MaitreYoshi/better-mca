@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.phone;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import com.maitreyoshi.mcavie.compat.Nbt;
 import org.jetbrains.annotations.Nullable;
 
@@ -73,11 +75,11 @@ public class PhotoFrameEntity extends HangingEntity {
     }
 
     @Override
-    protected void defineSynchedData() {
-        this.entityData.define(PHOTO, Optional.empty());
-        this.entityData.define(WIDTH, 4);
-        this.entityData.define(HEIGHT, 2);
-        this.entityData.define(TOP, 0);
+    protected void defineSynchedData(SynchedEntityData.Builder builder) {
+        builder.define(PHOTO, Optional.empty());
+        builder.define(WIDTH, 4);
+        builder.define(HEIGHT, 2);
+        builder.define(TOP, 0);
     }
 
     @Override
@@ -218,8 +220,9 @@ public class PhotoFrameEntity extends HangingEntity {
     }
 
     @Override
-    public void addAdditionalSaveData(CompoundTag nbt) {
-        super.addAdditionalSaveData(nbt);
+    public void addAdditionalSaveData(ValueOutput mcavieOutput) {
+        CompoundTag nbt = Nbt.out(mcavieOutput);
+        super.addAdditionalSaveData(mcavieOutput);
         UUID photo = photo();
         if (photo != null) {
             Nbt.putUUID(nbt, "photo", photo);
@@ -233,7 +236,8 @@ public class PhotoFrameEntity extends HangingEntity {
     }
 
     @Override
-    public void readAdditionalSaveData(CompoundTag nbt) {
+    public void readAdditionalSaveData(ValueInput mcavieInput) {
+        CompoundTag nbt = Nbt.in(mcavieInput);
         if (Nbt.hasUUID(nbt, "photo")) {
             this.entityData.set(PHOTO, Optional.of(Nbt.getUUID(nbt, "photo")));
         }
@@ -248,7 +252,7 @@ public class PhotoFrameEntity extends HangingEntity {
         this.entityData.set(TOP, nbt.getByteOr("top", (byte) 0) & 3);
         this.author = nbt.getStringOr("author", "");
         this.date = nbt.getLongOr("date", 0L);
-        super.readAdditionalSaveData(nbt);
+        super.readAdditionalSaveData(mcavieInput);
         setDirection(nbt.contains("dir") ? Direction.from3DDataValue(nbt.getByteOr("dir", (byte) 0)) : Direction.from2DDataValue(nbt.getByteOr("facing", (byte) 0)));
     }
 

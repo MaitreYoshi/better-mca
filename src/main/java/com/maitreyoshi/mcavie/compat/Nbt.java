@@ -93,4 +93,20 @@ public final class Nbt {
     public static Component readText(FriendlyByteBuf buf) {
         return ComponentSerialization.CODEC.parse(JsonOps.INSTANCE, JsonParser.parseString(buf.readUtf())).result().orElse(Component.empty());
     }
+
+    /** NBT brut d'une lecture 26.x (ValueInput), comme l'ancien CompoundTag passé à load/readNbt. */
+    public static CompoundTag in(net.minecraft.world.level.storage.ValueInput input) {
+        if (input instanceof com.maitreyoshi.mcavie.mixin.compat.TagValueInputAccessor tag) {
+            return tag.mcavie$input();
+        }
+        return new CompoundTag();
+    }
+
+    /** NBT brut d'une écriture 26.x (ValueOutput) : on y écrit comme avant dans le CompoundTag. */
+    public static CompoundTag out(net.minecraft.world.level.storage.ValueOutput output) {
+        if (output instanceof com.maitreyoshi.mcavie.mixin.compat.TagValueOutputAccessor tag) {
+            return tag.mcavie$output();
+        }
+        return new CompoundTag();
+    }
 }

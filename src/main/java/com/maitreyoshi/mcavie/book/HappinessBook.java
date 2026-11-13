@@ -40,7 +40,7 @@ public final class HappinessBook {
 
     public static void register() {
         com.maitreyoshi.mcavie.compat.Registration.register(net.minecraft.core.registries.Registries.ITEM, "happiness_book",
-                () -> new ExtendedWrittenBookItem(new Item.Properties().stacksTo(1), createBook()), item -> HAPPINESS_BOOK = item);
+                () -> new ExtendedWrittenBookItem(com.maitreyoshi.mcavie.compat.Registration.item("happiness_book").stacksTo(1), createBook()), item -> HAPPINESS_BOOK = item);
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             if (!handler.player.getTags().contains(TAG)) {
                 PENDING.add(handler.player.getUUID());

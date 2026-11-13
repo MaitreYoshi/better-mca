@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.life;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import com.maitreyoshi.mcavie.compat.Nbt;
 import org.jetbrains.annotations.Nullable;
 
@@ -57,22 +59,24 @@ public class GhostAltarBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    protected void saveAdditional(ValueOutput mcavieOutput) {
+        CompoundTag nbt = Nbt.out(mcavieOutput);
+        super.saveAdditional(mcavieOutput);
         if (person != null) {
             Nbt.putUUID(nbt, "person", person);
         }
     }
 
     @Override
-    public void load(CompoundTag nbt) {
-        super.load(nbt);
+    protected void loadAdditional(ValueInput mcavieInput) {
+        CompoundTag nbt = Nbt.in(mcavieInput);
+        super.loadAdditional(mcavieInput);
         person = Nbt.hasUUID(nbt, "person") ? Nbt.getUUID(nbt, "person") : null;
     }
 
     @Override
-    public CompoundTag getUpdateTag() {
-        return saveWithoutMetadata();
+    public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        return saveWithoutMetadata(registries);
     }
 
     @Nullable

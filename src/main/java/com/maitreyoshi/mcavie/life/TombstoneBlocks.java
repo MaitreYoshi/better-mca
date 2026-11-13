@@ -43,32 +43,32 @@ public final class TombstoneBlocks {
 
     private static <T extends Block> void register(String name, Supplier<T> factory, Consumer<T> onRegistered) {
         Registration.register(Registries.BLOCK, name, factory, onRegistered);
-        Registration.register(Registries.ITEM, name, () -> new BlockItem(BuiltInRegistries.BLOCK.getValue(MCAVie.id(name)), new Item.Properties()), item -> {
+        Registration.register(Registries.ITEM, name, () -> new BlockItem(BuiltInRegistries.BLOCK.getValue(MCAVie.id(name)), Registration.blockItem(name)), item -> {
         });
     }
 
     public static void register() {
-        register("wooden_cross_tomb", () -> new Tomb(BlockBehaviour.Properties.copy(Blocks.OAK_PLANKS).noOcclusion(), TombstoneDetails.POOR,
+        register("wooden_cross_tomb", () -> new Tomb(Registration.block("wooden_cross_tomb", BlockBehaviour.Properties.ofFullCopy(Blocks.OAK_PLANKS).noOcclusion()), TombstoneDetails.POOR,
             new double[][]{{6.9, 0, 7.2, 9.1, 17.3, 8.8}, {2.6, 12.2, 7.2, 13.4, 14.1, 8.8}, {3.2, 1.9, 6.8, 12.8, 11.2, 8.8}}), block -> WOODEN_CROSS = block);
-        register("stele_tomb", () -> new Tomb(BlockBehaviour.Properties.copy(Blocks.STONE).noOcclusion(), TombstoneDetails.MIDDLE,
+        register("stele_tomb", () -> new Tomb(Registration.block("stele_tomb", BlockBehaviour.Properties.ofFullCopy(Blocks.STONE).noOcclusion()), TombstoneDetails.MIDDLE,
             new double[][]{{0.8, 0, 4.8, 15.2, 1.9, 11.2}, {2.2, 1.9, 7, 13.8, 16, 9.3}}), block -> STELE = block);
-        register("marble_tomb", () -> new Tomb(BlockBehaviour.Properties.copy(Blocks.QUARTZ_BLOCK).noOcclusion(), TombstoneDetails.RICH,
+        register("marble_tomb", () -> new Tomb(Registration.block("marble_tomb", BlockBehaviour.Properties.ofFullCopy(Blocks.QUARTZ_BLOCK).noOcclusion()), TombstoneDetails.RICH,
             new double[][]{{0.3, 0, 0, 15.7, 2.6, 15.7}, {1.6, 2.6, 12.8, 14.4, 19.7, 15.5}}), block -> MARBLE = block);
-        register("family_vault", () -> new VaultBlock(BlockBehaviour.Properties.copy(Blocks.QUARTZ_BLOCK).strength(3, 1200).noOcclusion()), block -> VAULT = block);
+        register("family_vault", () -> new VaultBlock(Registration.block("family_vault", BlockBehaviour.Properties.ofFullCopy(Blocks.QUARTZ_BLOCK).strength(3, 1200).noOcclusion())), block -> VAULT = block);
         VaultBlock.registerNetwork();
-        register("war_memorial", () -> new MemorialBlock(BlockBehaviour.Properties.copy(Blocks.QUARTZ_BLOCK).strength(4, 1200).noOcclusion()), block -> MEMORIAL = block);
+        register("war_memorial", () -> new MemorialBlock(Registration.block("war_memorial", BlockBehaviour.Properties.ofFullCopy(Blocks.QUARTZ_BLOCK).strength(4, 1200).noOcclusion())), block -> MEMORIAL = block);
         Registration.register(Registries.BLOCK_ENTITY_TYPE, "war_memorial",
-                () -> net.minecraft.world.level.block.entity.BlockEntityType.Builder.of(MemorialBlockEntity::new, MEMORIAL).build(null),
+                () -> new net.minecraft.world.level.block.entity.BlockEntityType<>(MemorialBlockEntity::new, java.util.Set.of(MEMORIAL)),
                 type -> MEMORIAL_ENTITY = type);
         MemorialBlock.registerNetwork();
-        register("ghost_altar", () -> new GhostAltarBlock(BlockBehaviour.Properties.copy(Blocks.DARK_OAK_PLANKS).strength(1.5f).noOcclusion()
-                .lightLevel(state -> 6)), block -> GHOST_ALTAR = block);
+        register("ghost_altar", () -> new GhostAltarBlock(Registration.block("ghost_altar", BlockBehaviour.Properties.ofFullCopy(Blocks.DARK_OAK_PLANKS).strength(1.5f).noOcclusion()
+                .lightLevel(state -> 6))), block -> GHOST_ALTAR = block);
         Registration.register(Registries.BLOCK_ENTITY_TYPE, "ghost_altar",
-                () -> net.minecraft.world.level.block.entity.BlockEntityType.Builder.of(GhostAltarBlockEntity::new, GHOST_ALTAR).build(null),
+                () -> new net.minecraft.world.level.block.entity.BlockEntityType<>(GhostAltarBlockEntity::new, java.util.Set.of(GHOST_ALTAR)),
                 type -> GHOST_ALTAR_ENTITY = type);
         Registration.register(Registries.ENTITY_TYPE, "ghost",
                 () -> net.minecraft.world.entity.EntityType.Builder.<GhostEntity>of(GhostEntity::new, net.minecraft.world.entity.MobCategory.MISC)
-                        .sized(0.6f, 1.95f).fireImmune().clientTrackingRange(10).build(MCAVie.id("ghost").toString()),
+                        .sized(0.6f, 1.95f).fireImmune().clientTrackingRange(10).build(Registration.entity("ghost")),
                 type -> {
                     GHOST = type;
                     dev.architectury.registry.level.entity.EntityAttributeRegistry.register(() -> type, GhostEntity::createAttributes);

@@ -26,10 +26,10 @@ public final class WorkBlocks {
 
     private static void register(String name, Job job, Block base, int light, double[][] shape) {
         Registration.register(Registries.BLOCK, name, () -> {
-            BlockBehaviour.Properties settings = BlockBehaviour.Properties.copy(base).strength(2.5F).noOcclusion().lightLevel(state -> light);
+            BlockBehaviour.Properties settings = Registration.block(name, BlockBehaviour.Properties.ofFullCopy(base).strength(2.5F).noOcclusion().lightLevel(state -> light));
             return new WorkstationBlock(settings, job, shape);
         }, block -> BY_JOB.put(job, block));
-        Registration.register(Registries.ITEM, name, () -> new BlockItem(BY_JOB.get(job), new Item.Properties()), item -> {
+        Registration.register(Registries.ITEM, name, () -> new BlockItem(BY_JOB.get(job), Registration.blockItem(name)), item -> {
         });
     }
 
@@ -54,7 +54,7 @@ public final class WorkBlocks {
         register("cooking_pot", Job.COOK, Blocks.BRICKS, 9, Shapes.COOKING_POT);
         register("school_desk", Job.TEACHER, Blocks.OAK_PLANKS, 0, Shapes.SCHOOL_DESK);
         Registration.register(Registries.BLOCK_ENTITY_TYPE, "workstation",
-                () -> BlockEntityType.Builder.of(WorkstationBlockEntity::new, BY_JOB.values().toArray(new Block[0])).build(null),
+                () -> new BlockEntityType<>(WorkstationBlockEntity::new, java.util.Set.copyOf(BY_JOB.values())),
                 type -> WORKSTATION_ENTITY = type);
         CreativeTabRegistry.modify(CreativeTabRegistry.defer(CreativeModeTabs.FUNCTIONAL_BLOCKS), (flags, entries, operator) -> BY_JOB.values().forEach(entries::accept));
     }

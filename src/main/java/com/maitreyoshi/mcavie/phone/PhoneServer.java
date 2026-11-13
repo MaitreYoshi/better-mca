@@ -84,11 +84,11 @@ public final class PhoneServer {
     }
 
     public static void register() {
-        Registration.register(Registries.ITEM, "phone", () -> new PhoneItem(new Item.Properties().stacksTo(1)), item -> PHONE = item);
-        Registration.register(Registries.ITEM, "photo", () -> new PhotoItem(new Item.Properties().stacksTo(1)), item -> PHOTO = item);
+        Registration.register(Registries.ITEM, "phone", () -> new PhoneItem(com.maitreyoshi.mcavie.compat.Registration.item("phone").stacksTo(1)), item -> PHONE = item);
+        Registration.register(Registries.ITEM, "photo", () -> new PhotoItem(com.maitreyoshi.mcavie.compat.Registration.item("photo").stacksTo(1)), item -> PHOTO = item);
         Registration.register(Registries.ENTITY_TYPE, "photo_frame",
                 () -> EntityType.Builder.<PhotoFrameEntity>of(PhotoFrameEntity::new, MobCategory.MISC)
-                        .sized(0.5f, 0.5f).clientTrackingRange(10).updateInterval(Integer.MAX_VALUE).build(MCAVie.id("photo_frame").toString()),
+                        .sized(0.5f, 0.5f).clientTrackingRange(10).updateInterval(Integer.MAX_VALUE).build(Registration.entity("photo_frame")),
                 type -> PHOTO_FRAME = type);
         CreativeTabRegistry.modify(CreativeTabRegistry.defer(CreativeModeTabs.TOOLS_AND_UTILITIES), (flags, entries, operator) -> entries.accept(PHONE));
         ServerPlayNetworking.registerGlobalReceiver(PhoneNetwork.ACTION, (server, player, handler, buf, responseSender) -> {

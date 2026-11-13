@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.life;
 
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
 import com.maitreyoshi.mcavie.compat.Nbt;
 import net.conczin.mca.server.world.data.VillageManager;
 import net.minecraft.core.BlockPos;
@@ -85,8 +87,9 @@ public class MemorialBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void saveAdditional(CompoundTag nbt) {
-        super.saveAdditional(nbt);
+    protected void saveAdditional(ValueOutput mcavieOutput) {
+        CompoundTag nbt = Nbt.out(mcavieOutput);
+        super.saveAdditional(mcavieOutput);
         nbt.putInt("village", village);
         if (title != null) {
             nbt.putString("title", title);
@@ -100,8 +103,9 @@ public class MemorialBlockEntity extends BlockEntity {
     }
 
     @Override
-    public void load(CompoundTag nbt) {
-        super.load(nbt);
+    protected void loadAdditional(ValueInput mcavieInput) {
+        CompoundTag nbt = Nbt.in(mcavieInput);
+        super.loadAdditional(mcavieInput);
         village = nbt.contains("village") ? nbt.getIntOr("village", 0) : -1;
         title = nbt.contains("title") ? nbt.getStringOr("title", "") : null;
         dates = nbt.contains("dates") ? nbt.getStringOr("dates", "") : null;
@@ -122,8 +126,8 @@ public class MemorialBlockEntity extends BlockEntity {
     }
 
     @Override
-    public CompoundTag getUpdateTag() {
-        CompoundTag nbt = saveWithoutMetadata();
+    public CompoundTag getUpdateTag(net.minecraft.core.HolderLookup.Provider registries) {
+        CompoundTag nbt = saveWithoutMetadata(registries);
         if (level instanceof ServerLevel server && village >= 0) {
             VillageManager.get(server).getOrEmpty(village).ifPresent(v -> nbt.putString("village_name", v.getName()));
             MemorialRegistry registry = MemorialRegistry.get(server.getServer());

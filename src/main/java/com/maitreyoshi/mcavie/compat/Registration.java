@@ -21,4 +21,21 @@ public final class Registration {
             return value;
         });
     }
+
+    /** Propriétés de bloc avec leur identifiant (obligatoire depuis 1.21.2). */
+    public static net.minecraft.world.level.block.state.BlockBehaviour.Properties block(String name, net.minecraft.world.level.block.state.BlockBehaviour.Properties props) {
+        return props.setId(ResourceKey.create(net.minecraft.core.registries.Registries.BLOCK, MCAVie.id(name)));
+    }
+
+    public static net.minecraft.world.item.Item.Properties item(String name) {
+        return new net.minecraft.world.item.Item.Properties().setId(ResourceKey.create(net.minecraft.core.registries.Registries.ITEM, MCAVie.id(name)));
+    }
+
+    public static net.minecraft.world.item.Item.Properties blockItem(String name) {
+        return item(name).useBlockDescriptionPrefix();
+    }
+
+    public static ResourceKey<net.minecraft.world.entity.EntityType<?>> entity(String name) {
+        return ResourceKey.create(net.minecraft.core.registries.Registries.ENTITY_TYPE, MCAVie.id(name));
+    }
 }
