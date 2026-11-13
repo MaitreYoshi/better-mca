@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:chest",
+    "minecraft:book",
+    "minecraft:feather"
+  ],
+  "result": {
+    "count": 1,
+    "id": "mca_vie:school_desk"
+  }
+}

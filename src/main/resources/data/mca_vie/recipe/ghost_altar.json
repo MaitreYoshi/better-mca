@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "CGC",
+    "PFP"
+  ],
+  "key": {
+    "C": "minecraft:candle",
+    "G": "minecraft:gold_nugget",
+    "P": "minecraft:dark_oak_planks",
+    "F": "minecraft:item_frame"
+  },
+  "result": {
+    "id": "mca_vie:ghost_altar"
+  }
+}

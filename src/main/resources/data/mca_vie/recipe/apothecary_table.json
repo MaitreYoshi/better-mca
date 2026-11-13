@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:chest",
+    "minecraft:glass_bottle",
+    "#minecraft:flowers"
+  ],
+  "result": {
+    "count": 1,
+    "id": "mca_vie:apothecary_table"
+  }
+}

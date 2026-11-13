@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "QBQ",
+    "QGQ",
+    "SSS"
+  ],
+  "key": {
+    "Q": "minecraft:quartz_block",
+    "B": "minecraft:polished_blackstone",
+    "G": "minecraft:gold_ingot",
+    "S": "minecraft:smooth_stone"
+  },
+  "result": {
+    "id": "mca_vie:family_vault"
+  }
+}

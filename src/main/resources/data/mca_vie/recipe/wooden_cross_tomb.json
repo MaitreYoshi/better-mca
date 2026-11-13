@@ -7,14 +7,10 @@
     " S "
   ],
   "key": {
-    "S": {
-      "item": "minecraft:stick"
-    },
-    "P": {
-      "item": "minecraft:oak_planks"
-    }
+    "S": "minecraft:stick",
+    "P": "minecraft:oak_planks"
   },
   "result": {
-    "item": "mca_vie:wooden_cross_tomb"
+    "id": "mca_vie:wooden_cross_tomb"
   }
 }

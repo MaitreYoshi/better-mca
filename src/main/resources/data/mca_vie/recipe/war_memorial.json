@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "QGQ",
+    "CNC",
+    "QGQ"
+  ],
+  "key": {
+    "Q": "minecraft:chiseled_quartz_block",
+    "G": "minecraft:gold_ingot",
+    "C": "minecraft:copper_block",
+    "N": "minecraft:nether_star"
+  },
+  "result": {
+    "id": "mca_vie:war_memorial"
+  }
+}

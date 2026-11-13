@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "building",
+  "pattern": [
+    "QGQ",
+    "QFQ",
+    "BBB"
+  ],
+  "key": {
+    "Q": "minecraft:quartz_block",
+    "G": "minecraft:gold_ingot",
+    "F": "minecraft:flower_pot",
+    "B": "minecraft:smooth_stone_slab"
+  },
+  "result": {
+    "id": "mca_vie:marble_tomb"
+  }
+}

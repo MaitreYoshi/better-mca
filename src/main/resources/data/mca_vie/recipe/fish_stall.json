@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:chest",
+    "minecraft:fishing_rod"
+  ],
+  "result": {
+    "count": 1,
+    "id": "mca_vie:fish_stall"
+  }
+}

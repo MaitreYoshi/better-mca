@@ -7,14 +7,10 @@
     "BBB"
   ],
   "key": {
-    "S": {
-      "item": "minecraft:smooth_stone"
-    },
-    "B": {
-      "item": "minecraft:stone_bricks"
-    }
+    "S": "minecraft:smooth_stone",
+    "B": "minecraft:stone_bricks"
   },
   "result": {
-    "item": "mca_vie:stele_tomb"
+    "id": "mca_vie:stele_tomb"
   }
 }

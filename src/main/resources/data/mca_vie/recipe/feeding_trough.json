@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "minecraft:chest",
+    "minecraft:hay_block",
+    "minecraft:shears"
+  ],
+  "result": {
+    "count": 1,
+    "id": "mca_vie:feeding_trough"
+  }
+}

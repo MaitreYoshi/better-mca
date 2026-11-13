@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    "#minecraft:logs",
+    "minecraft:stone_axe"
+  ],
+  "result": {
+    "count": 1,
+    "id": "mca_vie:chopping_block"
+  }
+}
