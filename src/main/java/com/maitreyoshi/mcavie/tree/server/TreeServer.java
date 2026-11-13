@@ -31,7 +31,8 @@ import java.util.Set;
 import java.util.UUID;
 
 public final class TreeServer {
-    private static final int MAX_PERSONS = 400;
+    private static final int MAX_PERSONS = 20000;
+    private static final int MAX_PAYLOAD_BYTES = 1000000;
     private static final int MAX_SEARCH_RESULTS = 50;
     private static final int MAX_LINKS = Integer.MAX_VALUE;
     private static final int MAX_VIEWER_STEPS = Integer.MAX_VALUE;
@@ -103,6 +104,14 @@ public final class TreeServer {
             TreeProtocol.Response response = handle(server, player, request);
             PacketByteBuf out = PacketByteBufs.create();
             response.write(out);
+            // Un paquet serveur vers client est limité à 1 Mio : on retire les personnes les plus éloignées.
+            while (out.readableBytes() > MAX_PAYLOAD_BYTES && response.persons().size() > 1) {
+                List<FamilyPerson> kept = response.persons().subList(0, Math.max(1, response.persons().size() * 9 / 10));
+                response = new TreeProtocol.Response(response.mode(), response.root(), kept, response.path(), response.relation(),
+                        response.viewer(), response.text(), response.index(), response.count());
+                out = PacketByteBufs.create();
+                response.write(out);
+            }
             ServerPlayNetworking.send(player, TreeProtocol.RESPONSE, out);
         } catch (RuntimeException e) {
             MCAVie.LOGGER.error("Erreur en préparant l'arbre généalogique", e);
@@ -211,7 +220,7 @@ public final class TreeServer {
             }
         }
 
-        RelationInfo relation = Kinship.classify(nodes, steps, graph::node);
+        RelationInfo relation = Kinship.classify(nodes, steps, graph::node, graph::isCurrentSpouse);
         return new TreeProtocol.Response(TreeProtocol.MODE_PATH, a, viewer.persons(shown), nodes, relation, viewer.id, "", chosen, links.size());
     }
 

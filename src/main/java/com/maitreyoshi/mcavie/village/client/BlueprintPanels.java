@@ -135,11 +135,13 @@ public final class BlueprintPanels {
             appendQuality(lines, building, score, rule);
         }
         BuildingQuality.Measure measured = BuildingQuality.measureOf(building);
-        if (rule.minSurface > 0 && !building.getBuildingType().grouped() && (measured == null || measured.openings() == 0)) {
+        if (rule.minSurface > 0 && !building.getBuildingType().grouped()) {
             lines.add(Text.translatable("gui.mca_vie.building.surface", score.surface()).formatted(Formatting.GRAY));
         }
         if (measured != null && measured.storeys() > 0 && !building.getBuildingType().grouped()) {
-            lines.add(Text.translatable(measured.storeys() == 1 ? "gui.mca_vie.building.storey" : "gui.mca_vie.building.storeys", measured.storeys()).formatted(Formatting.GRAY));
+            int upper = measured.storeys() - 1;
+            lines.add((upper == 0 ? Text.translatable("gui.mca_vie.building.ground_floor")
+                    : Text.translatable(upper == 1 ? "gui.mca_vie.building.storey" : "gui.mca_vie.building.storeys", upper)).formatted(Formatting.GRAY));
         }
         if (rule.upkeep > 0) {
             lines.add(Text.translatable("gui.mca_vie.building.upkeep", rule.upkeep).formatted(Formatting.GRAY));
@@ -170,29 +172,25 @@ public final class BlueprintPanels {
             return;
         }
         lines.add(Text.translatable("gui.mca_vie.quality.measure", measure.lights(), measure.windows(), measure.decor()).formatted(Formatting.GRAY));
-        if (measure.openings() > 0) {
-            lines.add(Text.translatable("gui.mca_vie.quality.openings").formatted(Formatting.YELLOW));
-        }
         VillageConfig config = VillageConfig.get();
         if (quality == BuildingQuality.RUDIMENTARY) {
             lines.add(Text.translatable("gui.mca_vie.quality.need_basic").formatted(Formatting.YELLOW));
         } else if (quality == BuildingQuality.CORRECT) {
             lines.add(missing(BuildingQuality.BEAUTIFUL, (int) Math.ceil(config.beautifulSurface * rule.minSurface) - score.surface(),
-                    config.beautifulWindows - measure.windows(), config.beautifulDecor - measure.decor(), measure.openings() > 0));
+                    config.beautifulWindows - measure.windows(), config.beautifulDecor - measure.decor()));
         } else if (quality == BuildingQuality.BEAUTIFUL) {
             lines.add(missing(BuildingQuality.MAGNIFICENT, (int) Math.ceil(config.magnificentSurface * rule.minSurface) - score.surface(),
-                    config.magnificentWindows - measure.windows(), config.magnificentDecor - measure.decor(), measure.openings() > 0));
+                    config.magnificentWindows - measure.windows(), config.magnificentDecor - measure.decor()));
         }
     }
 
-    private static Text missing(BuildingQuality target, int surface, int windows, int decor, boolean open) {
+    private static Text missing(BuildingQuality target, int surface, int windows, int decor) {
         MutableText parts = Text.empty();
         int count = 0;
         for (MutableText part : new MutableText[]{
                 surface > 0 ? Text.translatable("gui.mca_vie.quality.missing.surface", surface) : null,
                 windows > 0 ? Text.translatable("gui.mca_vie.quality.missing.windows", windows) : null,
-                decor > 0 ? Text.translatable("gui.mca_vie.quality.missing.decor", decor) : null,
-                open ? Text.translatable("gui.mca_vie.quality.missing.open") : null}) {
+                decor > 0 ? Text.translatable("gui.mca_vie.quality.missing.decor", decor) : null}) {
             if (part != null) {
                 if (count++ > 0) {
                     parts.append(", ");

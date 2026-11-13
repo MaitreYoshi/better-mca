@@ -34,7 +34,11 @@ public final class FamilyAges {
     }
 
     public static void register() {
-        ServerLifecycleEvents.SERVER_STARTED.register(server -> repair(server.getOverworld()));
+        ServerLifecycleEvents.SERVER_STARTED.register(server -> {
+            repair(server.getOverworld());
+            com.maitreyoshi.mcavie.Surnames.uppercaseTree(server.getOverworld());
+            com.maitreyoshi.mcavie.village.CivilRegistry.fillExactDates(server.getOverworld());
+        });
     }
 
     static int initialYears(ServerWorld world, UUID self, int lo, int hi, Random random) {
@@ -74,7 +78,7 @@ public final class FamilyAges {
             }
             Family family = Family.around(world, node.id(), today);
             seen.addAll(family.ids);
-            if (family.inconsistent(worldYears)) {
+            if (family.inconsistent(worldYears) && family.ids.stream().noneMatch(life::isAgeForced)) {
                 changed += family.fix(life, worldYears);
             }
         }

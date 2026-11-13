@@ -3,6 +3,10 @@
   "values": [
     "mca_vie:forge",
     "mca_vie:bread_oven",
-    "mca_vie:cooking_pot"
+    "mca_vie:cooking_pot",
+    "mca_vie:stele_tomb",
+    "mca_vie:marble_tomb",
+    "mca_vie:family_vault",
+    "mca_vie:war_memorial"
   ]
 }

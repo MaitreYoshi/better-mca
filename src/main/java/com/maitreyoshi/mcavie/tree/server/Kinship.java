@@ -6,6 +6,7 @@ import net.mca.server.world.data.FamilyTreeNode;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 
 public final class Kinship {
@@ -21,7 +22,8 @@ public final class Kinship {
     private Kinship() {
     }
 
-    public static RelationInfo classify(List<UUID> nodes, List<Step> steps, Function<UUID, Optional<FamilyTreeNode>> lookup) {
+    public static RelationInfo classify(List<UUID> nodes, List<Step> steps, Function<UUID, Optional<FamilyTreeNode>> lookup,
+                                        BiPredicate<UUID, UUID> currentSpouse) {
         if (steps.isEmpty()) {
             return SELF;
         }
@@ -39,7 +41,7 @@ public final class Kinship {
 
         if (steps.get(0) == Step.SPOUSE) {
             if (steps.size() == 1) {
-                boolean current = lookup.apply(a).map(n -> b.equals(n.partner())).orElse(false);
+                boolean current = currentSpouse.test(a, b) || currentSpouse.test(b, a);
                 return rel(current ? "spouse" : "ex_spouse");
             }
             int[] ij = upDown(steps.subList(1, steps.size()));

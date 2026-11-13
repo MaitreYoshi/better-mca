@@ -50,20 +50,20 @@ public enum BuildingQuality {
         return Text.translatable("gui.mca_vie.quality." + name().toLowerCase(java.util.Locale.ROOT));
     }
 
-    public record Measure(int lights, int windows, int decor, int openings, int floor, int storeys) {
+    // storeys = niveaux comptés, rez-de-chaussée inclus (1 = rez-de-chaussée seul)
+    public record Measure(int lights, int windows, int decor, int floor, int storeys) {
         public NbtCompound toNbt() {
             NbtCompound nbt = new NbtCompound();
             nbt.putInt("lights", lights);
             nbt.putInt("windows", windows);
             nbt.putInt("decor", decor);
-            nbt.putInt("openings", openings);
             nbt.putInt("floor", floor);
             nbt.putInt("storeys", storeys);
             return nbt;
         }
 
         public static Measure fromNbt(NbtCompound nbt) {
-            return new Measure(nbt.getInt("lights"), nbt.getInt("windows"), nbt.getInt("decor"), nbt.getInt("openings"), nbt.getInt("floor"), nbt.getInt("storeys"));
+            return new Measure(nbt.getInt("lights"), nbt.getInt("windows"), nbt.getInt("decor"), nbt.getInt("floor"), nbt.getInt("storeys"));
         }
     }
 
@@ -85,9 +85,6 @@ public enum BuildingQuality {
         if (measure.lights() <= 0 || measure.windows() <= 0) {
             return RUDIMENTARY;
         }
-        if (measure.openings() > 0) {
-            return CORRECT;
-        }
         if (surface >= config.magnificentSurface * minSurface && measure.windows() >= config.magnificentWindows && measure.decor() >= config.magnificentDecor) {
             return MAGNIFICENT;
         }
@@ -103,7 +100,6 @@ public enum BuildingQuality {
 
         Set<BlockPos> done = new HashSet<>();
         Set<BlockPos> hull = new HashSet<>();
-        Set<BlockPos> openings = new HashSet<>();
         Set<BlockPos> floor = new HashSet<>();
         Set<BlockPos> beyondDoor = new HashSet<>();
         Map<BlockPos, Boolean> roofCache = new HashMap<>();
@@ -138,14 +134,10 @@ public enum BuildingQuality {
                 if (!air) {
                     hull.add(n);
                 }
-                if (isPassable(state)) {
-                    if (hasRoof(world, n, roofCache)) {
-                        queue.add(n);
-                        if (outside) {
-                            beyondDoor.add(n);
-                        }
-                    } else if (air && !outside && !isClimbOrStep(here)) {
-                        openings.add(n);
+                if (isPassable(state) && hasRoof(world, n, roofCache)) {
+                    queue.add(n);
+                    if (outside) {
+                        beyondDoor.add(n);
                     }
                 }
             }
@@ -180,7 +172,7 @@ public enum BuildingQuality {
                 decor.add(block);
             }
         });
-        return new Measure(lights, countWindows(glass), decor.size(), openings.size(), floor.size(), countStoreys(floor));
+        return new Measure(lights, countWindows(glass), decor.size(), floor.size(), countStoreys(floor));
     }
 
     public static boolean isPassable(BlockState state) {

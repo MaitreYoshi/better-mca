@@ -922,13 +922,18 @@ public class PlanScreen extends BlueprintScreen {
                 context.fill(cx - 1, y - 1, cx + cw - 4, y + LINE - 1, 0x30ffffff);
                 hoveredVillager = resident.getKey();
             }
-            context.drawTextWithShadow(textRenderer, resident.getValue(), cx + 2, y, hover ? GOLD : WHITE);
+            boolean dead = state.deadResidents.contains(resident.getKey());
+            int nameWidth = textRenderer.getWidth(resident.getValue());
+            context.drawTextWithShadow(textRenderer, resident.getValue(), cx + 2, y, hover ? GOLD : dead ? GRAY : WHITE);
+            if (dead) {
+                context.drawTextWithShadow(textRenderer, "☠", cx + 5 + nameWidth, y, GRAY);
+            }
             VillageState.TaxEntry entry = state.taxRoll.get(resident.getKey());
             if (entry != null) {
                 Job job = Job.values()[Math.max(0, Math.min(Job.values().length - 1, entry.job()))];
                 Text line = Text.translatable("gui.mca_vie.villagers.tax", job.getName(),
                         Text.translatable("job.mca_vie.level." + entry.level()), BlueprintPanels.format(Math.round(entry.amount() * 10) / 10.0));
-                int room = cw - 12 - textRenderer.getWidth(resident.getValue()) - 8;
+                int room = cw - 12 - nameWidth - (dead ? 18 : 8);
                 if (room > 20) {
                     OrderedText trimmed = Language.getInstance().reorder(textRenderer.trimToWidth(line, room));
                     context.drawTextWithShadow(textRenderer, trimmed, cx + cw - 6 - textRenderer.getWidth(trimmed), y, GRAY);
@@ -1140,7 +1145,7 @@ public class PlanScreen extends BlueprintScreen {
         }
         int width = cw - 6;
         for (CivilRegistry.Entry e : entries) {
-            Text date = Text.empty().append(TreeTexts.date(e.day())).append(" : ");
+            Text date = Text.empty().append(e.hasExact() ? TreeTexts.calendarDate(e.exact()) : TreeTexts.date(e.day())).append(" : ");
             MutableText line = BlueprintPanels.registryLine(e);
             int dateWidth = Math.min(textRenderer.getWidth(date), width / 2);
             int rest = width - dateWidth;
@@ -1159,7 +1164,7 @@ public class PlanScreen extends BlueprintScreen {
         int year = WorldCalendar.displayYearOfDay(today());
         int[] counts = new int[3];
         for (CivilRegistry.Entry e : VillageState.of(village).registry) {
-            if (e.kind() >= 0 && e.kind() < 3 && WorldCalendar.displayYearOfDay(e.day()) == year) {
+            if (e.kind() >= 0 && e.kind() < 3 && (e.hasExact() ? WorldCalendar.displayYearOfCalendarDay(e.exact()) : WorldCalendar.displayYearOfDay(e.day())) == year) {
                 counts[e.kind()]++;
             }
         }

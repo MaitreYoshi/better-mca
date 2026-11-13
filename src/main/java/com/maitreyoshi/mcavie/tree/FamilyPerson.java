@@ -27,13 +27,19 @@ public record FamilyPerson(
         @Nullable RelationInfo relationToViewer,
         List<Long> pastLives,
         @Nullable Long exactBirth,
-        @Nullable Long exactDeath
+        @Nullable Long exactDeath,
+        // conjoint actuel, ou défunt conjoint tant que le survivant ne s'est pas remarié ; NIL sinon
+        UUID spouse,
+        // anciens conjoints dont on a divorcé
+        List<UUID> divorced,
+        // anciens mariages terminés sans divorce (veuvage suivi d'un remariage)
+        List<UUID> formerSpouses
 ) {
     public FamilyPerson(UUID id, String name, String surname, int gender, boolean player, boolean deceased, UUID father, UUID mother,
                         List<UUID> spouses, List<UUID> children, String professionKey, @Nullable Long birthDay, @Nullable Long deathDay,
                         int happiness, @Nullable UUID portrait, @Nullable RelationInfo relationToViewer) {
         this(id, name, surname, gender, player, deceased, father, mother, spouses, children, professionKey, birthDay, deathDay,
-                happiness, portrait, relationToViewer, List.of(), null, null);
+                happiness, portrait, relationToViewer, List.of(), null, null, Util.NIL_UUID, List.of(), List.of());
     }
 
     public boolean hasFather() {
@@ -71,6 +77,9 @@ public record FamilyPerson(
         pastLives.forEach(buf::writeLong);
         writeNullableLong(buf, exactBirth);
         writeNullableLong(buf, exactDeath);
+        buf.writeUuid(spouse);
+        writeUuids(buf, divorced);
+        writeUuids(buf, formerSpouses);
     }
 
     public static FamilyPerson read(PacketByteBuf buf) {
@@ -93,7 +102,10 @@ public record FamilyPerson(
                 buf.readBoolean() ? RelationInfo.read(buf) : null,
                 readLongs(buf),
                 readNullableLong(buf),
-                readNullableLong(buf)
+                readNullableLong(buf),
+                buf.readUuid(),
+                readUuids(buf),
+                readUuids(buf)
         );
     }
 

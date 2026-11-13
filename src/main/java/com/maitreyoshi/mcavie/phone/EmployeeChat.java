@@ -158,7 +158,8 @@ public final class EmployeeChat {
         MinecraftServer server = player.getServer();
         WorkRegistry registry = WorkRegistry.get(server);
         WorkRegistry.Record record = registry.get(uuid);
-        if (record == null || !player.getUuid().equals(record.employer) || record.job == Job.NONE) {
+        if (record == null || !player.getUuid().equals(record.employer) || record.job == Job.NONE
+                || PhoneEmployees.isDead(server, uuid)) {
             return;
         }
         String text = raw.trim();

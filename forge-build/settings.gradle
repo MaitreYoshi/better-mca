@@ -1,0 +1,13 @@
+pluginManagement {
+    repositories {
+        maven { name = 'Fabric'; url = 'https://maven.fabricmc.net/' }
+        maven { name = 'Architectury'; url = "https://maven.architectury.dev/" }
+        maven { name = 'Forge'; url = "https://files.minecraftforge.net/maven/" }
+        gradlePluginPortal()
+    }
+}
+
+// Build Forge séparé : common = le src/ du projet Fabric (sans le package fabric).
+// Lancer depuis la racine : gradlew.bat -p forge-build build
+include 'common', 'forge'
+rootProject.name = 'better-mca-forge-build'

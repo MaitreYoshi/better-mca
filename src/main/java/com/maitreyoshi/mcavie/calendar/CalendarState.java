@@ -25,7 +25,10 @@ public class CalendarState extends PersistentState {
             NbtCompound entry = list.getCompound(i);
             double speed = entry.getDouble("speed");
             if (speed > 0) {
-                state.segments.add(new WorldCalendar.Segment(entry.getLong("game"), entry.getLong("calendar"), speed));
+                // anciens mondes : segments en jours entiers ; désormais en ticks pour garder la date exacte au changement de vitesse
+                long game = entry.contains("gameTick") ? entry.getLong("gameTick") : entry.getLong("game") * WorldCalendar.TICKS_PER_DAY;
+                long calendar = entry.contains("calendarTick") ? entry.getLong("calendarTick") : entry.getLong("calendar") * WorldCalendar.TICKS_PER_DAY;
+                state.segments.add(new WorldCalendar.Segment(game, calendar, speed));
             }
         }
         return state;
@@ -36,8 +39,11 @@ public class CalendarState extends PersistentState {
         NbtList list = new NbtList();
         for (WorldCalendar.Segment segment : segments) {
             NbtCompound entry = new NbtCompound();
-            entry.putLong("game", segment.gameStart());
-            entry.putLong("calendar", segment.calendarStart());
+            entry.putLong("gameTick", segment.gameStart());
+            entry.putLong("calendarTick", segment.calendarStart());
+            // compatibilité si le monde est rouvert avec une version précédente de l'addon
+            entry.putLong("game", Math.floorDiv(segment.gameStart(), WorldCalendar.TICKS_PER_DAY));
+            entry.putLong("calendar", Math.floorDiv(segment.calendarStart(), WorldCalendar.TICKS_PER_DAY));
             entry.putDouble("speed", segment.speed());
             list.add(entry);
         }

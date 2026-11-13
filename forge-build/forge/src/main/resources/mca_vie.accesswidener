@@ -1,0 +1,3 @@
+accessWidener v2 named
+accessible class net/minecraft/world/GameRules$Acceptor
+accessible method net/minecraft/world/GameRules$Type <init> (Ljava/util/function/Supplier;Ljava/util/function/Function;Ljava/util/function/BiConsumer;Lnet/minecraft/world/GameRules$Acceptor;)V

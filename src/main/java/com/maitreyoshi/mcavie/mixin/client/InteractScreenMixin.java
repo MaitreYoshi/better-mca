@@ -142,7 +142,7 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
             return;
         }
         long birth = mcavie$birthDay;
-        long today = WorldCalendar.now(client.world).dayIndex();
+        long today = WorldCalendar.exactCalendarDay(client.world);
         if (mcavie$birthLine == null || mcavie$birthLineDay != birth || mcavie$birthLineToday != today) {
             mcavie$birthLine = mcavie$createBirthLine(birth, today);
             mcavie$birthLineDay = birth;
@@ -154,7 +154,8 @@ public abstract class InteractScreenMixin extends Screen implements BirthDayHold
     @Unique
     private Text mcavie$createBirthLine(long birth, long today) {
         LocalDate date = WorldCalendar.dateOfDay(birth);
-        int age = LifeCycle.ageInYears(birth, today);
+        // today = jour exact du calendrier qui défile : l'âge change le jour de l'anniversaire, même en vitesse « 1 an »
+        int age = com.maitreyoshi.mcavie.tree.client.TreeTexts.ageBetween(null, birth, today);
 
         Text day = date.getDayOfMonth() == 1
                 ? Text.translatable("calendar.mca_vie.first_day")

@@ -36,6 +36,7 @@ public final class PhoneSettings {
     public static int textSize = 1;
     public static boolean mapRotate;
     public static int mapZoom = 1;
+    public static boolean treeYellow = true;
     public static List<String> order = new ArrayList<>();
     public static Set<String> hidden = new LinkedHashSet<>();
     private static boolean loaded;
@@ -69,6 +70,7 @@ public final class PhoneSettings {
         textSize = clamp(p.getProperty("text_size"), 0, TEXT_SCALES.length - 1, 1);
         mapRotate = "true".equals(p.getProperty("map_rotate"));
         mapZoom = clamp(p.getProperty("map_zoom"), 0, 3, 1);
+        treeYellow = !"false".equals(p.getProperty("tree_yellow"));
         order = split(p.getProperty("app_order"));
         hidden = new LinkedHashSet<>(split(p.getProperty("hidden_apps")));
     }
@@ -82,6 +84,7 @@ public final class PhoneSettings {
         p.setProperty("text_size", String.valueOf(textSize));
         p.setProperty("map_rotate", String.valueOf(mapRotate));
         p.setProperty("map_zoom", String.valueOf(mapZoom));
+        p.setProperty("tree_yellow", String.valueOf(treeYellow));
         p.setProperty("app_order", String.join(",", order));
         p.setProperty("hidden_apps", String.join(",", hidden));
         try {
@@ -91,6 +94,12 @@ public final class PhoneSettings {
             }
         } catch (IOException ignored) {
         }
+    }
+
+    /** Lien de parenté (« Ton père »…) affiché en jaune dans l'arbre ; option de l'écran de l'arbre. */
+    public static boolean treeRelations() {
+        load();
+        return treeYellow;
     }
 
     public static float textScale() {

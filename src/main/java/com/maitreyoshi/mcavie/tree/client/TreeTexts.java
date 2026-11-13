@@ -96,6 +96,22 @@ public final class TreeTexts {
         return Text.translatable(years <= 1 ? "gui.mca_vie.age_one" : "gui.mca_vie.age", years);
     }
 
+    // âge affiché : date de naissance exacte comparée à la date qui défile, pour qu'il change le jour de
+    // l'anniversaire même en vitesse rapide (« 1 jour = 1 an » fait passer toute l'année dans un seul jour de jeu)
+    public static int liveAge(@Nullable Long exactBirth, long birth, long today) {
+        net.minecraft.client.MinecraftClient client = net.minecraft.client.MinecraftClient.getInstance();
+        net.minecraft.client.world.ClientWorld world = client == null ? null : client.world;
+        if (world == null) {
+            return LifeCycle.ageInYears(birth, today);
+        }
+        return ageBetween(exactBirth, birth, WorldCalendar.exactCalendarDay(world));
+    }
+
+    public static int ageBetween(@Nullable Long exactBirth, long birth, long calendarDay) {
+        java.time.LocalDate born = exactBirth != null ? WorldCalendar.dateOfCalendarDay(exactBirth) : WorldCalendar.dateOfDay(birth);
+        return Math.max(0, java.time.Period.between(born, WorldCalendar.dateOfCalendarDay(calendarDay)).getYears());
+    }
+
     public static String year(long day) {
         return String.valueOf(WorldCalendar.displayYearOfDay(day));
     }
@@ -114,7 +130,7 @@ public final class TreeTexts {
         if (birth == null) {
             return null;
         }
-        return Text.translatable(PREFIX + "born_in." + g(person.gender()), year(birth), age(LifeCycle.ageInYears(birth, today)));
+        return Text.translatable(PREFIX + "born_in." + g(person.gender()), year(birth), age(liveAge(person.exactBirth(), birth, today)));
     }
 
     public static Text date(long day) {

@@ -30,6 +30,16 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
     public interface Holder {
         @Nullable
         TombstoneDetails mcavie$details();
+
+        @Nullable
+        String mcavie$vaultTitle();
+
+        void mcavie$setVaultTitle(@Nullable String title);
+
+        @Nullable
+        UUID mcavie$vaultOwner();
+
+        void mcavie$setVaultOwner(@Nullable UUID owner);
     }
 
     public static TombstoneDetails of(Entity entity, ServerWorld world, @Nullable Long birth, long death) {

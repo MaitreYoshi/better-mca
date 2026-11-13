@@ -2,6 +2,7 @@ package com.maitreyoshi.mcavie.mixin.village;
 
 import net.mca.resources.Rank;
 import net.mca.resources.Tasks;
+import net.mca.resources.data.tasks.AdvancementTask;
 import net.mca.resources.data.tasks.BuildingTask;
 import net.mca.resources.data.tasks.PopulationTask;
 import net.mca.server.world.data.Village;
@@ -37,5 +38,37 @@ public abstract class TasksMixin {
         }
         tasks.tasks.values().forEach(list -> list.removeIf(t -> t instanceof BuildingTask || t instanceof PopulationTask));
         mcavie$filtered = marker;
+    }
+
+    /** MCA ne marque pas les tâches de succès comme requises : un titre (monarque) exige aussi ses succès (Faucheuse tuée). */
+    @Inject(method = "getRank", at = @At("RETURN"), cancellable = true)
+    private static void mcavie$requireAdvancements(Village village, ServerPlayerEntity player, CallbackInfoReturnable<Rank> cir) {
+        Tasks tasks = Tasks.getInstance();
+        if (tasks == null) {
+            return;
+        }
+        Rank rank = cir.getReturnValue();
+        while (rank.ordinal() > 0 && !mcavie$advancementsDone(tasks, rank, village, player)) {
+            rank = Rank.values()[rank.ordinal() - 1];
+        }
+        if (rank != cir.getReturnValue()) {
+            cir.setReturnValue(rank);
+        }
+    }
+
+    @Unique
+    private static boolean mcavie$advancementsDone(Tasks tasks, Rank rank, Village village, ServerPlayerEntity player) {
+        for (var task : tasks.tasks.getOrDefault(rank, java.util.List.of())) {
+            if (task instanceof AdvancementTask) {
+                try {
+                    if (!task.isCompleted(village, player)) {
+                        return false;
+                    }
+                } catch (RuntimeException e) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 }

@@ -44,6 +44,7 @@ public final class TombReservations {
     public static final Identifier CHOOSE = MCAVie.id("tomb_reservation_choose");
     private static final int VILLAGE_MARGIN = 32;
     private static final double MAX_REACH = 64;
+    private static final int FALLBACK_RANGE = 256;
 
     private TombReservations() {
     }
@@ -54,6 +55,9 @@ public final class TombReservations {
                 return EventResult.pass();
             }
             ServerWorld world = serverPlayer.getServerWorld();
+            if (world.getBlockState(pos).getBlock() instanceof VaultBlock) {
+                return EventResult.pass();
+            }
             Optional<TombstoneBlock.Data> tomb = emptyTomb(world, pos);
             if (tomb.isEmpty()) {
                 return EventResult.pass();
@@ -73,6 +77,22 @@ public final class TombReservations {
             UUID villager = buf.readBoolean() ? buf.readUuid() : null;
             server.execute(() -> choose(player, pos, villager));
         });
+    }
+
+    public static void openAt(ServerPlayerEntity player, ServerWorld world, BlockPos pos) {
+        if (emptyTomb(world, pos).isPresent()) {
+            open(player, world, pos.toImmutable());
+        }
+    }
+
+    public static void announce(net.minecraft.entity.player.PlayerEntity player, ServerWorld world, BlockPos pos) {
+        if (emptyTomb(world, pos).isEmpty()) {
+            return;
+        }
+        Claim claim = Registry.get(world.getServer()).at(GlobalPos.create(world.getRegistryKey(), pos));
+        if (claim != null) {
+            player.sendMessage(Text.translatable("tomb.mca_vie.reserved_for", claim.name()).formatted(Formatting.GOLD), true);
+        }
     }
 
     private static Optional<TombstoneBlock.Data> emptyTomb(ServerWorld world, BlockPos pos) {
@@ -97,9 +117,11 @@ public final class TombReservations {
         return list;
     }
 
-    private static Optional<Village> village(ServerWorld world, BlockPos pos, ServerPlayerEntity player) {
+    static Optional<Village> village(ServerWorld world, BlockPos pos, ServerPlayerEntity player) {
         VillageManager manager = VillageManager.get(world);
-        return manager.findNearestVillage(pos, VILLAGE_MARGIN).or(() -> manager.findNearestVillage(player));
+        return manager.findNearestVillage(pos, VILLAGE_MARGIN).or(() -> manager.findNearestVillage(player))
+                .or(() -> manager.findVillages(v -> v.getCenter().getSquaredDistance(pos) <= FALLBACK_RANGE * FALLBACK_RANGE)
+                        .min(Comparator.comparingDouble(v -> v.getCenter().getSquaredDistance(pos))));
     }
 
     private static void open(ServerPlayerEntity player, ServerWorld world, BlockPos pos) {

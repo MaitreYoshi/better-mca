@@ -54,6 +54,12 @@ public class JobScreen extends Screen {
     private int panelHeight;
     @Nullable
     private Job shownFor;
+    @Nullable
+    private Text refusal;
+    private int refusalTicks;
+    // 2 s affiché puis 1 s de fondu
+    private static final int REFUSAL_TICKS = 60;
+    private static final int REFUSAL_FADE = 20;
 
     public JobScreen(Entity villager, @Nullable Screen parent) {
         super(Text.translatable("job.mca_vie.screen_title", villager.getName()));
@@ -150,8 +156,16 @@ public class JobScreen extends Screen {
         }
     }
 
+    public void showRefusal(Text message) {
+        refusal = message;
+        refusalTicks = REFUSAL_TICKS;
+    }
+
     @Override
     public void tick() {
+        if (refusalTicks > 0 && --refusalTicks == 0) {
+            refusal = null;
+        }
         if (shownFor != currentJob()) {
             rebuildActions();
         }
@@ -166,6 +180,16 @@ public class JobScreen extends Screen {
         renderList(context, mouseX, mouseY);
         renderDetail(context);
         super.render(context, mouseX, mouseY, delta);
+        if (refusal != null) {
+            float remaining = refusalTicks - delta;
+            int alpha = (int) (255 * Math.max(0f, Math.min(1f, remaining / REFUSAL_FADE)));
+            if (alpha > 4) {
+                int detailLeft = left + LIST_WIDTH + PAD;
+                int detailWidth = panelWidth - LIST_WIDTH - PAD * 2;
+                int y = top + panelHeight - BUTTON_HEIGHT - PAD - textRenderer.fontHeight - 4;
+                context.drawCenteredTextWithShadow(textRenderer, refusal, detailLeft + detailWidth / 2, y, (alpha << 24) | 0xFFFFFF);
+            }
+        }
     }
 
     private int visibleRows() {

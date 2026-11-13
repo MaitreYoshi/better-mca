@@ -74,16 +74,25 @@ public final class WorldCalendar {
         if (last.speed() == speed) {
             return;
         }
-        long today = fromTicks(s.getOverworld().getTimeOfDay()).dayIndex();
-        long calendarToday = calendarDay(segments, today);
-        if (last.gameStart() >= today) {
-            segments.remove(segments.size() - 1);
-        }
-        segments.add(new Segment(today, calendarToday, speed));
-        state.setSegments(segments);
+        state.setSegments(withSpeed(segments, s.getOverworld().getTimeOfDay(), speed));
         server = s;
         serverSegments = state.segments();
         s.getPlayerManager().getPlayerList().forEach(WorldCalendar::sendSegments);
+    }
+
+    // ancrage à l'instant exact : la date affichée et les âges ne bougent pas, seul le rythme change ensuite
+    static List<Segment> withSpeed(List<Segment> current, long timeOfDay, double speed) {
+        List<Segment> segments = new ArrayList<>(current);
+        long now = Math.max(0, timeOfDay + TICKS_OFFSET);
+        long calendarNow = calendarTicks(segments, now);
+        while (segments.size() > 1 && segments.get(segments.size() - 1).gameStart() >= now) {
+            segments.remove(segments.size() - 1);
+        }
+        if (segments.get(segments.size() - 1).gameStart() >= now) {
+            segments.clear();
+        }
+        segments.add(new Segment(now, calendarNow, speed));
+        return segments;
     }
 
     private static void sendSegments(ServerPlayerEntity player) {
@@ -125,39 +134,40 @@ public final class WorldCalendar {
         return s != null && (s.isDedicated() || s.isOnThread()) ? serverSegments : clientSegments;
     }
 
-    private static Segment segmentAt(List<Segment> segments, long gameDay) {
+    // segments en ticks (jeu décalé de TICKS_OFFSET → calendrier) : un changement de vitesse en cours de journée reste exact
+    private static Segment segmentAt(List<Segment> segments, long gameTick) {
         for (int i = segments.size() - 1; i > 0; i--) {
-            if (segments.get(i).gameStart() <= gameDay) {
+            if (segments.get(i).gameStart() <= gameTick) {
                 return segments.get(i);
             }
         }
         return segments.get(0);
     }
 
-    private static long calendarDay(List<Segment> segments, long gameDay) {
-        Segment s = segmentAt(segments, gameDay);
-        return s.calendarStart() + (long) Math.floor((gameDay - s.gameStart()) * s.speed());
+    private static long calendarTicks(List<Segment> segments, long gameTick) {
+        Segment s = segmentAt(segments, gameTick);
+        return s.calendarStart() + (long) Math.floor((gameTick - s.gameStart()) * s.speed());
     }
 
     public static long calendarDay(long gameDay) {
-        return calendarDay(active(), gameDay);
+        return Math.floorDiv(calendarTicks(active(), gameDay * TICKS_PER_DAY), TICKS_PER_DAY);
     }
 
     private static long flowingCalendarTicks(long gameDay, long tickOfDay) {
-        Segment s = segmentAt(active(), gameDay);
-        return s.calendarStart() * TICKS_PER_DAY + (long) Math.floor(((gameDay - s.gameStart()) * (double) TICKS_PER_DAY + tickOfDay) * s.speed());
+        return calendarTicks(active(), gameDay * TICKS_PER_DAY + tickOfDay);
     }
 
     public static long gameDayOf(long calendarDay) {
         List<Segment> segments = active();
+        long target = calendarDay * TICKS_PER_DAY;
         Segment s = segments.get(0);
         for (int i = segments.size() - 1; i > 0; i--) {
-            if (segments.get(i).calendarStart() <= calendarDay) {
+            if (segments.get(i).calendarStart() <= target) {
                 s = segments.get(i);
                 break;
             }
         }
-        return s.gameStart() + (long) Math.floor((calendarDay - s.calendarStart()) / s.speed());
+        return Math.floorDiv(s.gameStart() + (long) Math.floor((target - s.calendarStart()) / s.speed()), TICKS_PER_DAY);
     }
 
     public static long gameDaysFor(long fromGameDay, long calendarDays) {
@@ -170,7 +180,7 @@ public final class WorldCalendar {
     }
 
     public static double calendarDaysPerGameDay(long gameDay) {
-        return segmentAt(active(), gameDay).speed();
+        return segmentAt(active(), gameDay * TICKS_PER_DAY).speed();
     }
 
     public static double calendarDaysBetween(long fromGameDay, long toGameDay) {

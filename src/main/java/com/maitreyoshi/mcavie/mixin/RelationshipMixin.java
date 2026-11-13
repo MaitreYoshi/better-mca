@@ -6,7 +6,9 @@ import com.maitreyoshi.mcavie.life.LifeCycle;
 import com.maitreyoshi.mcavie.life.LifeRegistry;
 import com.maitreyoshi.mcavie.life.TombstoneBlocks;
 import com.maitreyoshi.mcavie.life.TombstoneDetails;
+import com.maitreyoshi.mcavie.life.TombReservations;
 import com.maitreyoshi.mcavie.life.TombstonePlacement;
+import net.mca.server.world.data.GraveyardManager;
 import com.maitreyoshi.mcavie.life.Wellbeing;
 import com.maitreyoshi.mcavie.social.Social;
 import net.minecraft.entity.damage.DamageSource;
@@ -36,8 +38,12 @@ public abstract class RelationshipMixin {
     @Shadow
     public abstract FamilyTreeNode getFamilyEntry();
 
+    @org.spongepowered.asm.mixin.Unique
+    private boolean mcavie$memorial;
+
     @Inject(method = "onDeath", at = @At("HEAD"))
     private void mcavie$mourning(DamageSource cause, CallbackInfo ci) {
+        mcavie$memorial = false;
         if (!(entity.getWorld() instanceof ServerWorld world)) {
             return;
         }
@@ -47,6 +53,9 @@ public abstract class RelationshipMixin {
         if (simulated != null) {
             history.clearPendingDeath(entity.getUuid());
             life.setDeathDay(entity.getUuid(), simulated);
+            if (entity instanceof VillagerEntityMCA villager) {
+                com.maitreyoshi.mcavie.life.Ghosts.died(villager, world);
+            }
             Social.died(world, entity.getUuid(), true);
             return;
         }
@@ -61,6 +70,8 @@ public abstract class RelationshipMixin {
         node.children().forEach(child -> Wellbeing.addHappiness(world, child, Wellbeing.LOST_PARENT));
         if (entity instanceof VillagerEntityMCA villager && !villager.isHostile()) {
             com.maitreyoshi.mcavie.village.CivilRegistry.death(villager, world);
+            com.maitreyoshi.mcavie.life.Ghosts.died(villager, world);
+            mcavie$memorial = com.maitreyoshi.mcavie.life.MemorialRegistry.died(villager, world, cause);
         }
         if (entity instanceof VillagerEntityMCA || life.isZombie(entity.getUuid())) {
             Social.died(world, entity.getUuid(), true);
@@ -76,15 +87,25 @@ public abstract class RelationshipMixin {
 
     @Redirect(method = "onDeath", at = @At(value = "INVOKE", target = "Lnet/mca/server/world/data/FamilyTreeNode;willBeRemembered()Z"))
     private boolean mcavie$alwaysRemembered(FamilyTreeNode node) {
-        if (entity instanceof VillagerEntityMCA villager && !villager.isHostile()) {
-            return true;
+        return entity instanceof VillagerEntityMCA || node.willBeRemembered();
+    }
+
+    @Redirect(method = "onDeath", at = @At(value = "INVOKE", remap = true,
+            target = "Lnet/mca/server/world/data/GraveyardManager;findNearest(Lnet/minecraft/util/math/BlockPos;Lnet/mca/server/world/data/GraveyardManager$TombstoneState;I)Ljava/util/Optional;"))
+    private Optional<BlockPos> mcavie$reservedOrFreeTomb(GraveyardManager graveyard, BlockPos pos, GraveyardManager.TombstoneState state, int range) {
+        if (mcavie$memorial) {
+            return Optional.empty();
         }
-        return node.willBeRemembered();
+        return entity.getWorld() instanceof ServerWorld world ? TombReservations.findTomb(world, entity, pos, range) : graveyard.findNearest(pos, state, range);
     }
 
     @Inject(method = "placeTombstone", at = @At("HEAD"), cancellable = true)
     private void mcavie$placeOnNearestFreeBlock(ServerWorld world, BlockPos entityPos, CallbackInfoReturnable<Optional<BlockPos>> cir) {
-        TombstonePlacement.findSpot(world, entityPos).ifPresent(pos -> {
+        if (mcavie$memorial) {
+            cir.setReturnValue(Optional.empty());
+            return;
+        }
+        TombstonePlacement.findSpot(world, entityPos).or(() -> TombstonePlacement.surface(world, entityPos)).ifPresent(pos -> {
             world.setBlockState(pos, TombstoneBlocks.forTier(TombstoneDetails.tierOf(entity, world)).getDefaultState());
             cir.setReturnValue(Optional.of(pos));
         });

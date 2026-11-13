@@ -23,6 +23,7 @@ public class LifeRegistry extends PersistentState {
     private final Map<UUID, long[]> pastLives = new HashMap<>();
     private final Map<UUID, long[]> legacyLives = new HashMap<>();
     private final Map<UUID, Long> resurrectedAt = new HashMap<>();
+    private final Map<UUID, Long> forcedAges = new HashMap<>();
 
     public static LifeRegistry get(MinecraftServer server) {
         return server.getOverworld().getPersistentStateManager().getOrCreate(LifeRegistry::fromNbt, LifeRegistry::new, DATA_ID);
@@ -34,6 +35,7 @@ public class LifeRegistry extends PersistentState {
         read(nbt.getCompound("deaths"), registry.deaths);
         read(nbt.getCompound("zombies"), registry.zombies);
         read(nbt.getCompound("resurrected_at"), registry.resurrectedAt);
+        read(nbt.getCompound("forced_ages"), registry.forcedAges);
         read(nbt.getCompound("exact_births"), registry.exactBirths);
         read(nbt.getCompound("exact_deaths"), registry.exactDeaths);
         readLives(nbt.getCompound("lives"), registry.pastLives);
@@ -73,6 +75,7 @@ public class LifeRegistry extends PersistentState {
         nbt.put("deaths", write(deaths));
         nbt.put("zombies", write(zombies));
         nbt.put("resurrected_at", write(resurrectedAt));
+        nbt.put("forced_ages", write(forcedAges));
         nbt.put("exact_births", write(exactBirths));
         nbt.put("exact_deaths", write(exactDeaths));
         NbtCompound lives = new NbtCompound();
@@ -93,6 +96,15 @@ public class LifeRegistry extends PersistentState {
         births.put(uuid, day);
         exactBirths.remove(uuid);
         markDirty();
+    }
+
+    public void forceBirthDay(UUID uuid, long day) {
+        setBirthDay(uuid, day);
+        forcedAges.put(uuid, day);
+    }
+
+    public boolean isAgeForced(UUID uuid) {
+        return forcedAges.containsKey(uuid);
     }
 
     @Nullable

@@ -6,7 +6,9 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.client.world.ClientWorld;
 import net.minecraft.text.OrderedText;
+import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import org.joml.Matrix4f;
 import org.joml.Quaternionf;
@@ -17,6 +19,7 @@ import java.util.UUID;
 public final class ChatHeads {
     private static final int SIZE = 8;
     private static final int MIN_ALPHA = 80;
+    public static final int CHAT_RAISE = 12;
 
     private ChatHeads() {
     }
@@ -61,6 +64,19 @@ public final class ChatHeads {
             villager.headYaw = headYaw;
             villager.prevHeadYaw = prevHeadYaw;
         }
+    }
+
+    public static Text withHead(Text text, UUID uuid) {
+        ClientWorld world = MinecraftClient.getInstance().world;
+        if (world == null || uuid == null) {
+            return text;
+        }
+        for (Entity entity : world.getEntities()) {
+            if (entity instanceof LivingEntity && uuid.equals(entity.getUuid())) {
+                return Text.empty().append(Text.literal("   ").styled(s -> s.withInsertion(SocialConversation.HEAD_MARKER + entity.getId() + ":" + uuid))).append(text);
+            }
+        }
+        return text;
     }
 
     private static LivingEntity find(String insertion) {

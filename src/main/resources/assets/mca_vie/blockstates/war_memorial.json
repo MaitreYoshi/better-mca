@@ -1,0 +1,129 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "part": "13",
+        "facing": "west"
+      },
+      "apply": {
+        "model": "mca_vie:block/war_memorial_0"
+      }
+    },
+    {
+      "when": {
+        "part": "13",
+        "facing": "north"
+      },
+      "apply": {
+        "model": "mca_vie:block/war_memorial_0",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "part": "13",
+        "facing": "east"
+      },
+      "apply": {
+        "model": "mca_vie:block/war_memorial_0",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "part": "13",
+        "facing": "south"
+      },
+      "apply": {
+        "model": "mca_vie:block/war_memorial_0",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "part": "40",
+        "facing": "west"
+      },
+      "apply": {
+        "model": "mca_vie:block/war_memorial_1"
+      }
+    },
+    {
+      "when": {
+        "part": "40",
+        "facing": "north"
+      },
+      "apply": {
+        "model": "mca_vie:block/war_memorial_1",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "part": "40",
+        "facing": "east"
+      },
+      "apply": {
+        "model": "mca_vie:block/war_memorial_1",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "part": "40",
+        "facing": "south"
+      },
+      "apply": {
+        "model": "mca_vie:block/war_memorial_1",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "part": "67",
+        "facing": "west"
+      },
+      "apply": {
+        "model": "mca_vie:block/war_memorial_2"
+      }
+    },
+    {
+      "when": {
+        "part": "67",
+        "facing": "north"
+      },
+      "apply": {
+        "model": "mca_vie:block/war_memorial_2",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "part": "67",
+        "facing": "east"
+      },
+      "apply": {
+        "model": "mca_vie:block/war_memorial_2",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "part": "67",
+        "facing": "south"
+      },
+      "apply": {
+        "model": "mca_vie:block/war_memorial_2",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "part": "0|1|2|3|4|5|6|7|8|9|10|11|12|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36|37|38|39|41|42|43|44|45|46|47|48|49|50|51|52|53|54|55|56|57|58|59|60|61|62|63|64|65|66|68|69|70|71"
+      },
+      "apply": {
+        "model": "mca_vie:block/war_memorial_part"
+      }
+    }
+  ]
+}

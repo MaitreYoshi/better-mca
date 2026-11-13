@@ -7,6 +7,7 @@ import net.mca.server.world.data.FamilyTreeNode;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -34,7 +35,16 @@ public abstract class FamilyTreeNodeMixin {
     private RelationshipState relationshipState;
 
     @Shadow
+    private boolean deceased;
+
+    @Shadow
     public abstract FamilyTree getRoot();
+
+    @Unique
+    private UUID mcavie$previousPartner;
+
+    @Unique
+    private boolean mcavie$wasMarried;
 
     @Inject(method = "setFather", at = @At("HEAD"))
     private void mcavie$detachFromOldFather(FamilyTreeNode parent, CallbackInfoReturnable<Boolean> cir) {
@@ -59,6 +69,8 @@ public abstract class FamilyTreeNodeMixin {
 
     @Inject(method = "updatePartner*", at = @At("HEAD"))
     private void mcavie$rememberPreviousSpouse(CallbackInfo ci) {
+        mcavie$previousPartner = partner;
+        mcavie$wasMarried = relationshipState != null && relationshipState.isMarried();
         if (FamilyTreeNode.isValid(partner) && (relationshipState == RelationshipState.WIDOW
                 || relationshipState != null && relationshipState.isMarried())) {
             SpouseRegistry.record(id, partner);
@@ -68,7 +80,24 @@ public abstract class FamilyTreeNodeMixin {
     @Inject(method = "updatePartner*", at = @At("TAIL"))
     private void mcavie$rememberNewSpouse(CallbackInfo ci) {
         if (FamilyTreeNode.isValid(partner) && relationshipState != null && relationshipState.isMarried()) {
-            SpouseRegistry.record(id, partner);
+            SpouseRegistry.recordMarriage(id, partner);
+        } else if (mcavie$wasMarried && FamilyTreeNode.isValid(mcavie$previousPartner) && !FamilyTreeNode.isValid(partner)
+                && relationshipState == RelationshipState.SINGLE && !deceased) {
+            // fin d'un mariage sans décès (un décès laisse l'état WIDOW) : divorce
+            FamilyTree root = getRoot();
+            boolean partnerDead = root != null && root.getOrEmpty(mcavie$previousPartner).map(FamilyTreeNode::isDeceased).orElse(false);
+            if (!partnerDead) {
+                SpouseRegistry.recordDivorce(id, mcavie$previousPartner);
+            }
+        }
+        mcavie$previousPartner = null;
+        mcavie$wasMarried = false;
+    }
+
+    @Inject(method = "setDeceased", at = @At("HEAD"))
+    private void mcavie$revive(boolean value, CallbackInfo ci) {
+        if (deceased && !value) {
+            SpouseRegistry.recordRevival(id);
         }
     }
 }

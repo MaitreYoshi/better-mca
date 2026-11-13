@@ -37,8 +37,44 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
     @Nullable
     private TombstoneDetails mcavie$details;
 
+    @Unique
+    private static final String TITLE_KEY = "mca_vie:vault_title";
+
+    @Unique
+    private static final String OWNER_KEY = "mca_vie:vault_owner";
+
+    @Unique
+    @Nullable
+    private String mcavie$vaultTitle;
+
+    @Unique
+    @Nullable
+    private java.util.UUID mcavie$vaultOwner;
+
     @Shadow(remap = false)
     private FlowingText computedName;
+
+    @Override
+    @Nullable
+    public String mcavie$vaultTitle() {
+        return mcavie$vaultTitle;
+    }
+
+    @Override
+    public void mcavie$setVaultTitle(@Nullable String title) {
+        mcavie$vaultTitle = title;
+    }
+
+    @Override
+    @Nullable
+    public java.util.UUID mcavie$vaultOwner() {
+        return mcavie$vaultOwner;
+    }
+
+    @Override
+    public void mcavie$setVaultOwner(@Nullable java.util.UUID owner) {
+        mcavie$vaultOwner = owner;
+    }
 
     @Shadow(remap = false)
     public abstract Optional<Text> getEntityName();
@@ -109,6 +145,12 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
         if (mcavie$details != null) {
             mcavie$details.write(nbt);
         }
+        if (mcavie$vaultTitle != null) {
+            nbt.putString(TITLE_KEY, mcavie$vaultTitle);
+        }
+        if (mcavie$vaultOwner != null) {
+            nbt.putUuid(OWNER_KEY, mcavie$vaultOwner);
+        }
     }
 
     @Inject(method = "writeToStack", at = @At("TAIL"), remap = false)
@@ -135,6 +177,8 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
         mcavie$years = nbt.contains(KEY) ? nbt.getString(KEY) : null;
         TombstoneDetails previous = mcavie$details;
         mcavie$details = TombstoneDetails.read(nbt);
+        mcavie$vaultTitle = nbt.contains(TITLE_KEY) ? nbt.getString(TITLE_KEY) : null;
+        mcavie$vaultOwner = nbt.containsUuid(OWNER_KEY) ? nbt.getUuid(OWNER_KEY) : null;
         computedName = null;
         BlockEntity self = (BlockEntity) (Object) this;
         World world = self.getWorld();

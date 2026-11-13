@@ -33,6 +33,7 @@ public final class WorkNetwork {
     public static final Identifier ZONE_HERE = MCAVie.id("zone_here");
     public static final Identifier JOB_INFO = MCAVie.id("job_info");
     public static final Identifier SHOW_WORKSTATION = MCAVie.id("show_workstation");
+    public static final Identifier JOB_REFUSED = MCAVie.id("job_refused");
 
     private static final double MAX_DISTANCE_SQ = 16 * 16;
     private static final Map<UUID, PendingDepot> PENDING_DEPOTS = new ConcurrentHashMap<>();
@@ -54,6 +55,14 @@ public final class WorkNetwork {
                 return;
             }
             server.execute(() -> findManaged(player, uuid).ifPresent(villager -> {
+                String refusal = job == Job.NONE ? null : WorkManager.jobRefusal(villager);
+                if (refusal != null) {
+                    // métier refusé (trop jeune ou trop vieux) : ni métier, ni employeur
+                    PacketByteBuf refused = PacketByteBufs.create();
+                    refused.writeText(Text.translatable(refusal, villager.getName()).formatted(Formatting.RED));
+                    ServerPlayNetworking.send(player, JOB_REFUSED, refused);
+                    return;
+                }
                 WorkManager.setJob(villager, job);
                 WorkRegistry.Record record = WorkManager.getRecord(villager);
                 if (job == Job.NONE) {

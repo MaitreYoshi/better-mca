@@ -23,7 +23,12 @@ public class SurnameRegistry extends PersistentState {
         NbtCompound entries = nbt.getCompound("surnames");
         for (String key : entries.getKeys()) {
             try {
-                registry.surnames.put(UUID.fromString(key), entries.getString(key));
+                String stored = entries.getString(key);
+                String upper = SurnameText.upper(stored);
+                registry.surnames.put(UUID.fromString(key), upper);
+                if (!upper.equals(stored)) {
+                    registry.markDirty();
+                }
             } catch (IllegalArgumentException e) {
                 MCAVie.LOGGER.warn("UUID invalide dans le registre des noms : {}", key);
             }
@@ -45,7 +50,9 @@ public class SurnameRegistry extends PersistentState {
     }
 
     public void set(UUID uuid, String surname) {
-        surnames.put(uuid, surname);
-        markDirty();
+        String upper = SurnameText.upper(surname);
+        if (!upper.equals(surnames.put(uuid, upper))) {
+            markDirty();
+        }
     }
 }

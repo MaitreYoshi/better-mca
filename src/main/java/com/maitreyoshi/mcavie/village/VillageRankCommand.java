@@ -30,19 +30,19 @@ public final class VillageRankCommand {
                                     String name = StringArgumentType.getString(ctx, "rank").toUpperCase(Locale.ROOT);
                                     VillageRank rank = Arrays.stream(VillageRank.values()).filter(r -> r.name().equals(name)).findFirst().orElse(null);
                                     if (rank == null) {
-                                        ctx.getSource().sendError(Text.literal("Rang inconnu : " + name.toLowerCase(Locale.ROOT)));
+                                        ctx.getSource().sendError(Text.translatable("command.mca_vie.villagerank.unknown", name.toLowerCase(Locale.ROOT)));
                                         return 0;
                                     }
                                     Optional<Village> village = VillageManager.get(player.getServerWorld()).findNearestVillage(player);
                                     if (village.isEmpty()) {
-                                        ctx.getSource().sendError(Text.literal("Aucun village à proximité"));
+                                        ctx.getSource().sendError(Text.translatable("command.mca_vie.villagerank.no_village"));
                                         return 0;
                                     }
                                     VillageState state = VillageState.of(village.get());
                                     state.rank = rank;
                                     state.descentDaysLeft = -1;
                                     village.get().markDirty();
-                                    ctx.getSource().sendFeedback(() -> Text.literal(village.get().getName() + " : rang ").append(rank.getName()), true);
+                                    ctx.getSource().sendFeedback(() -> Text.translatable("command.mca_vie.villagerank.set", village.get().getName(), rank.getName()), true);
                                     return 1;
                                 })));
             dispatcher.register(CommandManager.literal("villagemarket").requires(s -> s.hasPermissionLevel(2))
@@ -50,11 +50,11 @@ public final class VillageRankCommand {
                         ServerPlayerEntity player = ctx.getSource().getPlayerOrThrow();
                         Optional<Village> village = VillageManager.get(player.getServerWorld()).findNearestVillage(player);
                         if (village.isEmpty()) {
-                            ctx.getSource().sendError(Text.literal("Aucun village à proximité"));
+                            ctx.getSource().sendError(Text.translatable("command.mca_vie.villagerank.no_village"));
                             return 0;
                         }
                         VillageMarket.devHold(village.get(), player.getServerWorld());
-                        ctx.getSource().sendFeedback(() -> Text.literal(village.get().getName() + " : vente des étals effectuée"), true);
+                        ctx.getSource().sendFeedback(() -> Text.translatable("command.mca_vie.villagemarket.done", village.get().getName()), true);
                         return 1;
                     }));
         });

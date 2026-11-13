@@ -368,7 +368,8 @@ public final class History {
         }
         LifeRegistry.get(world.getServer()).setDeathDay(p.uuid, day);
         if (village != null) {
-            CivilRegistry.record(village, CivilRegistry.DEATH, day, p.node.getName(), "", LifeCycle.ageInYears(p.birth, day));
+            CivilRegistry.record(village, CivilRegistry.DEATH, day, p.node.getName(), "", LifeCycle.ageInYears(p.birth, day),
+                    LifeRegistry.get(world.getServer()).exactDeath(p.uuid));
         }
         SocialRegistry.get(world.getServer()).remove(p.uuid);
         LifeCycle.forgetDead(world, p.uuid);
@@ -391,7 +392,8 @@ public final class History {
         node.setMother(mother.node);
         Surnames.assign(world, node);
         LifeRegistry.get(world.getServer()).setBirthDay(uuid, day);
-        CivilRegistry.record(village, CivilRegistry.BIRTH, day, node.getName(), father.node.getName() + " & " + mother.node.getName(), 0);
+        CivilRegistry.record(village, CivilRegistry.BIRTH, day, node.getName(), father.node.getName() + " & " + mother.node.getName(), 0,
+                LifeRegistry.get(world.getServer()).exactBirth(uuid));
         HistoryRegistry history = HistoryRegistry.get(world.getServer());
         history.addSpawn(new HistoryRegistry.Spawn(uuid, village.getId(), firstName, gender));
         history.setOrigin(uuid, village.getId());

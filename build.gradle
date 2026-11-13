@@ -55,6 +55,11 @@ tasks.register('treeLayoutCheck', JavaExec) {
     args System.getProperty('treeSvg', "${buildDir}/tree-svg")
 }
 
+tasks.register('calendarSpeedCheck', JavaExec) {
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'com.maitreyoshi.mcavie.calendar.CalendarSpeedCheck'
+}
+
 tasks.register('treeSelectionCheck', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'com.maitreyoshi.mcavie.tree.TreeSelectionCheck'

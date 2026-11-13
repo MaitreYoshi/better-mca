@@ -109,12 +109,16 @@ public final class TreeLayoutCheck {
     }
 
     static TreeLayout layout(List<FamilyPerson> persons, UUID root) {
+        return layout(persons, root, -1, -1);
+    }
+
+    static TreeLayout layout(List<FamilyPerson> persons, UUID root, int maxUp, int maxDown) {
         return TreeLayout.family(persons, root, person -> {
             List<String> lines = new ArrayList<>();
             lines.add(person.name());
             lines.add(String.valueOf(person.birthDay()));
             return TreeLayout.card(person, lines, List.of(0, 0), s -> s.length() * 6);
-        });
+        }, maxUp, maxDown);
     }
 
     static final class Report {
@@ -278,7 +282,7 @@ public final class TreeLayoutCheck {
                 sorted.sort(Comparator.comparingInt(c -> Math.abs(c.centerX() - a.centerX())));
                 boolean sameSide = mates.stream().allMatch(c -> Integer.signum(c.centerX() - a.centerX()) == Integer.signum(mates.get(0).centerX() - a.centerX()));
                 boolean allSimple = mates.stream().allMatch(c -> linked.getOrDefault(c, List.of()).size() == 1);
-                if (allSimple) {
+                if (allSimple && !isRootParent(layout, a)) {
                     List<UUID> got = sorted.stream().map(TreeLayout.Card::id).toList();
                     List<UUID> want = order.stream().filter(got::contains).toList();
                     if (!sameSide || !got.equals(want)) {
@@ -823,6 +827,32 @@ public final class TreeLayoutCheck {
         return layout.byId.containsKey(id) ? id : NIL;
     }
 
+    // Carte centrale : ses parents sont au milieu de toute la fratrie (mêmes cartes parents), pas au-dessus d'elle seule.
+    static int siblingsLow(TreeLayout layout, TreeLayout.Card x) {
+        int lo = x.centerX();
+        for (TreeLayout.Card c : rowOf(layout, x)) {
+            if (new HashSet<>(parentCards.getOrDefault(c, List.of())).equals(new HashSet<>(parentCards.getOrDefault(x, List.of())))) {
+                lo = Math.min(lo, c.centerX());
+            }
+        }
+        return lo;
+    }
+
+    static int siblingsCenter(TreeLayout layout, TreeLayout.Card x) {
+        if (x != layout.root) {
+            return x.centerX();
+        }
+        int lo = x.centerX();
+        int hi = x.centerX();
+        for (TreeLayout.Card c : rowOf(layout, x)) {
+            if (new HashSet<>(parentCards.getOrDefault(c, List.of())).equals(new HashSet<>(parentCards.getOrDefault(x, List.of())))) {
+                lo = Math.min(lo, c.centerX());
+                hi = Math.max(hi, c.centerX());
+            }
+        }
+        return Math.floorDiv(lo + hi, 2);
+    }
+
     static void geneanet(Report r, TreeLayout layout) {
         TreeLayout.Card root = layout.root;
         Deque<TreeLayout.Card> todo = new ArrayDeque<>(List.of(root));
@@ -844,13 +874,25 @@ public final class TreeLayoutCheck {
             }
             if (f != null && m != null) {
                 int ax = (f.right() + m.left()) / 2;
-                if (f.y != m.y || f.centerX() >= m.centerX() || Math.abs(ax - x.centerX()) > 1) {
+                // Une épouse intercalée : le couple descend de l'intervalle juste à gauche de la mère.
+                if (x == root) {
+                    for (TreeLayout.Card c : rowOf(layout, f)) {
+                        if (c.centerX() > f.centerX() && c.centerX() < m.centerX()) {
+                            ax = Math.max(ax, (c.right() + m.left()) / 2);
+                        }
+                    }
+                }
+                int fx = f.centerX();
+                int mx = m.centerX();
+                boolean intercalated = x == root && rowOf(layout, f).stream().anyMatch(c -> c.centerX() > fx && c.centerX() < mx);
+                int target = intercalated ? siblingsLow(layout, x) : siblingsCenter(layout, x);
+                if (f.y != m.y || f.centerX() >= m.centerX() || Math.abs(ax - target) > 1) {
                     r.ancestors++;
                     r.note("parents of " + x.person.name() + " not father-left/mother-right centred");
                 }
             } else if (f != null || m != null) {
                 TreeLayout.Card p = f != null ? f : m;
-                if (Math.abs(p.centerX() - x.centerX()) > 1) {
+                if (Math.abs(p.centerX() - siblingsCenter(layout, x)) > 1) {
                     r.ancestors++;
                     r.note("parent of " + x.person.name() + " not centred");
                 }
@@ -894,13 +936,14 @@ public final class TreeLayoutCheck {
         int lo = full.stream().mapToInt(TreeLayout.Card::centerX).min().orElse(0);
         int hi = full.stream().mapToInt(TreeLayout.Card::centerX).max().orElse(0);
         for (TreeLayout.Card c : fatherSide) {
-            if (c.centerX() > lo) {
+            // Avec une autre mère affichée, les enfants passent à droite, sous l'autre épouse du père.
+            if (present(layout, c.person.mother()).equals(NIL) || c.person.mother().equals(c.person.father()) ? c.centerX() > lo : c.centerX() >= lo && c.centerX() <= hi) {
                 r.siblings++;
                 r.note("father-side half-sibling " + c.person.name() + " among full siblings");
             }
         }
         for (TreeLayout.Card c : motherSide) {
-            if (c.centerX() < hi) {
+            if (present(layout, c.person.father()).equals(NIL) ? c.centerX() < hi : c.centerX() > lo) {
                 r.siblings++;
                 r.note("mother-side half-sibling " + c.person.name() + " among full siblings");
             }
@@ -930,6 +973,10 @@ public final class TreeLayoutCheck {
                 }
             }
         }
+    }
+
+    static boolean isRootParent(TreeLayout layout, TreeLayout.Card card) {
+        return layout.root != null && (card.id().equals(layout.root.person.father()) || card.id().equals(layout.root.person.mother()));
     }
 
     static Map<UUID, FamilyPerson> index(List<FamilyPerson> persons) {
@@ -1627,12 +1674,118 @@ public final class TreeLayoutCheck {
             legacy.cases++;
             System.out.println(r);
         }
+        int implexFailures = implexParents() + generationLimit() + descendantLimit() + descendantImplex();
         System.out.println("SELECTION TOTAL: " + selection);
         System.out.println("DEEP TOTAL:      " + deep);
         System.out.println("LEGACY TOTAL:    " + legacy);
-        if (selection.errors() + deep.errors() + selection.fallback + deep.fallback > 0) {
+        if (selection.errors() + deep.errors() + selection.fallback + deep.fallback + implexFailures > 0) {
             System.exit(1);
         }
+    }
+
+    static int rowsAbove(TreeLayout layout) {
+        Set<Integer> rows = new HashSet<>();
+        layout.cards.stream().filter(c -> c.y < layout.root.y).forEach(c -> rows.add(c.y));
+        return rows.size();
+    }
+
+    static int generationLimit() {
+        Fam f = new Fam();
+        Map<Integer, P> men = new HashMap<>();
+        Map<Integer, P> women = new HashMap<>();
+        men.put(14, f.m("P14", 100));
+        for (int i = 14; i >= 1; i--) {
+            long birth = 100 + (14 - i) * 40L;
+            P wife = i == 1 ? f.child(men.get(12), women.get(12), "M1", FEMALE, birth + 5) : f.f("M" + i, birth + 5);
+            women.put(i, wife);
+            f.marry(men.get(i), wife);
+            men.put(i - 1, f.child(men.get(i), wife, "P" + (i - 1), MALE, birth + 40));
+        }
+        P root = men.get(0);
+        Map<UUID, FamilyPerson> all = index(f.persons(false));
+        TreeLayout ten = layout(select(all, root.id, 10, 1), root.id, 10, -1);
+        TreeLayout infinite = layout(select(all, root.id, -1, 1), root.id, -1, -1);
+        boolean top = infinite.cards.stream().anyMatch(c -> c.id().equals(men.get(14).id));
+        boolean ok = rowsAbove(ten) == 10 && ten.fallback.isEmpty() && rowsAbove(infinite) == 14 && top && infinite.fallback.isEmpty();
+        System.out.println((ok ? "OK   " : "FAIL ") + "generations : 10=" + rowsAbove(ten) + " lignes, infini=" + rowsAbove(infinite) + " lignes");
+        return ok ? 0 : 1;
+    }
+
+    static int descendantImplex() {
+        Fam f = new Fam();
+        P root = f.m("F", 100);
+        P wife = f.f("FW", 105);
+        f.marry(root, wife);
+        P a = f.child(root, wife, "A", MALE, 150);
+        P aw = f.f("AW", 152);
+        f.marry(a, aw);
+        P b = f.child(root, wife, "B", MALE, 155);
+        P bw = f.f("BW", 157);
+        f.marry(b, bw);
+        P a2 = f.child(a, aw, "A2", MALE, 200);
+        P b2 = f.child(b, bw, "B2", FEMALE, 205);
+        f.marry(a2, b2);
+        P k = f.child(a2, b2, "K", MALE, 250);
+        P kw = f.f("KW", 252);
+        f.marry(k, kw);
+        P last = f.child(k, kw, "L", MALE, 300);
+        TreeLayout layout = layout(f.persons(false), root.id, -1, -1);
+        long lastCards = layout.cards.stream().filter(c -> c.id().equals(last.id)).count();
+        boolean ok = lastCards == 2 && layout.fallback.isEmpty();
+        System.out.println((ok ? "OK   " : "FAIL ") + "descendants implexe : descendance sous chaque apparition (L=" + lastCards + ")");
+        return ok ? 0 : 1;
+    }
+
+    static int descendantLimit() {
+        Fam f = new Fam();
+        P root = f.m("R", 100);
+        P wife = f.f("W0", 105);
+        f.marry(root, wife);
+        P other = f.child(root, wife, "B1", FEMALE, 150);
+        P husband = f.m("H", 145);
+        f.marry(husband, other);
+        P second = f.child(husband, other, "B2", FEMALE, 190);
+        P line = f.child(root, wife, "A1", MALE, 140);
+        P last = line;
+        for (int i = 1; i < 14; i++) {
+            P spouse = i == 12 ? second : f.f("W" + i, 140 + i * 40L + 5);
+            f.marry(last, spouse);
+            last = f.child(last, spouse, "A" + (i + 1), MALE, 140 + i * 40L);
+        }
+        Map<UUID, FamilyPerson> all = index(f.persons(false));
+        TreeLayout ten = layout(select(all, root.id, 1, 10), root.id, 1, 10);
+        TreeLayout infinite = layout(select(all, root.id, 1, -1), root.id, 1, -1);
+        P deepest = last;
+        boolean bottom = infinite.cards.stream().anyMatch(c -> c.id().equals(deepest.id));
+        boolean ok = rowsBelow(ten) <= 10 && ten.fallback.isEmpty() && rowsBelow(infinite) == 14 && bottom && infinite.fallback.isEmpty();
+        System.out.println((ok ? "OK   " : "FAIL ") + "descendants : 10=" + rowsBelow(ten) + " lignes, infini=" + rowsBelow(infinite) + " lignes");
+        return ok ? 0 : 1;
+    }
+
+    static int rowsBelow(TreeLayout layout) {
+        Set<Integer> rows = new HashSet<>();
+        layout.cards.stream().filter(c -> c.y > layout.root.y).forEach(c -> rows.add(c.y));
+        return rows.size();
+    }
+
+    static int implexParents() {
+        Fam f = new Fam();
+        P g1 = f.m("G1", 100);
+        P g2 = f.f("G2", 105);
+        f.marry(g1, g2);
+        P x = f.child(g1, g2, "X", MALE, 200);
+        P y = f.f("Y", 205);
+        f.marry(x, y);
+        P a = f.child(x, y, "A", MALE, 300);
+        P b = f.child(x, y, "B", FEMALE, 305);
+        f.marry(a, b);
+        P root = f.child(a, b, "R", MALE, 400);
+        TreeLayout layout = layout(f.persons(false), root.id);
+        long xCards = layout.cards.stream().filter(c -> c.id().equals(x.id)).count();
+        long parentCards = layout.cards.stream().filter(c -> c.id().equals(g1.id)).count();
+        boolean ok = xCards == 2 && parentCards == 2;
+        System.out.println((ok ? "OK   " : "FAIL ") + "implexe : parents au-dessus de chaque apparition (X=" + xCards + ", G1=" + parentCards + ")");
+        return ok ? 0 : 1;
     }
 
     static List<P> randomRoots(Fam fam, long seed, int count) {

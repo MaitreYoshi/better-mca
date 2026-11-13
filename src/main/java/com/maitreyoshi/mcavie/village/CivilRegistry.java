@@ -13,7 +13,15 @@ import net.mca.server.world.data.VillageManager;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.server.world.ServerWorld;
 
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public final class CivilRegistry {
@@ -26,7 +34,21 @@ public final class CivilRegistry {
     private CivilRegistry() {
     }
 
-    public record Entry(int kind, long day, String name, String other, int age) {
+    public static final long NO_EXACT = Long.MIN_VALUE;
+
+    public record Entry(int kind, long day, String name, String other, int age, long exact) {
+        public Entry(int kind, long day, String name, String other, int age) {
+            this(kind, day, name, other, age, NO_EXACT);
+        }
+
+        public boolean hasExact() {
+            return exact != NO_EXACT;
+        }
+
+        Entry withExact(long calendarDay) {
+            return new Entry(kind, day, name, other, age, calendarDay);
+        }
+
         NbtCompound toNbt() {
             NbtCompound nbt = new NbtCompound();
             nbt.putInt("kind", kind);
@@ -34,11 +56,15 @@ public final class CivilRegistry {
             nbt.putString("name", name);
             nbt.putString("other", other);
             nbt.putInt("age", age);
+            if (hasExact()) {
+                nbt.putLong("exact", exact);
+            }
             return nbt;
         }
 
         static Entry fromNbt(NbtCompound nbt) {
-            return new Entry(nbt.getInt("kind"), nbt.getLong("day"), nbt.getString("name"), nbt.getString("other"), nbt.getInt("age"));
+            return new Entry(nbt.getInt("kind"), nbt.getLong("day"), nbt.getString("name"), nbt.getString("other"), nbt.getInt("age"),
+                    nbt.contains("exact") ? nbt.getLong("exact") : NO_EXACT);
         }
     }
 
@@ -51,7 +77,8 @@ public final class CivilRegistry {
                 .map(parent -> VillageManager.get(world).findVillages(v -> v.hasResident(parent.id())).findFirst())
                 .flatMap(Optional::stream)
                 .findFirst();
-        add(village.isPresent() ? village : village(baby, world), new Entry(BIRTH, today(world), name(baby), parents, 0));
+        add(village.isPresent() ? village : village(baby, world), exact(new Entry(BIRTH, today(world), name(baby), parents, 0),
+                LifeRegistry.get(world.getServer()).exactBirth(baby.getUuid())));
         com.maitreyoshi.mcavie.social.SocialConversation.witness(world, baby, "birth", net.minecraft.text.Text.literal(name(baby)), baby.getUuid());
     }
 
@@ -75,7 +102,8 @@ public final class CivilRegistry {
         Long birth = LifeRegistry.get(world.getServer()).getBirthDay(villager.getUuid());
         long today = today(world);
         int age = birth == null ? -1 : LifeCycle.ageInYears(birth, today);
-        add(village(villager, world), new Entry(DEATH, today, name(villager), "", age));
+        add(village(villager, world), exact(new Entry(DEATH, today, name(villager), "", age),
+                LifeRegistry.get(world.getServer()).exactDeath(villager.getUuid())));
     }
 
     public static void zombified(VillagerEntityMCA villager, ServerWorld world) {
@@ -84,6 +112,50 @@ public final class CivilRegistry {
 
     public static void record(Village village, int kind, long day, String name, String other, int age) {
         add(Optional.of(village), new Entry(kind, day, name, other, age));
+    }
+
+    public static void record(Village village, int kind, long day, String name, String other, int age, @Nullable Long exact) {
+        add(Optional.of(village), exact(new Entry(kind, day, name, other, age), exact));
+    }
+
+    private static Entry exact(Entry entry, @Nullable Long calendarDay) {
+        return calendarDay == null ? entry : entry.withExact(calendarDay);
+    }
+
+    /** Anciennes entrées : reprend la date exacte de l'arbre (même villageois, même jour de jeu). */
+    public static void fillExactDates(ServerWorld world) {
+        LifeRegistry life = LifeRegistry.get(world.getServer());
+        Map<String, List<UUID>> byName = new HashMap<>();
+        ((com.maitreyoshi.mcavie.tree.server.mixin.FamilyTreeAccessor) FamilyTree.get(world)).mcavie$getEntries().values()
+                .forEach(n -> byName.computeIfAbsent(n.getName(), k -> new ArrayList<>()).add(n.id()));
+        for (Village village : VillageManager.get(world)) {
+            VillageState state = VillageState.of(village);
+            boolean changed = false;
+            for (ListIterator<Entry> it = state.registry.listIterator(); it.hasNext(); ) {
+                Entry e = it.next();
+                if (e.hasExact() || e.kind() != BIRTH && e.kind() != DEATH) {
+                    continue;
+                }
+                boolean birth = e.kind() == BIRTH;
+                Long exact = null;
+                List<UUID> known = byName.getOrDefault(e.name(), List.of()).stream()
+                        .filter(id -> (birth ? life.getBirthDay(id) : life.getDeathDay(id)) != null).toList();
+                for (UUID id : known) {
+                    Long day = birth ? life.getBirthDay(id) : life.getDeathDay(id);
+                    if (day == e.day() || known.size() == 1) {
+                        exact = birth ? life.exactBirth(id) : life.exactDeath(id);
+                        break;
+                    }
+                }
+                if (exact != null) {
+                    it.set(e.withExact(exact));
+                    changed = true;
+                }
+            }
+            if (changed) {
+                village.markDirty();
+            }
+        }
     }
 
     private static String name(VillagerEntityMCA villager) {

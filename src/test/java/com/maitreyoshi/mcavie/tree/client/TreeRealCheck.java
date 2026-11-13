@@ -175,7 +175,7 @@ public final class TreeRealCheck {
             }
         };
         List<FamilyPerson> list = new ArrayList<>();
-        for (UUID id : TreeSelection.select(graph, root, up, down, 400)) {
+        for (UUID id : TreeSelection.select(graph, root, up, down, Integer.getInteger("treeMax", 400))) {
             FamilyPerson p = persons.get(id);
             if (p != null) {
                 list.add(p);

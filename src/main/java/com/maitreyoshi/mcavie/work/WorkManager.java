@@ -296,6 +296,22 @@ public final class WorkManager {
         return birth == null ? -1 : LifeCycle.ageInYears(birth, WorldCalendar.now(world).dayIndex());
     }
 
+    // clé de traduction du refus d'un métier proposé par un joueur, ou null s'il l'accepte
+    public static String jobRefusal(VillagerEntityMCA villager) {
+        if (!(villager.getWorld() instanceof ServerWorld world)) {
+            return null;
+        }
+        int age = ageInYears(villager, world);
+        if (age >= AgingConfig.get().retirementAge) {
+            return "job.mca_vie.refused_old";
+        }
+        boolean adult = AgeState.byCurrentAge(villager.getBreedingAge()) == AgeState.ADULT;
+        if (age >= 0 ? age < APPRENTICE_AGE : !adult) {
+            return "job.mca_vie.refused_young";
+        }
+        return null;
+    }
+
     private static void updateCareer(VillagerEntityMCA villager, ServerWorld world, int age) {
         if (age < 0) {
             return;
@@ -315,6 +331,7 @@ public final class WorkManager {
                 record = registry.getOrCreate(villager.getUuid());
                 record.job = Job.RETIRED;
                 record.formerJob = former;
+                record.employer = null;
                 registry.markDirty();
                 WorkNetwork.sendJobInfo(villager);
             }

@@ -77,6 +77,15 @@ public final class TreeSelectionCheck {
         System.out.println("FAIL " + label + " manquants=" + missing + " en trop=" + extra);
     }
 
+    private static String[] lineage(int generations) {
+        List<String> list = new ArrayList<>(List.of("P0"));
+        for (int i = 1; i <= generations; i++) {
+            list.add("P" + i);
+            list.add("M" + i);
+        }
+        return list.toArray(new String[0]);
+    }
+
     private void build() {
         marry("Papy", "Mamie");
         marry("Papy", "BelleMamie");
@@ -114,14 +123,14 @@ public final class TreeSelectionCheck {
         expect("racine haut 2 bas 2", "Racine", 2, 2, 400,
                 "Racine", "Pere", "Mere", "Papy", "Mamie", "PapyM", "MamieM",
                 "Ex", "Epouse", "Fils", "BelleFille", "Fille", "PetitFils", "PetiteFilleEpouse",
-                "Soeur", "DemiFrere", "DemiBelleSoeur", "Neveu", "NeveuEpouse", "PetitNeveu");
+                "Soeur", "BelleMere", "DemiFrere", "DemiBelleSoeur", "Neveu", "NeveuEpouse", "PetitNeveu");
         expect("racine haut 1 bas 1", "Racine", 1, 1, 400,
                 "Racine", "Pere", "Mere", "Ex", "Epouse", "Fils", "BelleFille", "Fille",
-                "Soeur", "DemiFrere", "DemiBelleSoeur", "Neveu", "NeveuEpouse");
+                "Soeur", "BelleMere", "DemiFrere", "DemiBelleSoeur", "Neveu", "NeveuEpouse");
         expect("racine illimite", "Racine", -1, -1, 400,
                 "Racine", "Pere", "Mere", "Papy", "Mamie", "PapyM", "MamieM",
                 "Ex", "Epouse", "Fils", "BelleFille", "Fille", "PetitFils", "PetiteFilleEpouse", "ArrierePetitFils",
-                "Soeur", "DemiFrere", "DemiBelleSoeur", "Neveu", "NeveuEpouse", "PetitNeveu");
+                "Soeur", "BelleMere", "DemiFrere", "DemiBelleSoeur", "Neveu", "NeveuEpouse", "PetitNeveu");
         expect("epouse haut 2 bas 2", "Epouse", 2, 2, 400,
                 "Epouse", "BeauPere", "BelleMereEpouse", "BeauFrere",
                 "Racine", "Fils", "BelleFille", "Fille", "PetitFils", "PetiteFilleEpouse");
@@ -129,6 +138,12 @@ public final class TreeSelectionCheck {
                 "Pere", "Papy", "Mamie", "Oncle", "Tante", "Tata", "Cousin",
                 "Mere", "BelleMere", "Racine", "Ex", "Epouse", "Soeur", "DemiFrere", "DemiBelleSoeur");
         expect("plafond", "Racine", 2, 2, 5, "Racine", "Pere", "Mere", "Papy", "Mamie");
+
+        for (int i = 0; i < 14; i++) {
+            child("P" + (i + 1), "M" + (i + 1), "P" + i);
+        }
+        expect("lignee haut 10", "P0", 10, 0, 400, lineage(10));
+        expect("lignee haut infini", "P0", -1, 0, 400, lineage(14));
 
         List<UUID> first = new ArrayList<>(TreeSelection.select(graph, id("Racine"), -1, -1, 400));
         List<UUID> second = new ArrayList<>(TreeSelection.select(graph, id("Racine"), -1, -1, 400));

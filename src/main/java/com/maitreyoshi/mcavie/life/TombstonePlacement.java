@@ -4,6 +4,7 @@ import net.minecraft.block.BlockState;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Direction;
+import net.minecraft.world.Heightmap;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -28,6 +29,16 @@ public final class TombstonePlacement {
 
         Optional<BlockPos> grounded = candidates.stream().filter(pos -> isFree(world, pos) && hasFloor(world, pos)).findFirst();
         return grounded.isPresent() ? grounded : candidates.stream().filter(pos -> isFree(world, pos)).findFirst();
+    }
+
+    public static Optional<BlockPos> surface(ServerWorld world, BlockPos deathPos) {
+        BlockPos top = world.getTopPosition(Heightmap.Type.MOTION_BLOCKING, deathPos);
+        for (int dy = 0; dy < 16 && world.isInBuildLimit(top.up(dy)); dy++) {
+            if (isFree(world, top.up(dy))) {
+                return Optional.of(top.up(dy));
+            }
+        }
+        return Optional.empty();
     }
 
     private static boolean isFree(ServerWorld world, BlockPos pos) {

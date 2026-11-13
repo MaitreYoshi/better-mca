@@ -1,0 +1,51 @@
+{
+  "multipart": [
+    {
+      "when": {
+        "part": "1",
+        "facing": "west"
+      },
+      "apply": {
+        "model": "mca_vie:block/family_vault"
+      }
+    },
+    {
+      "when": {
+        "part": "1",
+        "facing": "north"
+      },
+      "apply": {
+        "model": "mca_vie:block/family_vault",
+        "y": 90
+      }
+    },
+    {
+      "when": {
+        "part": "1",
+        "facing": "east"
+      },
+      "apply": {
+        "model": "mca_vie:block/family_vault",
+        "y": 180
+      }
+    },
+    {
+      "when": {
+        "part": "1",
+        "facing": "south"
+      },
+      "apply": {
+        "model": "mca_vie:block/family_vault",
+        "y": 270
+      }
+    },
+    {
+      "when": {
+        "part": "0|2|3|4|5|6|7|8|9|10|11"
+      },
+      "apply": {
+        "model": "mca_vie:block/family_vault_part"
+      }
+    }
+  ]
+}

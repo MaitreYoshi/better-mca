@@ -9,6 +9,8 @@ import net.minecraft.client.gui.hud.ChatHud;
 import net.minecraft.text.OrderedText;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Constant;
+import org.spongepowered.asm.mixin.injection.ModifyConstant;
 
 @Mixin(ChatHud.class)
 public abstract class ChatHudMixin {
@@ -18,5 +20,16 @@ public abstract class ChatHudMixin {
         int end = original.call(context, textRenderer, text, x, y, color);
         ChatHeads.draw(context, text, x, y, color);
         return end;
+    }
+
+    // Remonte le chat au-dessus de la barre d'armure (rendu, survol et clics restent alignés).
+    @ModifyConstant(method = "render", constant = @Constant(intValue = 40))
+    private int mcavie$raiseChat(int bottom) {
+        return bottom + ChatHeads.CHAT_RAISE;
+    }
+
+    @ModifyConstant(method = {"toChatLineY", "mouseClicked"}, constant = @Constant(doubleValue = 40.0))
+    private double mcavie$raiseChatMouse(double bottom) {
+        return bottom + ChatHeads.CHAT_RAISE;
     }
 }

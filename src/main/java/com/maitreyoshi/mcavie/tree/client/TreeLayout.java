@@ -27,6 +27,8 @@ public final class TreeLayout {
     private static final int LINK_STEP = 10;
     private static final int REMOTE_LINE_Y = 3;
     private static final int MAX_PERMUTED = 7;
+    private static final int MAX_ANCESTOR_CARDS = 25000;
+    private static final int MAX_COPY_DEPTH = 32;
     private static final int BAR_TOP = 10;
     private static final int BAR_BOTTOM = 8;
     private static final int BAR_STEP = 5;
@@ -142,7 +144,7 @@ public final class TreeLayout {
             lines.add(TreeTexts.trim(font, profession, MAX_TEXT_WIDTH));
             colors.add(0xAAAAAA);
         }
-        if (TreeTexts.isShownOnCard(person.relationToViewer())) {
+        if (com.maitreyoshi.mcavie.phone.client.PhoneSettings.treeRelations() && TreeTexts.isShownOnCard(person.relationToViewer())) {
             lines.add(TreeTexts.trim(font, TreeTexts.yourRelation(person.relationToViewer(), person.gender()), MAX_TEXT_WIDTH));
             colors.add(0xFFFF55);
         }
@@ -165,15 +167,15 @@ public final class TreeLayout {
         return new Card(person, lines, colors, width, height);
     }
 
-    public static TreeLayout family(List<FamilyPerson> persons, UUID rootId, TextRenderer font, long today) {
-        return family(persons, rootId, person -> card(person, font, today));
+    public static TreeLayout family(List<FamilyPerson> persons, UUID rootId, TextRenderer font, long today, int maxUp, int maxDown) {
+        return family(persons, rootId, person -> card(person, font, today), maxUp, maxDown);
     }
 
-    static TreeLayout family(List<FamilyPerson> persons, UUID rootId, Function<FamilyPerson, Card> cards) {
+    static TreeLayout family(List<FamilyPerson> persons, UUID rootId, Function<FamilyPerson, Card> cards, int maxUp, int maxDown) {
         if (persons.isEmpty()) {
             return new TreeLayout();
         }
-        return new FamilyBuilder(persons, rootId, cards).build();
+        return new FamilyBuilder(persons, rootId, cards, maxUp, maxDown).build();
     }
 
     private static final class FamilyBuilder {
@@ -200,7 +202,9 @@ public final class TreeLayout {
         private final Map<Card, Unit> unitOfChild = new HashMap<>();
         private final Map<Card, List<Unit>> unitsOfParent = new HashMap<>();
 
-        private FamilyBuilder(List<FamilyPerson> list, UUID rootId, Function<FamilyPerson, Card> cards) {
+        private FamilyBuilder(List<FamilyPerson> list, UUID rootId, Function<FamilyPerson, Card> cards, int maxUp, int maxDown) {
+            this.maxUp = maxUp;
+            this.maxDown = maxDown;
             for (FamilyPerson person : list) {
                 persons.putIfAbsent(person.id(), person);
             }
@@ -462,6 +466,9 @@ public final class TreeLayout {
         private record Group(Shape shape, List<Card> kids) {
         }
 
+        private record Half(Card parent, @Nullable Card mate, Group group) {
+        }
+
         private record Pair(Card a, Card b) {
         }
 
@@ -478,6 +485,14 @@ public final class TreeLayout {
         private final Set<String> linked = new HashSet<>();
         private final Map<Card, Shape> ancestry = new HashMap<>();
         private double maxSpread;
+        @Nullable
+        private Card betweenCard;
+        private double[] betweenEdge;
+        private int copyDepth;
+        private final Set<Unit> inProgress = new HashSet<>();
+        private final Set<Card> ancestors = new HashSet<>();
+        private final int maxUp;
+        private final int maxDown;
 
         private Card cardOf(UUID id) {
             return layout.byId.get(id);
@@ -516,6 +531,7 @@ public final class TreeLayout {
                     parentsOf(card.id()).forEach(id -> todo.add(cardOf(id)));
                 }
             }
+            ancestors.addAll(blood);
             ArrayDeque<Card> walk = new ArrayDeque<>(List.of(root));
             for (UUID parent : parentsOf(root.id())) {
                 childrenOf(parent).forEach(id -> walk.add(cardOf(id)));
@@ -553,6 +569,7 @@ public final class TreeLayout {
             boolean ok;
             try {
                 findBlood(root);
+                copyDepth = copyDepth(root);
                 rootRow(root);
                 validate();
                 ok = true;
@@ -561,6 +578,8 @@ public final class TreeLayout {
                 layout.fallback = e.getMessage();
             }
             if (ok) {
+                // Limite de générations : celui qu'on n'atteint que plus bas que la fenêtre n'est pas dessiné.
+                layout.cards.removeIf(card -> !claimed.contains(card));
                 List<Card> all = new ArrayList<>(layout.cards);
                 all.addAll(copies);
                 for (Card card : all) {
@@ -592,15 +611,25 @@ public final class TreeLayout {
         }
 
         private void validate() {
-            if (claimed.size() != layout.cards.size()) {
+            if (maxDown < 0 && claimed.size() != layout.cards.size()) {
                 throw new NotTree("cards");
             }
             for (Unit unit : units.values()) {
-                if (!drawn.getOrDefault(unit, Set.of()).containsAll(kidsOf(unit))) {
-                    throw new NotTree("kids");
+                if (maxDown >= 0 && !consumed.contains(unit)) {
+                    continue;
+                }
+                Set<Card> shown = drawn.getOrDefault(unit, Set.of());
+                for (Card kid : kidsOf(unit)) {
+                    // Avec une limite de générations, un ancêtre au bord de la fenêtre garde ses parents hors champ.
+                    if (!shown.contains(kid) && !(maxUp >= 0 && blood.contains(kid))) {
+                        throw new NotTree("kids");
+                    }
                 }
             }
             for (Card card : walked) {
+                if (maxDown >= 0 && !claimed.contains(card)) {
+                    continue;
+                }
                 for (UUID id : partnersOf(card.id())) {
                     if (!linked.contains(pairKey(card, cardOf(id)))) {
                         throw new NotTree("partners: " + card.person.name() + " / " + cardOf(id).person.name());
@@ -665,25 +694,62 @@ public final class TreeLayout {
             return list;
         }
 
+        // Un ancêtre qui revient (implexe) montre aussi ses parents à chaque apparition,
+        // sur autant de générations que le plafond de cartes le permet.
+        private int copyDepth(Card root) {
+            int best = 0;
+            for (int depth = 1; depth <= MAX_COPY_DEPTH; depth++) {
+                int[] count = {0};
+                countAncestors(root.id(), 0, depth, depth, new HashSet<>(), count);
+                if (count[0] > MAX_ANCESTOR_CARDS) {
+                    break;
+                }
+                best = depth;
+            }
+            return best;
+        }
+
+        private void countAncestors(UUID id, int level, int left, int depth, Set<UUID> seen, int[] count) {
+            if (++count[0] > MAX_ANCESTOR_CARDS) {
+                return;
+            }
+            boolean copy = !seen.add(id);
+            if (copy && left <= 0 || maxUp >= 0 && level >= maxUp) {
+                return;
+            }
+            for (UUID parent : parentsOf(id)) {
+                countAncestors(parent, level + 1, copy ? left - 1 : depth, depth, seen, count);
+            }
+        }
+
         private Shape anc(Card card) {
+            return anc(card, copyDepth);
+        }
+
+        private Shape anc(Card card, int left) {
             card.x = 0;
             Shape shape = new Shape();
             shape.add(card);
             ancestry.put(card, shape);
-            Unit unit = card.copy ? null : unitOfChild.get(card);
+            Unit unit = maxUp >= 0 && -card.gen >= maxUp ? null : unitOfChild.get(original(card));
+            if (unit != null && card.copy && left <= 0 && claimed.containsAll(unit.parents)
+                    && drawn.getOrDefault(unit, Set.of()).contains(original(card))) {
+                unit = null;
+            }
             if (unit == null) {
                 return shape;
             }
             List<Card> pair = parentsAbove(card, unit);
             brood(unit, pair, List.of(card));
+            int next = card.copy ? left - 1 : copyDepth;
             if (pair.size() == 1) {
-                Shape above = anc(pair.get(0));
+                Shape above = anc(pair.get(0), next);
                 shape.absorb(above);
             } else {
                 Card f = pair.get(0);
                 Card m = pair.get(1);
-                Shape a = anc(f);
-                Shape b = anc(m);
+                Shape a = anc(f, next);
+                Shape b = anc(m, next);
                 placeCouple(a, f, b, m, coupleDistance(a, f, b, m), 0);
                 shape.absorb(a);
                 shape.absorb(b);
@@ -703,8 +769,8 @@ public final class TreeLayout {
             for (Card parent : pair) {
                 family.addAll(unitsOfParent.getOrDefault(original(parent), List.of()));
             }
-            Unit fatherOnly = null;
-            Unit motherOnly = null;
+            List<Unit> fatherSide = new ArrayList<>();
+            List<Unit> motherSide = new ArrayList<>();
             for (Unit unit : family) {
                 if (kidsOf(unit).isEmpty()) {
                     continue;
@@ -715,46 +781,200 @@ public final class TreeLayout {
                 if (unit == full) {
                     continue;
                 }
-                if (pair.size() == 2 && unit.parents.size() == 1 && unit.parents.get(0) == original(pair.get(0))) {
-                    fatherOnly = unit;
-                } else if (pair.size() == 2 && unit.parents.size() == 1 && unit.parents.get(0) == original(pair.get(1))) {
-                    motherOnly = unit;
+                if (unit.parents.contains(original(pair.get(0)))) {
+                    fatherSide.add(unit);
+                } else if (pair.size() == 2 && unit.parents.contains(original(pair.get(1)))) {
+                    motherSide.add(unit);
                 } else {
                     throw new NotTree("rootHalf");
                 }
             }
             Group middle = group(full, 0, pair);
-            middle.shape.shift(-root.x);
-            double kidLo = Double.MAX_VALUE;
-            double kidHi = -Double.MAX_VALUE;
-            for (Card kid : middle.kids) {
-                kidLo = Math.min(kidLo, kid.x);
-                kidHi = Math.max(kidHi, kid.x);
-            }
-            if (fatherOnly != null) {
-                Group left = group(fatherOnly, 0, List.of(pair.get(0)));
-                left.shape.shift(-need(left.shape, middle.shape));
-            }
-            if (motherOnly != null) {
-                Group right = group(motherOnly, 0, List.of(pair.get(1)));
-                right.shape.shift(need(middle.shape, right.shape));
-            }
+            // La fratrie est centrée sous le couple, pas sur l'enfant affiché : sinon, plus il est loin dans la fratrie, plus le parent s'éloigne.
+            middle.shape.shift(-(kidLow(middle) + kidHigh(middle)) / 2);
+            List<Half> ofFather = halves(fatherSide, pair.get(0));
+            List<Half> ofMother = pair.size() == 2 ? halves(motherSide, pair.get(1)) : List.of();
             if (pair.size() == 1) {
-                anc(pair.get(0));
+                Card parent = pair.get(0);
+                placeHalves(ofFather, parent, parent.id().equals(root.person.father()) ? 1 : -1, middle, anc(parent));
                 return;
             }
+            // Comme dans la vue descendants : les autres épouses à droite de l'homme, les autres maris à gauche de la femme.
+            // Les autres épouses du père, quel que soit l'ordre des mariages, s'intercalent entre le père et elle (sauf si la mère a aussi un autre mari : les lignes se croiseraient).
+            List<Half> between = new ArrayList<>();
+            for (Half half : ofFather) {
+                if (half.mate != null && ofMother.stream().allMatch(h -> h.mate == null)) {
+                    between.add(half);
+                }
+            }
+            List<Half> outer = new ArrayList<>(ofFather);
+            outer.removeAll(between);
+            List<Half> left = sideHalves(ofFather, ofMother);
+            List<Half> right = sideHalves(ofMother, outer);
             Card f = pair.get(0);
             Card m = pair.get(1);
             Shape a = anc(f);
             Shape b = anc(m);
             double distance = coupleDistance(a, f, b, m);
-            if (fatherOnly != null) {
-                distance = Math.max(distance, -2 * (kidLo - BAR_GAP) - f.width / 2.0 + m.width / 2.0);
+            if (!between.isEmpty()) {
+                // Épouse intercalée : le couple descend au-dessus de l'aîné, sinon le père serait repoussé à gauche de toute la fratrie.
+                middle.shape.shift(-kidLow(middle));
+                placeBetween(between, f, a, m, b, distance, !left.isEmpty() && left.get(0).mate == null, !right.isEmpty() && right.get(0).mate == null, middle);
+                double[] state = betweenEdge;
+                placeHalves(left, f, -1, middle, a, state[0], state[1]);
+                placeHalves(right, m, 1, middle, b, kidHigh(middle), Double.NaN);
+                return;
             }
-            if (motherOnly != null) {
-                distance = Math.max(distance, 2 * (kidHi + BAR_GAP) + f.width / 2.0 - m.width / 2.0);
+            if (!left.isEmpty() && left.get(0).mate == null) {
+                distance = Math.max(distance, -2 * (kidLow(middle) - BAR_GAP) - f.width / 2.0 + m.width / 2.0);
+            }
+            if (!right.isEmpty() && right.get(0).mate == null) {
+                distance = Math.max(distance, 2 * (kidHigh(middle) + BAR_GAP) + f.width / 2.0 - m.width / 2.0);
             }
             placeCouple(a, f, b, m, distance, 0);
+            placeHalves(left, f, -1, middle, a);
+            placeHalves(right, m, 1, middle, b);
+        }
+
+        // Demi-frères et sœurs : l'enfant sans autre parent connu en premier, puis les autres conjoints dans l'ordre des mariages.
+        private List<Half> halves(List<Unit> list, Card parent) {
+            List<UUID> order = marriageOrder(parent.id(), partnersOf(parent.id()));
+            List<Unit> sorted = new ArrayList<>(list);
+            sorted.sort(Comparator.comparingInt(unit -> {
+                Card other = otherParent(unit, parent);
+                return other == null ? -1 : order.indexOf(other.id());
+            }));
+            List<Half> result = new ArrayList<>();
+            List<Card> mates = new ArrayList<>();
+            for (Unit unit : sorted) {
+                Card other = otherParent(unit, parent);
+                Card mate = null;
+                if (other != null) {
+                    mate = blood.contains(other) || claimed.contains(other) ? copyOf(other, parent.gen) : occurrence(other, parent.gen);
+                    mates.add(mate);
+                }
+                result.add(new Half(parent, mate, group(unit, parent.gen + 1, mate == null ? List.of(parent) : List.of(parent, mate))));
+            }
+            if (!mates.isEmpty()) {
+                List<Card> row = new ArrayList<>(mates);
+                row.add(parent);
+                couple(row, parent, mates);
+            }
+            return result;
+        }
+
+        private static List<Half> sideHalves(List<Half> solo, List<Half> mates) {
+            List<Half> result = new ArrayList<>();
+            for (Half half : solo) {
+                if (half.mate == null) {
+                    result.add(half);
+                }
+            }
+            for (Half half : mates) {
+                if (half.mate != null) {
+                    result.add(half);
+                }
+            }
+            return result;
+        }
+
+        @Nullable
+        private Card otherParent(Unit unit, Card parent) {
+            for (Card card : unit.parents) {
+                if (card != original(parent)) {
+                    return card;
+                }
+            }
+            return null;
+        }
+
+        private void placeBetween(List<Half> between, Card f, Shape a, Card m, Shape b, double distance, boolean fatherSolo, boolean motherSolo, Group middle) {
+            Card closest = between.get(between.size() - 1).mate;
+            betweenCard = closest;
+            double gap = COUPLE_GAP / 2.0;
+            if (motherSolo) {
+                gap = Math.max(gap, kidHigh(middle) + BAR_GAP - m.width / 2.0);
+            }
+            double motherX = gap + m.width / 2.0;
+            closest.x = -(gap + closest.width / 2.0);
+            Shape placed = middle.shape;
+            double edge = kidLow(middle);
+            double previous = Double.NaN;
+            double fatherX = 0;
+            for (int i = between.size() - 1; i >= 0; i--) {
+                Half half = between.get(i);
+                Group group = half.group;
+                group.shape.shift(-need(group.shape, placed));
+                if (!Double.isNaN(previous)) {
+                    group.shape.shift(-Math.max(0, kidHigh(group) - previous + BAR_GAP));
+                }
+                Card mate = half.mate;
+                Card neighbor = i > 0 ? between.get(i - 1).mate : f;
+                double x = mate.x - separation(neighbor, mate);
+                double anchor = (x + neighbor.width / 2.0 + mate.x - mate.width / 2.0) / 2;
+                double over = anchor - edge + BAR_GAP;
+                if (over > 0) {
+                    x -= 2 * over + 1;
+                }
+                if (i == 0) {
+                    x = Math.min(x, motherX - distance);
+                    if (fatherSolo) {
+                        x = Math.min(x, kidLow(group) - BAR_GAP);
+                    }
+                    fatherX = x;
+                } else {
+                    neighbor.x = x;
+                }
+                anchor = (x + neighbor.width / 2.0 + mate.x - mate.width / 2.0) / 2;
+                placed.absorb(group.shape);
+                edge = kidLow(group);
+                previous = anchor;
+            }
+            a.shift(fatherX - f.x);
+            b.shift(motherX - m.x);
+            for (Half half : between) {
+                a.add(half.mate);
+            }
+            betweenEdge = new double[]{edge, previous};
+        }
+
+        private void placeHalves(List<Half> list, Card parent, int dir, Group middle, Shape line) {
+            placeHalves(list, parent, dir, middle, line, dir < 0 ? kidLow(middle) : kidHigh(middle), Double.NaN);
+        }
+
+        private void placeHalves(List<Half> list, Card parent, int dir, Group middle, Shape line, double startEdge, double startPrevious) {
+            Shape placed = middle.shape;
+            double edge = startEdge;
+            double previous = startPrevious;
+            Card last = parent;
+            for (Half half : list) {
+                Group group = half.group;
+                group.shape.shift(dir < 0 ? -need(group.shape, placed) : need(placed, group.shape));
+                if (!Double.isNaN(previous)) {
+                    double inner = dir < 0 ? kidHigh(group) : kidLow(group);
+                    group.shape.shift(dir * Math.max(0, dir * (previous - inner) + BAR_GAP));
+                }
+                double anchor = half.parent.x;
+                if (half.mate != null) {
+                    Card mate = half.mate;
+                    mate.x = last.x + dir * (dir < 0 ? separation(mate, last) : separation(last, mate));
+                    anchor = gapAnchor(last, mate, dir);
+                    double over = dir * (edge - anchor) + BAR_GAP;
+                    if (over > 0) {
+                        mate.x += dir * (2 * over + 1);
+                        anchor = gapAnchor(last, mate, dir);
+                    }
+                    line.add(mate);
+                    last = mate;
+                }
+                placed.absorb(group.shape);
+                edge = dir < 0 ? kidLow(group) : kidHigh(group);
+                previous = anchor;
+            }
+        }
+
+        private static double gapAnchor(Card inner, Card outer, int dir) {
+            return (inner.x + dir * inner.width / 2.0 + outer.x - dir * outer.width / 2.0) / 2;
         }
 
         private Group group(Unit unit, int gen, List<Card> parents) {
@@ -765,7 +985,7 @@ public final class TreeLayout {
             for (Card kid : kids) {
                 Shape shape;
                 Card occ = occurrence(kid, gen);
-                if (occ.copy) {
+                if (occ.copy && !replayable(occ)) {
                     shape = new Shape();
                     shape.add(occ);
                 } else {
@@ -779,6 +999,19 @@ public final class TreeLayout {
             }
             brood(unit, parents, placed);
             return new Group(acc, placed);
+        }
+
+        // Deux descendants mariés entre eux : les enfants sont dessinés sous chacune de leurs deux lignées.
+        private boolean mayRepeat(Card card) {
+            return !ancestors.contains(card) && copies.size() < MAX_ANCESTOR_CARDS;
+        }
+
+        private boolean replayable(Card copy) {
+            Card card = original(copy);
+            if (!mayRepeat(card)) {
+                return false;
+            }
+            return unitsOfParent.getOrDefault(card, List.of()).stream().anyMatch(unit -> !kidsOf(unit).isEmpty());
         }
 
         private static double kidLow(Group group) {
@@ -801,7 +1034,7 @@ public final class TreeLayout {
             int gen = person.gen;
             List<Card> spouses = new ArrayList<>();
             Map<Card, Card> inRow = new HashMap<>();
-            inRow.put(person, person);
+            inRow.put(original(person), person);
             for (UUID id : marriageOrder(person.id(), partnersOf(person.id()))) {
                 Card mate = cardOf(id);
                 Card spouse = blood.contains(mate) || claimed.contains(mate) ? copyOf(mate, gen) : occurrence(mate, gen);
@@ -824,8 +1057,9 @@ public final class TreeLayout {
             List<Unit> list = new ArrayList<>();
             Map<Unit, Double> keys = new HashMap<>();
             Map<Unit, List<Card>> parentsInRow = new HashMap<>();
-            for (Unit unit : unitsOfParent.getOrDefault(person, List.of())) {
-                if (kidsOf(unit).isEmpty() || !consumed.add(unit)) {
+            for (Unit unit : unitsOfParent.getOrDefault(original(person), List.of())) {
+                if (maxDown >= 0 && gen >= maxDown || kidsOf(unit).isEmpty() || inProgress.contains(unit)
+                        || !consumed.add(unit) && !mayRepeat(original(person))) {
                     continue;
                 }
                 double key = self;
@@ -848,7 +1082,9 @@ public final class TreeLayout {
             list.sort(Comparator.comparingDouble(keys::get));
             List<Group> groups = new ArrayList<>();
             for (Unit unit : list) {
+                inProgress.add(unit);
                 groups.add(group(unit, gen + 1, parentsInRow.get(unit)));
+                inProgress.remove(unit);
             }
 
             int n = row.size();
@@ -917,11 +1153,23 @@ public final class TreeLayout {
             }
             List<Card> parents = new ArrayList<>(brood.parents());
             parents.sort(Comparator.comparingInt(c -> c.cx));
+            // Les parents de la carte centrale se placent au milieu de toute la fratrie, pas au-dessus d'elle seule.
+            int target = child.cx;
+            if (child == layout.root) {
+                int lo = Integer.MAX_VALUE;
+                int hi = Integer.MIN_VALUE;
+                for (Card kid : brood.kids()) {
+                    lo = Math.min(lo, kid.cx);
+                    hi = Math.max(hi, kid.cx);
+                }
+                target = betweenCard != null ? lo : Math.floorDiv(lo + hi, 2);
+            }
             int delta;
             if (parents.size() == 2) {
-                delta = child.cx - (parents.get(0).right() + parents.get(1).left()) / 2;
+                Card left = child == layout.root && betweenCard != null ? betweenCard : parents.get(0);
+                delta = target - (left.right() + parents.get(1).left()) / 2;
             } else {
-                delta = child.cx - parents.get(0).cx;
+                delta = target - parents.get(0).cx;
             }
             for (Card parent : parents) {
                 if (delta != 0) {
@@ -963,7 +1211,16 @@ public final class TreeLayout {
                         anchorX = gapCenter(spouse, row.get(spouse.index + toHub));
                         iconX = gapCenter(hub, row.get(hub.index - toHub));
                     }
-                    Link link = new Link(a, b, base - (distance - 1) * step, anchorX, iconX);
+                    int dy = base - (distance - 1) * step;
+                    // Les deux parents remariés : leurs lignes passent au-dessus du même intervalle.
+                    if (distance > 1) {
+                        for (Link other : links) {
+                            if (other.left().gen == a.gen && other.dy() == dy && other.left().cx < b.cx && a.cx < other.right().cx) {
+                                dy += 3;
+                            }
+                        }
+                    }
+                    Link link = new Link(a, b, dy, anchorX, iconX);
                     links.add(link);
                     byPair.put(new Pair(hub, spouse), link);
                     byPair.put(new Pair(spouse, hub), link);
@@ -1917,20 +2174,28 @@ public final class TreeLayout {
         Card left = a.centerX() <= b.centerX() ? a : b;
         Card right = left == a ? b : a;
         boolean married = left.person.spouses().contains(right.id()) || right.person.spouses().contains(left.id());
-        boolean current = married && (isFirst(left.person.spouses(), right.id()) || isFirst(right.person.spouses(), left.id()));
+        boolean current = married && (right.id().equals(left.person.spouse()) || left.id().equals(right.person.spouse()));
+        boolean divorced = left.person.divorced().contains(right.id()) || right.person.divorced().contains(left.id());
         boolean widowed = left.person.deceased() || right.person.deceased();
 
         int color;
         boolean dashed;
         String icon;
-        if (!married || !current) {
+        if (divorced) {
+            // bague cassée : divorce
             color = DIM_COLOR;
             dashed = true;
-            icon = null;
+            icon = "widow";
+        } else if (!married || !current) {
+            color = DIM_COLOR;
+            dashed = true;
+            boolean former = left.person.formerSpouses().contains(right.id()) || right.person.formerSpouses().contains(left.id());
+            icon = former ? "married_past" : null;
         } else if (widowed) {
+            // veuvage : toujours mariés, alliance sur un trait gris
             color = WIDOW_COLOR;
             dashed = false;
-            icon = "widow";
+            icon = "married";
         } else {
             color = LINE_COLOR;
             dashed = false;
@@ -1941,10 +2206,6 @@ public final class TreeLayout {
         if (icon != null) {
             layout.marks.add(new Mark(iconX, y, icon));
         }
-    }
-
-    private static boolean isFirst(List<UUID> list, UUID id) {
-        return !list.isEmpty() && list.get(0).equals(id);
     }
 
     private static void computeBounds(TreeLayout layout) {
@@ -2028,6 +2289,43 @@ public final class TreeLayout {
             card.y = (gens[i] - minGen) * (maxHeight + ROW_GAP);
         }
 
+        // Ancêtre commun : affiche le couple (l'autre parent partagé par les deux branches).
+        Map<Card, int[]> drops = new HashMap<>();
+        for (int i = 1; i < n - 1; i++) {
+            if (steps[i - 1] != UP || steps[i] != DOWN) {
+                continue;
+            }
+            Card top = chain.get(i);
+            FamilyPerson left = chain.get(i - 1).person;
+            FamilyPerson right = chain.get(i + 1).person;
+            FamilyPerson other = null;
+            for (UUID candidate : List.of(left.father(), left.mother())) {
+                if (!candidate.equals(top.id()) && (candidate.equals(right.father()) || candidate.equals(right.mother()))
+                        && byId.containsKey(candidate) && !layout.byId.containsKey(candidate)) {
+                    other = byId.get(candidate);
+                    break;
+                }
+            }
+            if (other == null) {
+                continue;
+            }
+            Card mate = card(other, font, today);
+            int gap = 24;
+            int start = top.centerX() - (top.width + gap + mate.width) / 2;
+            top.cx = start + top.width / 2;
+            top.x = top.cx;
+            mate.cx = top.right() + gap + mate.width / 2;
+            mate.x = mate.cx;
+            mate.gen = top.gen;
+            mate.y = top.y;
+            layout.cards.add(mate);
+            layout.byId.put(mate.id(), mate);
+            int middle = (top.right() + mate.left()) / 2;
+            int lineY = top.y + COUPLE_LINE_Y;
+            coupleLine(layout, top, mate, lineY, middle);
+            drops.put(top, new int[]{middle, lineY});
+        }
+
         for (int i = 0; i < n - 1; i++) {
             Card a = chain.get(i);
             Card b = chain.get(i + 1);
@@ -2047,13 +2345,16 @@ public final class TreeLayout {
             } else {
                 Card parent = steps[i] == UP ? b : a;
                 Card child = parent == a ? b : a;
-                if (parent.centerX() == child.centerX()) {
-                    layout.segments.add(new Segment(parent.centerX(), parent.bottom(), child.centerX(), child.y, LINE_COLOR, false));
+                int[] drop = drops.get(parent);
+                int px = drop != null ? drop[0] : parent.centerX();
+                int py = drop != null ? drop[1] : parent.bottom();
+                if (px == child.centerX()) {
+                    layout.segments.add(new Segment(px, py, child.centerX(), child.y, LINE_COLOR, false));
                 } else {
                     int midY = child.y - 10;
-                    layout.segments.add(new Segment(parent.centerX(), parent.bottom(), parent.centerX(), midY, LINE_COLOR, false));
-                    layout.segments.add(new Segment(Math.min(parent.centerX(), child.centerX()), midY,
-                            Math.max(parent.centerX(), child.centerX()), midY, LINE_COLOR, false));
+                    layout.segments.add(new Segment(px, py, px, midY, LINE_COLOR, false));
+                    layout.segments.add(new Segment(Math.min(px, child.centerX()), midY,
+                            Math.max(px, child.centerX()), midY, LINE_COLOR, false));
                     layout.segments.add(new Segment(child.centerX(), midY, child.centerX(), child.y, LINE_COLOR, false));
                 }
             }

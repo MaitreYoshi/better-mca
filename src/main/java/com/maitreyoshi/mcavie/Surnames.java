@@ -139,6 +139,44 @@ public final class Surnames {
         return filled;
     }
 
+    /** Met en majuscules le nom de famille déjà présent dans les fiches de l'arbre (anciens mondes). */
+    public static void uppercaseTree(ServerWorld world) {
+        FamilyTree tree = FamilyTree.get(world);
+        SurnameRegistry registry = SurnameRegistry.get(world.getServer());
+        for (FamilyTreeNode node : ((FamilyTreeAccessor) tree).mcavie$getEntries().values()) {
+            String surname = registry.get(node.id());
+            if (surname == null || node.getName() == null) {
+                continue;
+            }
+            String display = SurnameText.display(surname, node.gender());
+            String first = SurnameText.firstName(node.getName(), display);
+            if (first.equals(node.getName().trim())) {
+                continue;
+            }
+            String updated = SurnameText.withSurname(first, display);
+            if (!updated.equals(node.getName())) {
+                node.setName(updated);
+            }
+        }
+    }
+
+    /** Joueur dont le nom MCA garde un nom de famille en minuscules. */
+    public static void uppercasePlayer(ServerPlayerEntity player) {
+        String surname = SurnameRegistry.get(player.getServer()).get(player.getUuid());
+        if (surname == null) {
+            return;
+        }
+        PlayerSaveData data = PlayerSaveData.get(player);
+        NbtCompound entityData = data.getEntityData();
+        String name = entityData != null && entityData.contains("villagerName") ? entityData.getString("villagerName") : null;
+        if (name == null) {
+            name = FamilyTree.get(player.getServerWorld()).getOrEmpty(player.getUuid()).map(FamilyTreeNode::getName).orElse(null);
+        }
+        if (name != null && !SurnameText.withSurname(SurnameText.firstName(name, surname), surname).equals(name.trim())) {
+            setPlayerSurname(player, surname, true);
+        }
+    }
+
     public static void assign(ServerWorld world, FamilyTreeNode node) {
         resolve(FamilyTree.get(world), SurnameRegistry.get(world.getServer()), node, SurnameLists.DEFAULT_REGION, 0);
     }

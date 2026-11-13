@@ -1,0 +1,22 @@
+architectury {
+    common rootProject.enabled_platforms.split(',')
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['../../src/main/java']
+            exclude 'com/maitreyoshi/mcavie/fabric/**'
+        }
+        resources {
+            srcDirs = ['../../src/main/resources']
+            exclude 'fabric.mod.json'
+        }
+    }
+}
+
+dependencies {
+    modImplementation "net.fabricmc:fabric-loader:${rootProject.loader_version}"
+    modImplementation "dev.architectury:architectury:${rootProject.architectury_version}"
+    modImplementation files(rootProject.mca_common_jar)
+}

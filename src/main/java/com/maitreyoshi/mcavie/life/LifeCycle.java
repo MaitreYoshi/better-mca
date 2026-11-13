@@ -40,6 +40,7 @@ public final class LifeCycle {
         if (!(villager.getWorld() instanceof ServerWorld world)) {
             return;
         }
+        syncTreeGender(villager, world);
         if (History.applyPendingDeath(villager, world)) {
             return;
         }
@@ -78,6 +79,24 @@ public final class LifeCycle {
         Aging.update(villager, world, ageInYears(body, today));
     }
 
+    public static boolean setAge(VillagerEntityMCA villager, ServerWorld world, int years) {
+        LifeRegistry registry = LifeRegistry.get(world.getServer());
+        UUID uuid = villager.getUuid();
+        long today = WorldCalendar.now(world).dayIndex();
+        Long birth = registry.getBirthDay(uuid);
+        Long body = registry.getBodyBirthDay(uuid);
+        if (birth != null && body != null && years < ageInYears(birth, today) - ageInYears(body, today)) {
+            return false;
+        }
+        long target = WorldCalendar.gameDayOf(WorldCalendar.calendarDay(today) - Math.round((years + 0.5) * DAYS_PER_YEAR));
+        for (int i = 0; i < 64 && ageInYears(target, today) != years; i++) {
+            target += ageInYears(target, today) > years ? 1 : -1;
+        }
+        registry.forceBirthDay(uuid, target);
+        update(villager);
+        return true;
+    }
+
     public static void forgetDead(ServerWorld world, UUID uuid) {
         MinecraftServer server = world.getServer();
         WellbeingRegistry.get(server).remove(uuid);
@@ -93,6 +112,19 @@ public final class LifeCycle {
         WorkManager.forget(uuid);
     }
 
+    // l'arbre MCA fige le genre à la création de la fiche : chez d'anciens villageois il peut différer du genre réel
+    private static void syncTreeGender(VillagerEntityMCA villager, ServerWorld world) {
+        Gender gender = villager.getGenetics().getGender();
+        if (gender != Gender.MALE && gender != Gender.FEMALE) {
+            return;
+        }
+        FamilyTreeNode node = villager.getRelationships().getFamilyEntry();
+        if (node.gender() != gender) {
+            node.setGender(gender);
+            FamilyTree.get(world).markDirty();
+        }
+    }
+
     public static boolean isMenopausal(Entity entity) {
         if (!(entity instanceof VillagerEntityMCA villager) || villager.getGenetics().getGender() != Gender.FEMALE
                 || !(villager.getWorld() instanceof ServerWorld world)) {
@@ -103,7 +135,11 @@ public final class LifeCycle {
     }
 
     public static int ageInYears(long birthDay, long today) {
-        return Period.between(WorldCalendar.dateOfDay(birthDay), WorldCalendar.dateOfDay(today)).getYears();
+        // milieu du jour de jeu : en vitesse rapide (1 jour = 1 an) le début du jour oscille d'un jour autour de
+        // l'anniversaire (années bissextiles), ce qui faisait stagner puis sauter l'âge ; identique en vitesse « 1 jour »
+        long start = WorldCalendar.calendarDay(today);
+        long reference = start + (WorldCalendar.calendarDay(today + 1) - start) / 2;
+        return Period.between(WorldCalendar.dateOfDay(birthDay), WorldCalendar.dateOfCalendarDay(reference)).getYears();
     }
 
     private static boolean isNewborn(VillagerEntityMCA villager, ServerWorld world) {

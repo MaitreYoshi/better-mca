@@ -32,6 +32,11 @@ public abstract class TombstoneRendererMixin {
                                       int light, int overlay, CallbackInfo ci) {
         TombstoneDetails details = ((TombstoneDetails.Holder) entity).mcavie$details();
         BlockState state = entity.getCachedState();
+        if (state.getBlock() instanceof com.maitreyoshi.mcavie.life.VaultBlock) {
+            ci.cancel();
+            com.maitreyoshi.mcavie.life.client.VaultClient.render(entity, entity.hasEntity() ? details : null, state, text, matrices, consumers, light);
+            return;
+        }
         if (details == null || !entity.hasEntity() || !(state.getBlock() instanceof TombstoneBlock block)) {
             return;
         }

@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [
     "BlockEntityTypeMixin",
+    "GhostCollisionMixin",
     "BlockItemMixin",
     "BreedableRelationshipMixin",
     "FamilyTreeUUIDLookupMixin",
@@ -12,6 +13,7 @@
     "PregnancyMixin",
     "RelationshipMixin",
     "TimeCommandMixin",
+    "TombstoneBlockMixin",
     "TombstoneDataMixin",
     "TraitAccessor",
     "VillagerEntityMCAMixin",
@@ -22,13 +24,20 @@
     "VillagerEditorSyncRequestMixin",
     "VillagerTasksMCAMixin",
     "VillagerTrackerItemMixin",
+    "path.PathNodeMakerAccessor",
+    "path.PathNodeNavigatorMixin",
+    "path.EntityNavigationMixin",
+    "path.MobNavigationMixin",
     "village.BuildingMixin",
     "village.EnterBuildingTaskMixin",
+    "village.GetVillageRequestMixin",
     "village.RenameVillageMessageMixin",
+    "village.ResidencyMixin",
     "village.ReportBuildingMessageMixin",
     "village.SaveVillageMessageMixin",
     "village.TasksMixin",
     "village.VillageAccessor",
+    "village.VillageInnManagerMixin",
     "village.VillageMarriageManagerMixin",
     "village.VillageProcreationManagerMixin",
     "village.VillageTaxesManagerMixin",
@@ -68,7 +77,9 @@
     "compat.client.WorldRendererMixin",
     "compat.client.BuiltinModelItemRendererMixin",
     "compat.client.LivingEntityRendererInvoker",
-    "compat.client.EntityRenderDispatcherMixin"
+    "compat.client.EntityRenderDispatcherMixin",
+    "client.GhostVillagerLayerMixin",
+    "client.LimbAnimatorAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

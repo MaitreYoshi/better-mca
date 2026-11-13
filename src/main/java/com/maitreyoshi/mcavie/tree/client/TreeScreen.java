@@ -19,6 +19,7 @@ import net.mca.client.gui.MCAScreens;
 import net.mca.client.resources.Icon;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import com.maitreyoshi.mcavie.phone.client.PhoneSettings;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.sound.PositionedSoundInstance;
@@ -40,7 +41,8 @@ public class TreeScreen extends Screen {
     private static final int BOTTOM = 26;
     private static final int RESULT_HEIGHT = 20;
     private static final int LINEAGE_ROW_HEIGHT = 22;
-    private static final float MIN_ZOOM = 0.2f;
+    private static final float MIN_ZOOM = 0.03f;
+    private static final float BLOCK_ZOOM = 0.08f;
     private static final float MAX_ZOOM = 2.0f;
     private static final float TEXT_ZOOM = 0.3f;
     private static final int MAX_GENERATIONS = 10;
@@ -59,6 +61,9 @@ public class TreeScreen extends Screen {
     @Nullable
     private final Screen parent;
     private boolean requested;
+    private ButtonWidget relationsButton;
+    @Nullable
+    private List<FamilyPerson> treePersons;
     private View view = View.TREE;
 
     private UUID root;
@@ -165,6 +170,8 @@ public class TreeScreen extends Screen {
         }).dimensions(PANEL_WIDTH + 6, barY, 70, 18).build());
         fitButton = addDrawableChild(ButtonWidget.builder(Text.translatable("tree.mca_vie.fit"), b -> fitAll())
                 .dimensions(PANEL_WIDTH + 80, barY, 70, 18).build());
+        relationsButton = addDrawableChild(ButtonWidget.builder(relationsText(), b -> toggleRelations())
+                .dimensions(PANEL_WIDTH + 154, barY, 100, 18).build());
         addDrawableChild(ButtonWidget.builder(ScreenTexts.DONE, b -> close())
                 .dimensions(width - 6 - 80, barY, 80, 18).build());
         previousLink = addDrawableChild(ButtonWidget.builder(Text.literal("◀"), b -> changeLink(-1))
@@ -179,6 +186,23 @@ public class TreeScreen extends Screen {
             clampScrolls();
         }
         updateWidgets();
+    }
+
+    private static Text relationsText() {
+        return Text.translatable(PhoneSettings.treeRelations() ? "tree.mca_vie.relations.on" : "tree.mca_vie.relations.off");
+    }
+
+    /** Affiche ou cache les liens de parenté jaunes, puis recalcule les cartes sans bouger la caméra. */
+    private void toggleRelations() {
+        PhoneSettings.treeYellow = !PhoneSettings.treeYellow;
+        PhoneSettings.save();
+        relationsButton.setMessage(relationsText());
+        if (treePersons != null) {
+            treeLayout = TreeLayout.family(treePersons, root, textRenderer, today(), up, down);
+        }
+        if (pathResponse != null) {
+            pathLayout = TreeLayout.path(pathResponse.persons(), pathResponse.path(), textRenderer, today());
+        }
     }
 
     private void updateWidgets() {
@@ -325,7 +349,8 @@ public class TreeScreen extends Screen {
                 treeWaiting = false;
                 treeById.clear();
                 response.persons().forEach(p -> treeById.put(p.id(), p));
-                treeLayout = TreeLayout.family(response.persons(), root, textRenderer, today());
+                treePersons = response.persons();
+                treeLayout = TreeLayout.family(response.persons(), root, textRenderer, today(), up, down);
                 if (keepCamera) {
                     keepCamera = false;
                 } else if (view == View.TREE) {
@@ -743,7 +768,14 @@ public class TreeScreen extends Screen {
         }
         for (Mark mark : layout.marks) {
             if (mark.x() >= x0 && mark.x() <= x1 && mark.y() >= y0 && mark.y() <= y1) {
-                drawIcon(context, mark.icon(), mark.x() - 5, mark.y() - 5, 10);
+                boolean past = "married_past".equals(mark.icon());
+                if (past) {
+                    RenderSystem.setShaderColor(0.55f, 0.55f, 0.55f, 1);
+                }
+                drawIcon(context, past ? "married" : mark.icon(), mark.x() - 5, mark.y() - 5, 10);
+                if (past) {
+                    RenderSystem.setShaderColor(1, 1, 1, 1);
+                }
             }
         }
 
@@ -791,10 +823,13 @@ public class TreeScreen extends Screen {
         int t = card.y;
         int r = card.right();
         int b = card.bottom();
+        if (zoom < BLOCK_ZOOM) {
+            context.fill(l, t, r, b, card.highlighted ? CARD_BORDER_ROOT : hovered ? CARD_BORDER_HOVER : 0xFF000000 | card.colors[0]);
+            return;
+        }
         boolean dead = card.person.deceased();
         int background = hovered ? CARD_BG_HOVER : dead ? CARD_BG_DEAD : CARD_BG;
-        int border = hovered ? CARD_BORDER_HOVER : dead || card.copy ? CARD_BORDER_DEAD : CARD_BORDER;
-        boolean dim = card.copy && !hovered;
+        int border = hovered ? CARD_BORDER_HOVER : dead ? CARD_BORDER_DEAD : CARD_BORDER;
 
         context.fill(l, t + 1, r, b - 1, background);
         context.fill(l + 1, t, r - 1, t + 1, background);
@@ -806,11 +841,11 @@ public class TreeScreen extends Screen {
 
         int x = l + TreeLayout.PADDING;
         if (card.person.portrait() != null) {
-            drawPortrait(context, card.person.portrait(), l + 4, t + (b - t - TreeLayout.PORTRAIT) / 2, dim);
+            drawPortrait(context, card.person.portrait(), l + 4, t + (b - t - TreeLayout.PORTRAIT) / 2);
             x += TreeLayout.PORTRAIT + TreeLayout.PORTRAIT_GAP;
         }
         if (!text) {
-            context.fill(x - 1, t + 4, r - 4, t + 8, 0xFF000000 | shade(card.colors[0], dim));
+            context.fill(x - 1, t + 4, r - 4, t + 8, 0xFF000000 | card.colors[0]);
             return;
         }
         int y = t + (b - t - card.lines.length * TreeLayout.LINE_HEIGHT + 2) / 2;
@@ -820,22 +855,18 @@ public class TreeScreen extends Screen {
             nameX += TreeLayout.ICON_SPACE;
         }
         for (int i = 0; i < card.lines.length; i++) {
-            context.drawText(textRenderer, card.lines[i], i == 0 ? nameX : x, y + i * TreeLayout.LINE_HEIGHT, shade(card.colors[i], dim), true);
+            context.drawText(textRenderer, card.lines[i], i == 0 ? nameX : x, y + i * TreeLayout.LINE_HEIGHT, card.colors[i], true);
         }
     }
 
-    private static void drawPortrait(DrawContext context, UUID id, int x, int y, boolean dim) {
+    private static void drawPortrait(DrawContext context, UUID id, int x, int y) {
         int size = TreeLayout.PORTRAIT;
         PhonePhotos.Picture picture = PhonePhotos.portrait(id);
         if (picture == null) {
             context.fill(x, y, x + size, y + size, 0xFF202030);
             return;
         }
-        if (dim) {
-            RenderSystem.setShaderColor(0.5f, 0.5f, 0.5f, 1);
-        }
         context.drawTexture(picture.texture(), x, y, size, size, 0, 0, picture.width(), picture.height(), picture.width(), picture.height());
-        RenderSystem.setShaderColor(1, 1, 1, 1);
     }
 
     @Nullable
@@ -851,10 +882,6 @@ public class TreeScreen extends Screen {
         if (pathResponse != null) {
             requestPath();
         }
-    }
-
-    private static int shade(int color, boolean dim) {
-        return dim ? color >> 1 & 0x7F7F7F : color;
     }
 
     private int lineageTop() {
@@ -1034,7 +1061,7 @@ public class TreeScreen extends Screen {
             long today = today();
             String g = TreeTexts.g(person.gender());
             add(Text.literal(TreeTexts.name(person)), TreeTexts.nameColor(person.gender()));
-            if (TreeTexts.isShown(person.relationToViewer())) {
+            if (PhoneSettings.treeRelations() && TreeTexts.isShown(person.relationToViewer())) {
                 add(Text.literal(TreeTexts.yourRelation(person.relationToViewer(), person.gender())), 0xFFFF55);
             }
             String profession = TreeTexts.profession(person);
@@ -1056,12 +1083,13 @@ public class TreeScreen extends Screen {
                 add(Text.translatable("tree.mca_vie.resurrected." + g, TreeTexts.calendarDate(lives.get(i + 1))), 0xB48CFF);
             }
             if (birth != null && !dead) {
-                add(Text.translatable("tree.mca_vie.details.age", TreeTexts.age(LifeCycle.ageInYears(birth, today))), 0xFFFFFF);
+                add(Text.translatable("tree.mca_vie.details.age", TreeTexts.age(TreeTexts.liveAge(person.exactBirth(), birth, today))), 0xFFFFFF);
             }
             if (death != null) {
                 if (birth != null) {
                     add(Text.translatable("tree.mca_vie.died_age." + g, TreeTexts.date(person.exactDeath(), death),
-                            TreeTexts.age(LifeCycle.ageInYears(birth, death))), 0xC0C0C0);
+                            TreeTexts.age(person.exactDeath() != null ? TreeTexts.ageBetween(person.exactBirth(), birth, person.exactDeath())
+                                    : LifeCycle.ageInYears(birth, death))), 0xC0C0C0);
                 } else {
                     add(Text.translatable("tree.mca_vie.died." + g, TreeTexts.date(person.exactDeath(), death)), 0xC0C0C0);
                 }
@@ -1071,13 +1099,11 @@ public class TreeScreen extends Screen {
 
             List<UUID> spouses = person.spouses();
             int pastFrom = 0;
-            if (!spouses.isEmpty()) {
+            if (!spouses.isEmpty() && spouses.get(0).equals(person.spouse())) {
                 FamilyPerson current = findPerson(spouses.get(0));
-                if (current == null || !current.deceased()) {
-                    String key = "tree.mca_vie.details.spouse." + (current == null ? "m" : TreeTexts.g(current.gender()));
-                    add(Text.translatable(key, spouseName(spouses.get(0))), 0xFFFFFF);
-                    pastFrom = 1;
-                }
+                String key = "tree.mca_vie.details.spouse." + (current == null ? "m" : TreeTexts.g(current.gender()));
+                add(Text.translatable(key, spouseName(spouses.get(0))), 0xFFFFFF);
+                pastFrom = 1;
             }
             if (spouses.size() > pastFrom) {
                 List<String> names = new ArrayList<>();

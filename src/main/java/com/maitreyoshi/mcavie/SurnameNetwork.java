@@ -93,6 +93,9 @@ public final class SurnameNetwork {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
             String surname = SurnameRegistry.get(server).get(handler.player.getUuid());
             sendOwnSurname(handler.player, surname == null ? "" : surname);
+            if (surname != null) {
+                Surnames.uppercasePlayer(handler.player);
+            }
             if (surname == null && net.mca.server.world.data.PlayerSaveData.get(handler.player).isEntityDataSet()) {
                 handler.player.sendMessage(net.minecraft.text.Text.translatable("command.mca_vie.none"), false);
             }

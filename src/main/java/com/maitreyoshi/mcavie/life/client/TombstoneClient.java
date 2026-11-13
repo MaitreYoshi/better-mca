@@ -67,7 +67,7 @@ public final class TombstoneClient {
     }
 
     @Nullable
-    private static UUID portrait(UUID person) {
+    static UUID portrait(UUID person) {
         long now = Util.getMeasuringTimeMs();
         Portrait portrait = PORTRAITS.get(person);
         Long requested = REQUESTED.get(person);
@@ -93,7 +93,7 @@ public final class TombstoneClient {
                 Text.translatable("block.mca_vie.tombstone.month." + date.getMonthValue()), date.getYear() <= 0 ? date.getYear() - 1 : date.getYear());
     }
 
-    private static String lives(TombstoneDetails details) {
+    static String lives(TombstoneDetails details) {
         List<Long> past = details.pastLives();
         StringBuilder out = new StringBuilder();
         String start = details.birth() == null ? "?" : String.valueOf(details.exactBirth() != null
@@ -193,7 +193,7 @@ public final class TombstoneClient {
         }
     }
 
-    private static void drawOval(UUID image, MatrixStack matrices, VertexConsumerProvider consumers, float y, float size, int light) {
+    static void drawOval(UUID image, MatrixStack matrices, VertexConsumerProvider consumers, float y, float size, int light) {
         Matrix4f position = matrices.peek().getPositionMatrix();
         float border = Math.max(1, size / 14);
         float height = size;

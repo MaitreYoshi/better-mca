@@ -37,7 +37,12 @@ public final class MCAVie {
         registerCommand();
         com.maitreyoshi.mcavie.village.VillageTitleCommand.register();
         com.maitreyoshi.mcavie.village.VillageRankCommand.register();
+        com.maitreyoshi.mcavie.life.AgeCommand.register();
+        com.maitreyoshi.mcavie.tree.server.TreeMergeCommand.register();
         TreeServer.register();
+        com.maitreyoshi.mcavie.path.LadderPaths.register();
+        com.maitreyoshi.mcavie.village.BedClaims.register();
+        com.maitreyoshi.mcavie.path.HomeEntrance.register();
         com.maitreyoshi.mcavie.work.block.WorkBlocks.register();
         com.maitreyoshi.mcavie.work.JobProfessions.register();
         WorkNetwork.register();
@@ -47,10 +52,12 @@ public final class MCAVie {
         VillageNetwork.register();
         PhoneServer.register();
         com.maitreyoshi.mcavie.life.TombstonePortraits.register();
+        com.maitreyoshi.mcavie.life.TombReservations.register();
         com.maitreyoshi.mcavie.life.TombstoneBlocks.register();
         com.maitreyoshi.mcavie.aging.Aging.register();
         com.maitreyoshi.mcavie.life.FamilyAges.register();
         com.maitreyoshi.mcavie.book.HappinessBook.register();
+        com.maitreyoshi.mcavie.book.GuideBooks.register();
         com.maitreyoshi.mcavie.item.BetterMcaItemGroup.register();
         if (Platform.isDevelopmentEnvironment()) {
             DevTestCommand.register();

@@ -45,6 +45,7 @@ public final class FamilyGraph {
     private static final Pattern MARKS = Pattern.compile("\\p{M}+");
 
     private final Map<UUID, FamilyTreeNode> entries;
+    private final FamilyTree tree;
     private final SurnameRegistry surnames;
     private final SpouseRegistry spouseHistory;
     private final LifeRegistry life;
@@ -55,6 +56,7 @@ public final class FamilyGraph {
 
     public FamilyGraph(MinecraftServer server, FamilyTree tree) {
         this.entries = ((FamilyTreeAccessor) tree).mcavie$getEntries();
+        this.tree = tree;
         this.surnames = SurnameRegistry.get(server);
         this.spouseHistory = SpouseRegistry.get(server);
         this.life = LifeRegistry.get(server);
@@ -108,8 +110,9 @@ public final class FamilyGraph {
     public List<UUID> spouses(FamilyTreeNode node) {
         return spouseCache.computeIfAbsent(node.id(), id -> {
             Set<UUID> set = new LinkedHashSet<>();
-            if (FamilyTreeNode.isValid(node.partner()) && node.getRelationshipState() != RelationshipState.SINGLE) {
-                set.add(node.partner());
+            UUID current = currentSpouse(node);
+            if (FamilyTreeNode.isValid(current)) {
+                set.add(current);
             }
             set.addAll(spouseHistory.get(id));
             for (UUID childId : node.children()) {
@@ -125,6 +128,31 @@ public final class FamilyGraph {
             set.removeIf(spouse -> !contains(spouse));
             return List.copyOf(set);
         });
+    }
+
+    // conjoint actuel, ou défunt conjoint tant que le survivant ne s'est pas remarié ; NIL sinon
+    public UUID currentSpouse(FamilyTreeNode node) {
+        if (FamilyTreeNode.isValid(node.partner()) && node.getRelationshipState() != RelationshipState.SINGLE) {
+            return node.partner();
+        }
+        UUID widowed = spouseHistory.widowedSpouse(tree, node);
+        return widowed != null && contains(widowed) ? widowed : Util.NIL_UUID;
+    }
+
+    public boolean isCurrentSpouse(UUID a, UUID b) {
+        return node(a).map(n -> b.equals(currentSpouse(n))).orElse(false);
+    }
+
+    public List<UUID> divorced(FamilyTreeNode node) {
+        return spouses(node).stream().filter(s -> spouseHistory.isDivorced(node.id(), s)).toList();
+    }
+
+    // vrais mariages enregistrés, hors conjoint actuel et divorces ; les co-parents jamais mariés n'y figurent pas
+    public List<UUID> formerSpouses(FamilyTreeNode node) {
+        UUID current = currentSpouse(node);
+        return spouseHistory.get(node.id()).stream()
+                .filter(s -> !s.equals(current) && !spouseHistory.isDivorced(node.id(), s) && contains(s))
+                .toList();
     }
 
     public String surname(UUID id) {
@@ -178,7 +206,10 @@ public final class FamilyGraph {
                 relationToViewer,
                 life.pastLives(id),
                 life.exactBirth(id),
-                node.isDeceased() ? life.exactDeath(id) : null
+                node.isDeceased() ? life.exactDeath(id) : null,
+                currentSpouse(node),
+                divorced(node),
+                formerSpouses(node)
         );
     }
 
@@ -477,7 +508,7 @@ public final class FamilyGraph {
             if (!reached(id)) {
                 return null;
             }
-            return Kinship.classify(nodes(id), steps(id), FamilyGraph.this::node);
+            return Kinship.classify(nodes(id), steps(id), FamilyGraph.this::node, FamilyGraph.this::isCurrentSpouse);
         }
     }
 }

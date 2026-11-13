@@ -351,8 +351,13 @@ public final class Social {
     }
 
     public static String displayName(ServerWorld world, UUID uuid) {
-        String name = FamilyTree.get(world).getOrEmpty(uuid).map(FamilyTreeNode::getName).orElse(uuid.toString().substring(0, 8));
-        return SurnameText.withSurname(name, SurnameRegistry.get(world.getServer()).get(uuid));
+        java.util.Optional<FamilyTreeNode> node = FamilyTree.get(world).getOrEmpty(uuid);
+        String name = node.map(FamilyTreeNode::getName).orElse(uuid.toString().substring(0, 8));
+        String surname = SurnameRegistry.get(world.getServer()).get(uuid);
+        if (surname != null && node.isPresent()) {
+            surname = SurnameText.display(surname, node.get().gender());
+        }
+        return SurnameText.withSurname(name, surname);
     }
 
     public static boolean areColleagues(WorkRegistry.Record a, WorkRegistry.Record b) {

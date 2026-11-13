@@ -358,6 +358,15 @@ public final class PhoneEmployees {
         return null;
     }
 
+    static boolean isDead(FamilyTree tree, UUID uuid) {
+        return tree.getOrEmpty(uuid).map(FamilyTreeNode::isDeceased).orElse(false);
+    }
+
+    // mort et non ressuscité : ni réponse aux SMS ni place dans l'appli
+    public static boolean isDead(MinecraftServer server, UUID uuid) {
+        return find(server, uuid) == null && isDead(FamilyTree.get(server.getOverworld()), uuid);
+    }
+
     private static void fire(ServerPlayerEntity player, UUID uuid) {
         MinecraftServer server = player.getServer();
         WorkRegistry.Record record = WorkRegistry.get(server).get(uuid);
@@ -386,6 +395,16 @@ public final class PhoneEmployees {
 
     public static String nameOf(MinecraftServer server, UUID uuid, WorkRegistry.Record record) {
         if (record.lastName != null) {
+            String surname = com.maitreyoshi.mcavie.SurnameRegistry.get(server).get(uuid);
+            if (surname == null) {
+                return record.lastName;
+            }
+            for (String form : surname.split("/")) {
+                String first = com.maitreyoshi.mcavie.SurnameText.firstName(record.lastName, form);
+                if (!first.equals(record.lastName.trim())) {
+                    return com.maitreyoshi.mcavie.SurnameText.withSurname(first, form);
+                }
+            }
             return record.lastName;
         }
         return FamilyTree.get(server.getOverworld()).getOrEmpty(uuid).map(FamilyTreeNode::getName).orElse("?");
@@ -402,13 +421,13 @@ public final class PhoneEmployees {
         FamilyTree tree = FamilyTree.get(server.getOverworld());
         for (Map.Entry<UUID, WorkRegistry.Record> entry : WorkRegistry.get(server).entries()) {
             WorkRegistry.Record record = entry.getValue();
-            if (!player.getUuid().equals(record.employer) || record.job == Job.NONE) {
+            if (!player.getUuid().equals(record.employer) || record.job == Job.NONE || record.job == Job.RETIRED) {
                 continue;
             }
             UUID uuid = entry.getKey();
             VillagerEntityMCA villager = find(server, uuid);
             // un mort ne figure plus dans la liste ; sa fiche reste pour le cas où il serait ressuscité
-            if (villager == null && tree.getOrEmpty(uuid).map(FamilyTreeNode::isDeceased).orElse(false)) {
+            if (villager == null && isDead(tree, uuid)) {
                 continue;
             }
             if (villager != null) {

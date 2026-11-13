@@ -33,6 +33,16 @@ public final class WorkClient {
             Info info = new Info(Job.byId(buf.readVarInt()), buf.readBoolean(), buf.readVarInt(), buf.readBoolean(), WorkStatus.byId(buf.readVarInt()), buf.readVarInt(), WorkGesture.byId(buf.readVarInt()));
             client.execute(() -> BY_ENTITY_ID.put(entityId, info));
         });
+        ClientPlayNetworking.registerGlobalReceiver(WorkNetwork.JOB_REFUSED, (client, handler, buf, responseSender) -> {
+            Text message = buf.readText();
+            client.execute(() -> {
+                if (client.currentScreen instanceof JobScreen screen) {
+                    screen.showRefusal(message);
+                } else if (client.player != null) {
+                    client.player.sendMessage(message, true);
+                }
+            });
+        });
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> BY_ENTITY_ID.clear());
         ClientEntityEvents.ENTITY_UNLOAD.register((entity, world) -> BY_ENTITY_ID.remove(entity.getId()));
     }

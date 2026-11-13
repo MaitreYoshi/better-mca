@@ -58,6 +58,8 @@ public final class VillageState {
     public long lastArrivalDay = NONE;
 
     public final Map<UUID, TaxEntry> taxRoll = new HashMap<>();
+    /** Habitants morts, rafraîchi à chaque envoi du plan (affichage seul). */
+    public final Set<UUID> deadResidents = new HashSet<>();
 
     public boolean marketActive;
     public long lastMarketWeek = NONE;
@@ -347,6 +349,9 @@ public final class VillageState {
             roll.put(uuid.toString(), e);
         });
         nbt.put("taxRoll", roll);
+        NbtList dead = new NbtList();
+        deadResidents.forEach(uuid -> dead.add(net.minecraft.nbt.NbtString.of(uuid.toString())));
+        nbt.put("deadResidents", dead);
 
         nbt.putBoolean("marketActive", marketActive);
         if (lastMarketWeek != NONE) {
@@ -443,6 +448,13 @@ public final class VillageState {
             try {
                 NbtCompound e = roll.getCompound(key);
                 taxRoll.put(UUID.fromString(key), new TaxEntry(e.getInt("job"), e.getInt("level"), e.getDouble("amount")));
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+        deadResidents.clear();
+        for (NbtElement e : nbt.getList("deadResidents", NbtElement.STRING_TYPE)) {
+            try {
+                deadResidents.add(UUID.fromString(e.asString()));
             } catch (IllegalArgumentException ignored) {
             }
         }

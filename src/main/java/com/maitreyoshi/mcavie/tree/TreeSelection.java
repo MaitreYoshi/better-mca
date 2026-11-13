@@ -2,6 +2,7 @@ package com.maitreyoshi.mcavie.tree;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -65,6 +66,15 @@ public final class TreeSelection {
         while (!queue.isEmpty() && result.size() < max) {
             Walk walk = queue.poll();
             result.add(walk.id);
+            if (walk.depth == 0 && maxUp > 0 && !Collections.disjoint(graph.parents(walk.id), graph.parents(root))) {
+                // l'autre parent d'un demi-frère ou d'une demi-sœur
+                for (UUID parent : graph.parents(walk.id)) {
+                    if (result.size() >= max) {
+                        break;
+                    }
+                    result.add(parent);
+                }
+            }
             for (UUID spouse : graph.spouses(walk.id)) {
                 if (result.size() >= max) {
                     break;

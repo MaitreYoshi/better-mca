@@ -36,6 +36,12 @@ public class IllustratedPage extends Page {
     private final List<Row> rows = new ArrayList<>();
     private final List<String> grid = new ArrayList<>();
     private String noteKey;
+    private String bigIcon;
+    private Identifier image;
+    private int imageWidth;
+    private int imageHeight;
+    private String[] recipe;
+    private String recipeResult;
     private String introKey;
 
     public IllustratedPage(String titleKey) {
@@ -82,6 +88,24 @@ public class IllustratedPage extends Page {
         return this;
     }
 
+    public IllustratedPage image(Identifier image, int width, int height) {
+        this.image = image;
+        this.imageWidth = width;
+        this.imageHeight = height;
+        return this;
+    }
+
+    public IllustratedPage big(String icon) {
+        this.bigIcon = icon;
+        return this;
+    }
+
+    public IllustratedPage recipe(String result, String... nine) {
+        this.recipeResult = result;
+        this.recipe = nine;
+        return this;
+    }
+
     public IllustratedPage note(String key) {
         this.noteKey = key;
         return this;
@@ -101,8 +125,24 @@ public class IllustratedPage extends Page {
         TextRenderer font = screen.getTextRenderer();
         int left = (screen.width - 192) / 2 + 36;
 
+        if (image != null) {
+            int h = 124;
+            int w = imageWidth * h / imageHeight;
+            context.drawTexture(image, left + (WIDTH - w) / 2, 28, w, h, 0, 0, imageWidth, imageHeight, imageWidth, imageHeight);
+            return;
+        }
         Text title = Text.translatable(titleKey).formatted(Formatting.BOLD);
-        context.drawText(font, title, left + (WIDTH - font.getWidth(title)) / 2, 30, TITLE_COLOR, false);
+        int titleWidth = font.getWidth(title);
+        if (titleWidth > WIDTH) {
+            float scale = WIDTH / (float) titleWidth;
+            context.getMatrices().push();
+            context.getMatrices().translate(left, 30 + 4 * (1 - scale), 0);
+            context.getMatrices().scale(scale, scale, 1);
+            context.drawText(font, title, 0, 0, TITLE_COLOR, false);
+            context.getMatrices().pop();
+        } else {
+            context.drawText(font, title, left + (WIDTH - titleWidth) / 2, 30, TITLE_COLOR, false);
+        }
         context.fill(left + 10, 41, left + WIDTH - 10, 42, 0x55000000 | TITLE_COLOR);
 
         int y = 46;
@@ -112,6 +152,33 @@ public class IllustratedPage extends Page {
                 y += 9;
             }
             y += 4;
+        }
+        if (bigIcon != null) {
+            context.getMatrices().push();
+            context.getMatrices().translate(left + (WIDTH - 48) / 2f, y, 0);
+            context.getMatrices().scale(3, 3, 1);
+            context.drawItem(stack(bigIcon), 0, 0);
+            context.getMatrices().pop();
+            y += 52;
+        }
+        if (recipe != null) {
+            int gridLeft = left + (WIDTH - 54 - 22 - 18) / 2;
+            for (int i = 0; i < 9; i++) {
+                int sx = gridLeft + (i % 3) * 18;
+                int sy = y + (i / 3) * 18;
+                context.fill(sx, sy, sx + 18, sy + 18, 0x40000000 | TITLE_COLOR);
+                context.fill(sx + 1, sy + 1, sx + 17, sy + 17, 0xFFE9DDBF);
+                if (i < recipe.length && !recipe[i].isEmpty()) {
+                    context.drawItem(stack(recipe[i]), sx + 1, sy + 1);
+                }
+            }
+            int arrowX = gridLeft + 54 + 4;
+            context.drawText(font, Text.literal("→").formatted(Formatting.BOLD), arrowX + 3, y + 23, TITLE_COLOR, false);
+            int rx = arrowX + 18;
+            context.fill(rx, y + 18, rx + 18, y + 36, 0x40000000 | TITLE_COLOR);
+            context.fill(rx + 1, y + 19, rx + 17, y + 35, 0xFFE9DDBF);
+            context.drawItem(stack(recipeResult), rx + 1, y + 19);
+            y += 58;
         }
         Row hovered = null;
         for (Row row : rows) {
@@ -127,17 +194,18 @@ public class IllustratedPage extends Page {
             int valueWidth = font.getWidth(value);
             context.drawText(font, value, left + WIDTH - valueWidth, y + 4, row.color, false);
             List<OrderedText> lines = font.wrapLines(Text.translatable(row.key), WIDTH - 20 - valueWidth - 3);
+            int rowHeight = Math.max(ROW_HEIGHT, lines.size() * 9 + 2);
             if (lines.size() == 1) {
                 context.drawText(font, lines.get(0), left + 19, y + 4, TEXT_COLOR, false);
             } else {
-                for (int i = 0; i < Math.min(2, lines.size()); i++) {
+                for (int i = 0; i < lines.size(); i++) {
                     context.drawText(font, lines.get(i), left + 19, y + i * 9, TEXT_COLOR, false);
                 }
             }
-            if (mouseX >= left && mouseX < left + WIDTH && mouseY >= y - 1 && mouseY < y + ROW_HEIGHT - 1) {
+            if (mouseX >= left && mouseX < left + WIDTH && mouseY >= y - 1 && mouseY < y + rowHeight - 1) {
                 hovered = row;
             }
-            y += ROW_HEIGHT;
+            y += rowHeight;
         }
 
         if (!grid.isEmpty()) {
