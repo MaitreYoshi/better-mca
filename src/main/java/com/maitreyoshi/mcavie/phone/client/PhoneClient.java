@@ -7,7 +7,6 @@ import com.maitreyoshi.mcavie.phone.PhoneServer;
 import com.maitreyoshi.mcavie.phone.PhotoFrameEntity;
 import com.maitreyoshi.mcavie.phone.PhotoItem;
 import com.maitreyoshi.mcavie.compat.client.ClientTickEvents;
-import com.maitreyoshi.mcavie.compat.client.BuiltinItemRendererRegistry;
 import dev.architectury.registry.client.level.entity.EntityRendererRegistry;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayConnectionEvents;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
@@ -177,7 +176,6 @@ public final class PhoneClient {
         CameraMode.register();
         ClientTickEvents.END_CLIENT_TICK.register(client -> PhonePhotos.tick());
         EntityRendererRegistry.register(() -> PhoneServer.PHOTO_FRAME, PhotoFrameRenderer::new);
-        BuiltinItemRendererRegistry.INSTANCE.register(PhoneServer.PHOTO, new PhotoItemRenderer());
         ClientPlayNetworking.registerGlobalReceiver(PhoneNetwork.PRINT_VIEW, (client, handler, buf, responseSender) -> {
             UUID id = buf.readUUID();
             client.execute(() -> {
