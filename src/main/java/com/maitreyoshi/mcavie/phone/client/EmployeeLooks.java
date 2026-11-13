@@ -68,19 +68,19 @@ public final class EmployeeLooks {
     @Nullable
     private static VillagerEntityMCA build(ClientLevel world, CompoundTag look) {
         try {
-            VillagerEntityMCA villager = EntitiesMCA.MALE_VILLAGER.get().create(world);
+            VillagerEntityMCA villager = EntitiesMCA.MALE_VILLAGER.create(world);
             if (villager == null) {
                 return null;
             }
             villager.getTypeDataManager().load(villager, look);
             if (villager.getGenetics().getGender() == Gender.FEMALE) {
-                VillagerEntityMCA female = EntitiesMCA.FEMALE_VILLAGER.get().create(world);
+                VillagerEntityMCA female = EntitiesMCA.FEMALE_VILLAGER.create(world);
                 if (female != null) {
                     female.getTypeDataManager().load(female, look);
                     villager = female;
                 }
             }
-            villager.setAge(look.getInt("Age"));
+            villager.setAge(look.getIntOr("Age", 0));
             villager.refreshDimensions();
             return villager;
         } catch (RuntimeException e) {

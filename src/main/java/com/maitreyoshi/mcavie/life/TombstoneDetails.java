@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.SurnameRegistry;
 import com.maitreyoshi.mcavie.SurnameText;
 import com.maitreyoshi.mcavie.aging.AgingConfig;
@@ -108,28 +109,28 @@ public record TombstoneDetails(UUID person, String firstName, String lastName, @
         if (parent == null || !parent.contains(KEY)) {
             return null;
         }
-        CompoundTag nbt = parent.getCompound(KEY);
-        if (!nbt.hasUUID("person")) {
+        CompoundTag nbt = parent.getCompoundOrEmpty(KEY);
+        if (!Nbt.hasUUID(nbt, "person")) {
             return null;
         }
         return new TombstoneDetails(
-                nbt.getUUID("person"),
-                nbt.getString("first"),
-                nbt.getString("last"),
-                nbt.contains("job") ? nbt.getString("job") : null,
-                nbt.contains("birth") ? nbt.getLong("birth") : null,
-                nbt.getLong("death"),
-                nbt.contains("tier") ? nbt.getInt("tier") : LEGACY,
-                nbt.contains("lives_cal") ? java.util.Arrays.stream(nbt.getLongArray("lives_cal")).boxed().toList()
-                        : java.util.Arrays.stream(nbt.getLongArray("lives")).map(WorldCalendar::calendarDay).boxed().toList(),
-                nbt.contains("exact_birth") ? nbt.getLong("exact_birth") : null,
-                nbt.contains("exact_death") ? nbt.getLong("exact_death") : null
+                Nbt.getUUID(nbt, "person"),
+                nbt.getStringOr("first", ""),
+                nbt.getStringOr("last", ""),
+                nbt.contains("job") ? nbt.getStringOr("job", "") : null,
+                nbt.contains("birth") ? nbt.getLongOr("birth", 0L) : null,
+                nbt.getLongOr("death", 0L),
+                nbt.contains("tier") ? nbt.getIntOr("tier", 0) : LEGACY,
+                nbt.contains("lives_cal") ? java.util.Arrays.stream(nbt.getLongArray("lives_cal").orElse(new long[0])).boxed().toList()
+                        : java.util.Arrays.stream(nbt.getLongArray("lives").orElse(new long[0])).map(WorldCalendar::calendarDay).boxed().toList(),
+                nbt.contains("exact_birth") ? nbt.getLongOr("exact_birth", 0L) : null,
+                nbt.contains("exact_death") ? nbt.getLongOr("exact_death", 0L) : null
         );
     }
 
     public void write(CompoundTag parent) {
         CompoundTag nbt = new CompoundTag();
-        nbt.putUUID("person", person);
+        Nbt.putUUID(nbt, "person", person);
         nbt.putString("first", firstName);
         nbt.putString("last", lastName);
         if (job != null) {

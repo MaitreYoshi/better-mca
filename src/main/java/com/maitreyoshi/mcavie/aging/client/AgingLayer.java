@@ -39,7 +39,7 @@ public class AgingLayer extends VillagerLayer<VillagerEntityMCA, VillagerEntityM
         }
         model.setAllVisible(false);
         model.head.visible = true;
-        super.render(transform, provider, light, villager, limbAngle, limbDistance, tickDelta, animationProgress, headYaw, headPitch);
+        super.extractRenderState(transform, provider, light, villager, limbAngle, limbDistance, tickDelta, animationProgress, headYaw, headPitch);
     }
 
     @Override

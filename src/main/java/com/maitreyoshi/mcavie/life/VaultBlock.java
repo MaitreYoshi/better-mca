@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
@@ -217,9 +218,9 @@ public class VaultBlock extends TombstoneBlock {
                 world.setBlock(target, state.setValue(PART, part).setValue(BlockStateProperties.WATERLOGGED, false), Block.UPDATE_ALL);
             }
         }
-        CompoundTag tag = stack.getTag();
+        CompoundTag tag = Nbt.tag(stack);
         if (tag != null && tag.contains(SLOTS_KEY) && world instanceof ServerLevel server) {
-            restore(server, master, facing, tag.getList(SLOTS_KEY, Tag.TAG_COMPOUND));
+            restore(server, master, facing, tag.getListOrEmpty(SLOTS_KEY));
         }
         if (placer instanceof Player player) {
             titleHolder(world, master, facing).ifPresent(data -> {
@@ -283,7 +284,7 @@ public class VaultBlock extends TombstoneBlock {
     @Override
     public void attack(BlockState state, Level world, BlockPos pos, Player player) {
         if (!world.isClientSide && !silkTouch(player) && occupied(world, master(pos, state), state.getValue(BlockStateProperties.HORIZONTAL_FACING))) {
-            player.displayClientMessage(Component.translatable("tomb.mca_vie.vault.occupied").withStyle(ChatFormatting.GOLD), true);
+            player.sendOverlayMessage(Component.translatable("tomb.mca_vie.vault.occupied").withStyle(ChatFormatting.GOLD));
         }
     }
 
@@ -314,7 +315,7 @@ public class VaultBlock extends TombstoneBlock {
     private static void restore(ServerLevel world, BlockPos master, Direction facing, ListTag slots) {
         for (int i = 0; i < SLOTS.length && i < slots.size(); i++) {
             BlockPos target = partPos(master, facing, SLOTS[i]);
-            CompoundTag nbt = slots.getCompound(i);
+            CompoundTag nbt = slots.getCompoundOrEmpty(i);
             Data.of(world.getBlockEntity(target)).ifPresent(data -> {
                 data.load(nbt);
                 data.setChanged();
@@ -372,7 +373,7 @@ public class VaultBlock extends TombstoneBlock {
     private static void openTitle(ServerPlayer player, ServerLevel world, BlockPos master, Direction facing) {
         titleHolder(world, master, facing).ifPresent(holder -> {
             if (!canEdit(player, holder)) {
-                player.displayClientMessage(Component.translatable("tomb.mca_vie.vault.not_owner").withStyle(ChatFormatting.RED), true);
+                player.sendOverlayMessage(Component.translatable("tomb.mca_vie.vault.not_owner").withStyle(ChatFormatting.RED));
                 return;
             }
             String title = ((TombstoneDetails.Holder) holder).mcavie$vaultTitle();
@@ -384,7 +385,7 @@ public class VaultBlock extends TombstoneBlock {
     }
 
     private static void setTitle(ServerPlayer player, BlockPos pos, String title) {
-        ServerLevel world = player.serverLevel();
+        ServerLevel world = player.level();
         BlockState state = world.getBlockState(pos);
         if (player.distanceToSqr(pos.getCenter()) > 64 || !(state.getBlock() instanceof VaultBlock) || state.getValue(PART) != SLOTS[0]) {
             return;

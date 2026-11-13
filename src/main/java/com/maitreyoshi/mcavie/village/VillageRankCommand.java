@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.village;
 
+import net.minecraft.server.permissions.Permissions;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import dev.architectury.event.events.common.CommandRegistrationEvent;
 import net.conczin.mca.server.world.data.Village;
@@ -20,7 +21,7 @@ public final class VillageRankCommand {
     public static void register() {
         CommandRegistrationEvent.EVENT.register((dispatcher, registryAccess, environment) -> {
             dispatcher.register(
-                Commands.literal("villagerank").requires(s -> s.hasPermission(2))
+                Commands.literal("villagerank").requires(s -> s.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                         .then(Commands.argument("rank", StringArgumentType.word())
                                 .suggests((ctx, builder) -> SharedSuggestionProvider.suggest(
                                         Arrays.stream(VillageRank.values()).map(r -> r.name().toLowerCase(Locale.ROOT)), builder))
@@ -32,7 +33,7 @@ public final class VillageRankCommand {
                                         ctx.getSource().sendFailure(Component.translatable("command.mca_vie.villagerank.unknown", name.toLowerCase(Locale.ROOT)));
                                         return 0;
                                     }
-                                    Optional<Village> village = VillageManager.get(player.serverLevel()).findNearestVillage(player);
+                                    Optional<Village> village = VillageManager.get(player.level()).findNearestVillage(player);
                                     if (village.isEmpty()) {
                                         ctx.getSource().sendFailure(Component.translatable("command.mca_vie.villagerank.no_village"));
                                         return 0;
@@ -44,15 +45,15 @@ public final class VillageRankCommand {
                                     ctx.getSource().sendSuccess(() -> Component.translatable("command.mca_vie.villagerank.set", village.get().getName(), rank.getName()), true);
                                     return 1;
                                 })));
-            dispatcher.register(Commands.literal("villagemarket").requires(s -> s.hasPermission(2))
+            dispatcher.register(Commands.literal("villagemarket").requires(s -> s.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                     .executes(ctx -> {
                         ServerPlayer player = ctx.getSource().getPlayerOrException();
-                        Optional<Village> village = VillageManager.get(player.serverLevel()).findNearestVillage(player);
+                        Optional<Village> village = VillageManager.get(player.level()).findNearestVillage(player);
                         if (village.isEmpty()) {
                             ctx.getSource().sendFailure(Component.translatable("command.mca_vie.villagerank.no_village"));
                             return 0;
                         }
-                        VillageMarket.devHold(village.get(), player.serverLevel());
+                        VillageMarket.devHold(village.get(), player.level());
                         ctx.getSource().sendSuccess(() -> Component.translatable("command.mca_vie.villagemarket.done", village.get().getName()), true);
                         return 1;
                     }));

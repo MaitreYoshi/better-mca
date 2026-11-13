@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.village;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.life.LifeCycle;
 import com.maitreyoshi.mcavie.life.LifeRegistry;
 import com.maitreyoshi.mcavie.work.Job;
@@ -273,15 +274,15 @@ public final class VillageEconomy {
     }
 
     public static void withdraw(ServerPlayer player, int villageId, int amount) {
-        VillageManager.get(player.serverLevel()).getOrEmpty(villageId).ifPresent(village -> {
+        VillageManager.get(player.level()).getOrEmpty(villageId).ifPresent(village -> {
             if (!VillageRights.personalRank(village, player).isAtLeast(VillageRights.WITHDRAW)) {
-                player.displayClientMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.WITHDRAW.getTranslationKey())), true);
+                player.sendOverlayMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.WITHDRAW.getTranslationKey())));
                 return;
             }
             VillageState state = VillageState.of(village);
             long taken = Math.min(Math.max(0, amount), availableShare(state));
             if (taken <= 0) {
-                player.displayClientMessage(Component.translatable("msg.mca_vie.treasury.nothing"), true);
+                player.sendOverlayMessage(Component.translatable("msg.mca_vie.treasury.nothing"));
                 return;
             }
             state.treasury -= taken;
@@ -295,14 +296,14 @@ public final class VillageEconomy {
                 left -= stack;
             }
             village.markDirty();
-            player.displayClientMessage(Component.translatable("msg.mca_vie.treasury.withdrawn", taken, village.getName()), true);
+            player.sendOverlayMessage(Component.translatable("msg.mca_vie.treasury.withdrawn", taken, village.getName()));
         });
     }
 
     public static void deposit(ServerPlayer player, int villageId, int amount) {
-        VillageManager.get(player.serverLevel()).getOrEmpty(villageId).ifPresent(village -> {
+        VillageManager.get(player.level()).getOrEmpty(villageId).ifPresent(village -> {
             if (!VillageRights.personalRank(village, player).isAtLeast(VillageRights.DEPOSIT)) {
-                player.displayClientMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.DEPOSIT.getTranslationKey())), true);
+                player.sendOverlayMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.DEPOSIT.getTranslationKey())));
                 return;
             }
             net.minecraft.world.entity.player.Inventory inventory = player.getInventory();
@@ -310,7 +311,7 @@ public final class VillageEconomy {
             int left = wanted;
             for (int slot = 0; slot < inventory.getContainerSize() && left > 0; slot++) {
                 ItemStack stack = inventory.getItem(slot);
-                if (stack.is(Items.EMERALD) && !stack.hasTag()) {
+                if (stack.is(Items.EMERALD) && !Nbt.hasTag(stack)) {
                     int take = Math.min(left, stack.getCount());
                     stack.shrink(take);
                     left -= take;
@@ -318,7 +319,7 @@ public final class VillageEconomy {
             }
             long given = wanted - left;
             if (given <= 0) {
-                player.displayClientMessage(Component.translatable("msg.mca_vie.treasury.no_emerald"), true);
+                player.sendOverlayMessage(Component.translatable("msg.mca_vie.treasury.no_emerald"));
                 return;
             }
             inventory.setChanged();
@@ -328,14 +329,14 @@ public final class VillageEconomy {
             state.depositedThisWeek += given;
             state.addWithdrawal(new VillageState.Withdrawal(state.lastDay, player.getName().getString(), given, true));
             village.markDirty();
-            player.displayClientMessage(Component.translatable("msg.mca_vie.treasury.deposited", given, village.getName()), true);
+            player.sendOverlayMessage(Component.translatable("msg.mca_vie.treasury.deposited", given, village.getName()));
         });
     }
 
     public static void changeNature(ServerPlayer player, int villageId, int direction) {
-        VillageManager.get(player.serverLevel()).getOrEmpty(villageId).ifPresent(village -> {
+        VillageManager.get(player.level()).getOrEmpty(villageId).ifPresent(village -> {
             if (!VillageRights.personalRank(village, player).isAtLeast(VillageRights.SET_TAXES)) {
-                player.displayClientMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.SET_TAXES.getTranslationKey())), true);
+                player.sendOverlayMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.SET_TAXES.getTranslationKey())));
                 return;
             }
             VillageState state = VillageState.of(village);

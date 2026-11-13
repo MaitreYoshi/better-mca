@@ -147,7 +147,7 @@ public class BakerTask extends AbstractJobTask {
 
     // four vide : il va chercher le blé rangé par le fermier le plus proche, puis le dépose dans son four
     private BlockPos findSupplier(ServerLevel world, VillagerEntityMCA villager) {
-        net.minecraft.resources.Identifier dimension = world.dimension().location();
+        net.minecraft.resources.Identifier dimension = world.dimension().identifier();
         BlockPos best = null;
         double bestDistance = SUPPLIER_SQ;
         for (com.maitreyoshi.mcavie.work.WorkRegistry.Record record

@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import net.minecraft.server.permissions.Permissions;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -35,7 +36,7 @@ public final class AgeCommand {
 
     public static void register() {
         CommandRegistrationEvent.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(
-                Commands.literal("age").requires(s -> s.hasPermission(2))
+                Commands.literal("age").requires(s -> s.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                         .then(Commands.literal("set")
                                 // L'entier doit rester avant le sélecteur : « 40 » serait aussi un nom de joueur valide.
                                 .then(Commands.argument("years", IntegerArgumentType.integer(0, MAX_YEARS))

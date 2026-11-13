@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.mixin;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import net.conczin.mca.item.VillagerTrackerItem;
 import net.conczin.mca.server.world.data.VillagerTrackerManager;
 import net.conczin.mca.util.NbtHelper;
@@ -23,11 +24,11 @@ public abstract class VillagerTrackerItemMixin {
         if (!(world instanceof ServerLevel serverWorld) || world.getGameTime() % 20 != 0) {
             return;
         }
-        CompoundTag nbt = stack.getTag();
-        if (nbt == null || !nbt.hasUUID("targetUUID")) {
+        CompoundTag nbt = Nbt.tag(stack);
+        if (nbt == null || !Nbt.hasUUID(nbt, "targetUUID")) {
             return;
         }
-        UUID target = nbt.getUUID("targetUUID");
+        UUID target = Nbt.getUUID(nbt, "targetUUID");
         for (ServerLevel candidate : serverWorld.getServer().getAllLevels()) {
             Entity entity = candidate.getEntity(target);
             if (entity != null) {

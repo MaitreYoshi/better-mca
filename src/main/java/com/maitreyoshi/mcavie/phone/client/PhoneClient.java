@@ -111,11 +111,11 @@ public final class PhoneClient {
             State state = new State(number, access, owner, hasCode, List.copyOf(contacts), Map.copyOf(people), List.copyOf(conversations), List.copyOf(gallery), Collections.unmodifiableMap(folders), wallpaper, List.copyOf(agenda));
             client.execute(() -> {
                 CameraMode.update(state);
-                if (client.screen instanceof PhoneScreen screen && screen.number() == number) {
+                if (client.gui.screen() instanceof PhoneScreen screen && screen.number() == number) {
                     screen.applyState(state);
                 } else if (open) {
                     CameraMode.stop(false);
-                    client.setScreen(new PhoneScreen(state));
+                    client.gui.setScreen(new PhoneScreen(state));
                 }
             });
         });
@@ -126,7 +126,7 @@ public final class PhoneClient {
                 list.add(PhoneEmployees.Employee.read(buf));
             }
             client.execute(() -> {
-                if (client.screen instanceof PhoneScreen screen) {
+                if (client.gui.screen() instanceof PhoneScreen screen) {
                     screen.applyEmployees(list);
                 }
             });
@@ -135,7 +135,7 @@ public final class PhoneClient {
             UUID uuid = buf.readUUID();
             List<EmployeeChat.Line> lines = EmployeeChat.readLog(buf);
             client.execute(() -> {
-                if (client.screen instanceof PhoneScreen screen) {
+                if (client.gui.screen() instanceof PhoneScreen screen) {
                     screen.applyEmployeeChat(uuid, lines);
                 }
             });
@@ -149,7 +149,7 @@ public final class PhoneClient {
                 messages.add(new Message(buf.readBoolean(), buf.readUtf(), buf.readVarLong(), buf.readBoolean() ? buf.readUUID() : null));
             }
             client.execute(() -> {
-                if (client.screen instanceof PhoneScreen screen && screen.number() == number) {
+                if (client.gui.screen() instanceof PhoneScreen screen && screen.number() == number) {
                     screen.applyConversation(other, List.copyOf(messages));
                 }
             });
@@ -181,29 +181,29 @@ public final class PhoneClient {
         ClientPlayNetworking.registerGlobalReceiver(PhoneNetwork.PRINT_VIEW, (client, handler, buf, responseSender) -> {
             UUID id = buf.readUUID();
             client.execute(() -> {
-                if (client.screen == null) {
-                    client.setScreen(PhotoViewerScreen.print(id));
+                if (client.gui.screen() == null) {
+                    client.gui.setScreen(PhotoViewerScreen.print(id));
                 }
             });
         });
-        PhotoItem.placer = (clicked, side, hand, photo, top) -> Minecraft.getInstance().setScreen(PhotoSizeScreen.place(clicked, side, hand, photo, top));
+        PhotoItem.placer = (clicked, side, hand, photo, top) -> Minecraft.getInstance().gui.setScreen(PhotoSizeScreen.place(clicked, side, hand, photo, top));
         ClientPlayNetworking.registerGlobalReceiver(PhoneNetwork.PHOTO_RESIZE_OPEN, (client, handler, buf, responseSender) -> {
             int id = buf.readVarInt();
             client.execute(() -> {
-                if (client.screen == null && client.level != null && client.level.getEntity(id) instanceof PhotoFrameEntity frame) {
-                    client.setScreen(PhotoSizeScreen.resize(frame));
+                if (client.gui.screen() == null && client.level != null && client.level.getEntity(id) instanceof PhotoFrameEntity frame) {
+                    client.gui.setScreen(PhotoSizeScreen.resize(frame));
                 }
             });
         });
         ClientPlayNetworking.registerGlobalReceiver(PhoneNetwork.PRINTED, (client, handler, buf, responseSender) -> client.execute(() -> {
-            if (client.screen instanceof PhotoViewerScreen || client.screen instanceof PhoneScreen) {
-                client.setScreen(null);
+            if (client.gui.screen() instanceof PhotoViewerScreen || client.gui.screen() instanceof PhoneScreen) {
+                client.gui.setScreen(null);
             }
         }));
         ClientPlayNetworking.registerGlobalReceiver(PhoneNetwork.ERROR, (client, handler, buf, responseSender) -> {
             Component text = buf.readComponent();
             client.execute(() -> {
-                if (client.screen instanceof PhoneScreen screen) {
+                if (client.gui.screen() instanceof PhoneScreen screen) {
                     screen.showError(text);
                 }
             });

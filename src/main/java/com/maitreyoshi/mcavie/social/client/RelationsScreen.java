@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.social.client;
 
+import net.minecraft.client.input.MouseButtonEvent;
 import com.maitreyoshi.mcavie.social.Social;
 import com.maitreyoshi.mcavie.social.SocialNetwork;
 import com.maitreyoshi.mcavie.social.client.RelationsClient.Entry;
@@ -66,7 +67,7 @@ public class RelationsScreen extends Screen {
             String name = font.plainSubstrByWidth(previousScreen.villagerName.getString(), 90);
             addRenderableWidget(Button.builder(Component.literal("‹ " + name), b -> {
                 if (minecraft != null) {
-                    minecraft.setScreen(previousScreen);
+                    minecraft.gui.setScreen(previousScreen);
                 }
             }).bounds(8, 8, font.width("‹ " + name) + 12, 20).build());
         }
@@ -111,28 +112,28 @@ public class RelationsScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        renderBackground(context);
-        context.drawCenteredString(font, title, width / 2, 16, 0xFFFFFF);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        extractBackground(context, mouseX, mouseY, delta);
+        context.centeredText(font, title, width / 2, 16, 0xFFFFFF);
         Relations relations = RelationsClient.get(villager);
         List<Row> rows = visibleRows(relations);
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
 
         if (relations == null) {
             if (System.currentTimeMillis() - requestedAt > 1000) {
                 RelationsClient.request(villager);
                 requestedAt = System.currentTimeMillis();
             }
-            context.drawCenteredString(font, Component.translatable("gui.mca_vie.relations.loading"), width / 2, TOP + 10, 0xAAAAAA);
+            context.centeredText(font, Component.translatable("gui.mca_vie.relations.loading"), width / 2, TOP + 10, 0xAAAAAA);
             return;
         }
         if (relations.entries().isEmpty()) {
-            context.drawCenteredString(font, Component.translatable("gui.mca_vie.relations.empty", villagerName), width / 2, TOP + 10, 0xAAAAAA);
+            context.centeredText(font, Component.translatable("gui.mca_vie.relations.empty", villagerName), width / 2, TOP + 10, 0xAAAAAA);
             return;
         }
         int pages = pages(relations);
         if (pages > 1) {
-            context.drawCenteredString(font, Component.translatable("gui.mca_vie.relations.page", page + 1, pages), width / 2, height - 40, 0xAAAAAA);
+            context.centeredText(font, Component.translatable("gui.mca_vie.relations.page", page + 1, pages), width / 2, height - 40, 0xAAAAAA);
         }
 
         int left = width / 2 - HALF_WIDTH;
@@ -141,7 +142,7 @@ public class RelationsScreen extends Screen {
             Row row = rows.get(i);
             int y = TOP + i * ROW;
             if (row.entry() == null) {
-                context.drawString(font, Component.translatable("gui.mca_vie.relations.grudges").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD), left, y + 3, 0xFFFFFF);
+                context.text(font, Component.translatable("gui.mca_vie.relations.grudges").withStyle(ChatFormatting.DARK_RED, ChatFormatting.BOLD), left, y + 3, 0xFFFFFF);
                 continue;
             }
             Entry entry = row.entry();
@@ -152,18 +153,18 @@ public class RelationsScreen extends Screen {
             }
             int x = left;
             if (row.index() == 0 && entry.score() >= Social.FRIEND) {
-                context.drawString(font, Component.literal("★").withStyle(ChatFormatting.GOLD), x, y + 3, 0xFFFFFF);
+                context.text(font, Component.literal("★").withStyle(ChatFormatting.GOLD), x, y + 3, 0xFFFFFF);
             }
             x += 10;
             int limit = left + HALF_WIDTH * 2 - HEARTS * 9 - 6;
             String trimmed = font.plainSubstrByWidth(entry.name(), limit - x);
             MutableComponent name = Component.literal(trimmed).withStyle(over && entry.openable() ? ChatFormatting.YELLOW : ChatFormatting.WHITE);
-            context.drawString(font, name, x, y + 3, 0xFFFFFF);
+            context.text(font, name, x, y + 3, 0xFFFFFF);
             x += font.width(name) + 6;
             if (entry.tag() != SocialNetwork.TAG_NONE) {
                 MutableComponent tag = tag(entry).withStyle(ChatFormatting.GRAY);
                 if (x + font.width(tag) <= limit) {
-                    context.drawString(font, tag, x, y + 3, 0xFFFFFF);
+                    context.text(font, tag, x, y + 3, 0xFFFFFF);
                 }
             }
             drawHearts(context, left + HALF_WIDTH * 2 - HEARTS * 9, y + 2, entry.score());
@@ -209,8 +210,11 @@ public class RelationsScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (super.mouseClicked(mouseX, mouseY, button)) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
+        if (super.mouseClicked(event, doubleClick)) {
             return true;
         }
         Relations relations = RelationsClient.get(villager);
@@ -227,14 +231,14 @@ public class RelationsScreen extends Screen {
         if (entry == null || !entry.openable()) {
             return false;
         }
-        minecraft.setScreen(new RelationsScreen(entry.uuid(), Component.literal(entry.name()), this));
+        minecraft.gui.setScreen(new RelationsScreen(entry.uuid(), Component.literal(entry.name()), this));
         return true;
     }
 
     @Override
     public void onClose() {
         if (minecraft != null) {
-            minecraft.setScreen(root);
+            minecraft.gui.setScreen(root);
         }
     }
 

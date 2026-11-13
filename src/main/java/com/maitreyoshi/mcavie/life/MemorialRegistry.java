@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import com.maitreyoshi.mcavie.compat.Saved;
 import net.conczin.mca.entity.VillagerEntityMCA;
 import net.conczin.mca.server.world.data.Village;
 import net.conczin.mca.server.world.data.VillageManager;
@@ -48,7 +49,7 @@ public class MemorialRegistry extends SavedData {
         @Nullable
         static Fallen read(CompoundTag nbt) {
             TombstoneDetails details = TombstoneDetails.read(nbt);
-            return details == null ? null : new Fallen(details, nbt.getString("killer"));
+            return details == null ? null : new Fallen(details, nbt.getStringOr("killer", ""));
         }
     }
 
@@ -56,12 +57,12 @@ public class MemorialRegistry extends SavedData {
     private final Map<Integer, Set<GlobalPos>> monuments = new HashMap<>();
 
     public static MemorialRegistry get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(MemorialRegistry::fromNbt, MemorialRegistry::new, DATA_ID);
+        return Saved.get(server.overworld(), MemorialRegistry::fromNbt, MemorialRegistry::new, MemorialRegistry::save, DATA_ID);
     }
 
     private static List<Fallen> readList(CompoundTag nbt) {
         List<Fallen> list = new ArrayList<>();
-        for (Tag element : nbt.getList("fallen", Tag.TAG_COMPOUND)) {
+        for (Tag element : nbt.getListOrEmpty("fallen")) {
             Fallen entry = Fallen.read((CompoundTag) element);
             if (entry != null) {
                 list.add(entry);
@@ -72,15 +73,15 @@ public class MemorialRegistry extends SavedData {
 
     private static MemorialRegistry fromNbt(CompoundTag nbt) {
         MemorialRegistry registry = new MemorialRegistry();
-        CompoundTag villages = nbt.getCompound("villages");
-        for (String key : villages.getAllKeys()) {
+        CompoundTag villages = nbt.getCompoundOrEmpty("villages");
+        for (String key : villages.keySet()) {
             int id = Integer.parseInt(key);
-            CompoundTag village = villages.getCompound(key);
+            CompoundTag village = villages.getCompoundOrEmpty(key);
             List<Fallen> list = readList(village);
             Set<GlobalPos> set = new LinkedHashSet<>();
-            for (Tag element : village.getList("monuments", Tag.TAG_COMPOUND)) {
+            for (Tag element : village.getListOrEmpty("monuments")) {
                 CompoundTag pos = (CompoundTag) element;
-                set.add(GlobalPos.of(ResourceKey.create(Registries.DIMENSION, Identifier.parse(pos.getString("dim"))), NbtUtils.readBlockPos(pos)));
+                set.add(GlobalPos.of(ResourceKey.create(Registries.DIMENSION, Identifier.parse(pos.getStringOr("dim", ""))), NbtUtils.readBlockPos(pos)));
                 list.addAll(readList(pos));
             }
             registry.fallen.put(id, list);
@@ -89,8 +90,7 @@ public class MemorialRegistry extends SavedData {
         return registry;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag nbt) {
+        public CompoundTag save(CompoundTag nbt) {
         CompoundTag villages = new CompoundTag();
         Set<Integer> ids = new java.util.HashSet<>(fallen.keySet());
         ids.addAll(monuments.keySet());
@@ -102,7 +102,7 @@ public class MemorialRegistry extends SavedData {
             ListTag positions = new ListTag();
             for (GlobalPos pos : monuments.getOrDefault(id, Set.of())) {
                 CompoundTag tag = NbtUtils.writeBlockPos(pos.pos());
-                tag.putString("dim", pos.dimension().location().toString());
+                tag.putString("dim", pos.dimension().identifier().toString());
                 positions.add(tag);
             }
             village.put("monuments", positions);

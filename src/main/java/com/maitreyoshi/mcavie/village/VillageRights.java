@@ -30,14 +30,14 @@ public final class VillageRights {
     private static Object ranksServer;
 
     public static Rank personalRank(Village village, ServerPlayer player) {
-        int tick = player.getServer() == null ? -1 : player.getServer().getTickCount();
+        int tick = player.level().level().getServer() == null ? -1 : player.level().level().getServer().getTickCount();
         if (tick < 0) {
             return Tasks.getRank(village, player);
         }
-        if (tick != ranksTick || player.getServer() != ranksServer) {
+        if (tick != ranksTick || player.level().getServer() != ranksServer) {
             RANKS.clear();
             ranksTick = tick;
-            ranksServer = player.getServer();
+            ranksServer = player.level().getServer();
         }
         return RANKS.computeIfAbsent(player.getUUID(), k -> new HashMap<>())
                 .computeIfAbsent(village.getId(), k -> Tasks.getRank(village, player));

@@ -51,13 +51,13 @@ public final class MemorialClient {
             BlockPos pos = buf.readBlockPos();
             String title = buf.readUtf();
             String dates = buf.readUtf();
-            client.execute(() -> client.setScreen(new EditScreen(pos, title, dates)));
+            client.execute(() -> client.gui.setScreen(new EditScreen(pos, title, dates)));
         });
         ClientPlayNetworking.registerGlobalReceiver(MemorialBlock.LIST_OPEN, (client, handler, buf, responseSender) -> {
             BlockPos pos = buf.readBlockPos();
             client.execute(() -> {
                 if (client.level != null && client.level.getBlockEntity(pos) instanceof MemorialBlockEntity memorial) {
-                    client.setScreen(new ListScreen(memorial));
+                    client.gui.setScreen(new ListScreen(memorial));
                 }
             });
         });
@@ -228,12 +228,12 @@ public final class MemorialClient {
         }
 
         @Override
-        public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-            renderBackground(context);
-            context.drawCenteredString(font, title, width / 2, height / 2 - 76, 0xFFFFFF);
-            context.drawString(font, Component.translatable("gui.mca_vie.war_memorial.inscription_hint"), width / 2 - 120, height / 2 - 48, 0xA0A0A0);
-            context.drawString(font, Component.translatable("gui.mca_vie.war_memorial.dates_hint"), width / 2 - 120, height / 2 - 8, 0xA0A0A0);
-            super.render(context, mouseX, mouseY, delta);
+        public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+            extractBackground(context, mouseX, mouseY, delta);
+            context.centeredText(font, title, width / 2, height / 2 - 76, 0xFFFFFF);
+            context.text(font, Component.translatable("gui.mca_vie.war_memorial.inscription_hint"), width / 2 - 120, height / 2 - 48, 0xA0A0A0);
+            context.text(font, Component.translatable("gui.mca_vie.war_memorial.dates_hint"), width / 2 - 120, height / 2 - 8, 0xA0A0A0);
+            super.extractRenderState(context, mouseX, mouseY, delta);
         }
     }
 
@@ -262,33 +262,33 @@ public final class MemorialClient {
         }
 
         @Override
-        public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double amount) {
             int max = Math.max(0, memorial.fallen().size() - visibleRows());
             scroll = Math.max(0, Math.min(max, scroll - amount));
             return true;
         }
 
         @Override
-        public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-            renderBackground(context);
-            context.drawCenteredString(font, title, width / 2, 14, 0xF2CC5A);
+        public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+            extractBackground(context, mouseX, mouseY, delta);
+            context.centeredText(font, title, width / 2, 14, 0xF2CC5A);
             List<MemorialRegistry.Fallen> all = memorial.fallen();
             if (all.isEmpty()) {
-                context.drawCenteredString(font, Component.translatable("gui.mca_vie.war_memorial.empty"), width / 2, height / 2, 0xA0A0A0);
+                context.centeredText(font, Component.translatable("gui.mca_vie.war_memorial.empty"), width / 2, height / 2, 0xA0A0A0);
             }
             int x = width / 2 - 150;
             int y = 40;
             for (int i = (int) scroll; i < all.size() && i < scroll + visibleRows(); i++) {
                 MemorialRegistry.Fallen entry = all.get(all.size() - 1 - i);
                 TombstoneDetails details = entry.details();
-                context.drawString(font, Component.literal(name(details)).withStyle(ChatFormatting.WHITE), x, y, 0xFFFFFF);
+                context.text(font, Component.literal(name(details)).withStyle(ChatFormatting.WHITE), x, y, 0xFFFFFF);
                 Component killer = Component.Serializer.fromJson(entry.killer());
                 Component info = Component.literal(TombstoneClient.lives(details) + "  ")
                         .append(Component.translatable("gui.mca_vie.war_memorial.killed_by", killer == null ? Component.literal("?") : killer));
-                context.drawString(font, info, x + 8, y + 10, 0xA0A0A0);
+                context.text(font, info, x + 8, y + 10, 0xA0A0A0);
                 y += ROW;
             }
-            super.render(context, mouseX, mouseY, delta);
+            super.extractRenderState(context, mouseX, mouseY, delta);
         }
     }
 }

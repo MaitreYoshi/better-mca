@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.tree.client;
 
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.life.LifeCycle;
 import com.maitreyoshi.mcavie.phone.PhoneNetwork;
@@ -136,7 +138,7 @@ public class TreeScreen extends Screen {
     @Override
     public void onClose() {
         assert minecraft != null;
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 
     @Override
@@ -505,7 +507,10 @@ public class TreeScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         if (details != null) {
             Runnable action = details.actionAt(mouseX, mouseY);
             boolean inside = details.contains(mouseX, mouseY);
@@ -520,7 +525,7 @@ public class TreeScreen extends Screen {
                 return true;
             }
         }
-        if (super.mouseClicked(mouseX, mouseY, button)) {
+        if (super.mouseClicked(event, doubleClick)) {
             return true;
         }
         if (button == 0 && clickResult(mouseX, mouseY)) {
@@ -558,7 +563,10 @@ public class TreeScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY) {
+    public boolean mouseDragged(MouseButtonEvent event, double deltaX, double deltaY) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         if (pressInView && button == 0) {
             if (!dragged && Math.abs(mouseX - pressX) + Math.abs(mouseY - pressY) > 3) {
                 dragged = true;
@@ -567,11 +575,14 @@ public class TreeScreen extends Screen {
             camY -= deltaY / zoom;
             return true;
         }
-        return super.mouseDragged(mouseX, mouseY, button, deltaX, deltaY);
+        return super.mouseDragged(event, deltaX, deltaY);
     }
 
     @Override
-    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+    public boolean mouseReleased(MouseButtonEvent event) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         if (pressInView && button == 0) {
             pressInView = false;
             if (!dragged) {
@@ -583,18 +594,18 @@ public class TreeScreen extends Screen {
             }
             return true;
         }
-        return super.mouseReleased(mouseX, mouseY, button);
+        return super.mouseReleased(event);
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double amount) {
         if (mouseX < PANEL_WIDTH && mouseY >= resultsTop()) {
             resultsScroll -= amount * RESULT_HEIGHT;
             clampScrolls();
             return true;
         }
         if (!inView(mouseX, mouseY)) {
-            return super.mouseScrolled(mouseX, mouseY, amount);
+            return super.mouseScrolled(mouseX, mouseY, scrollX, amount);
         }
         if (view == View.LINEAGE) {
             lineageScroll -= amount * LINEAGE_ROW_HEIGHT;
@@ -611,7 +622,10 @@ public class TreeScreen extends Screen {
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
+        int scanCode = event.scancode();
+        int modifiers = event.modifiers();
         if (details != null && keyCode == GLFW.GLFW_KEY_ESCAPE) {
             details = null;
             return true;
@@ -620,7 +634,7 @@ public class TreeScreen extends Screen {
             sendSearch();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     private void playClick() {
@@ -636,12 +650,12 @@ public class TreeScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        renderBackground(context);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        extractBackground(context, mouseX, mouseY, delta);
         context.fill(0, TOP, PANEL_WIDTH - 1, height, 0x80000000);
         context.fill(viewLeft(), viewTop(), viewRight(), viewBottom(), 0x66000000);
 
-        context.drawCenteredString(font, titleText(), (int) viewCenterX(), 8, 0xFFFFFF);
+        context.centeredText(font, titleText(), (int) viewCenterX(), 8, 0xFFFFFF);
 
         switch (view) {
             case TREE -> renderTree(context, mouseX, mouseY);
@@ -650,7 +664,7 @@ public class TreeScreen extends Screen {
         }
         renderPanel(context, mouseX, mouseY);
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
 
         if (details != null) {
             details.render(context, mouseX, mouseY);
@@ -687,15 +701,15 @@ public class TreeScreen extends Screen {
         }
         int cx = (int) viewCenterX();
         context.fill(viewLeft(), viewTop(), viewRight(), viewTop() + 28, 0x90000000);
-        context.drawCenteredString(font, sentence, cx, viewTop() + 4, 0xFFFF55);
+        context.centeredText(font, sentence, cx, viewTop() + 4, 0xFFFF55);
         MutableComponent slots = Component.translatable("tree.mca_vie.path.a", nameOf(pathA))
                 .append("   ")
                 .append(Component.translatable("tree.mca_vie.path.b", nameOf(pathB)));
         if (pathCount > 1) {
             slots.append("   ").append(Component.translatable("tree.mca_vie.path.link", pathIndex + 1, pathCount));
         }
-        context.drawCenteredString(font, slots, cx, viewTop() + 16, 0xAAAAAA);
-        context.drawString(font, Component.translatable("tree.mca_vie.path.pick"),
+        context.centeredText(font, slots, cx, viewTop() + 16, 0xAAAAAA);
+        context.text(font, Component.translatable("tree.mca_vie.path.pick"),
                 viewLeft() + 6, viewBottom() - 12, 0x808080);
     }
 
@@ -739,7 +753,7 @@ public class TreeScreen extends Screen {
     }
 
     private void centeredMessage(GuiGraphicsExtractor context, Component text) {
-        context.drawCenteredString(font, text, (int) viewCenterX(), (int) viewCenterY() - 4, 0xAAAAAA);
+        context.centeredText(font, text, (int) viewCenterX(), (int) viewCenterY() - 4, 0xAAAAAA);
     }
 
     private void renderLayout(GuiGraphicsExtractor context, TreeLayout layout, int mouseX, int mouseY) {
@@ -834,9 +848,9 @@ public class TreeScreen extends Screen {
         context.fill(l, t + 1, r, b - 1, background);
         context.fill(l + 1, t, r - 1, t + 1, background);
         context.fill(l + 1, b - 1, r - 1, b, background);
-        context.renderOutline(l + 1, t + 1, r - l - 2, b - t - 2, border);
+        context.outline(l + 1, t + 1, r - l - 2, b - t - 2, border);
         if (card.highlighted) {
-            context.renderOutline(l, t, r - l, b - t, CARD_BORDER_ROOT);
+            context.outline(l, t, r - l, b - t, CARD_BORDER_ROOT);
         }
 
         int x = l + TreeLayout.PADDING;
@@ -855,7 +869,7 @@ public class TreeScreen extends Screen {
             nameX += TreeLayout.ICON_SPACE;
         }
         for (int i = 0; i < card.lines.length; i++) {
-            context.drawString(font, card.lines[i], i == 0 ? nameX : x, y + i * TreeLayout.LINE_HEIGHT, card.colors[i], true);
+            context.text(font, card.lines[i], i == 0 ? nameX : x, y + i * TreeLayout.LINE_HEIGHT, card.colors[i], true);
         }
     }
 
@@ -928,7 +942,7 @@ public class TreeScreen extends Screen {
         Component header = lineageWaiting
                 ? Component.translatable("tree.mca_vie.loading")
                 : Component.translatable("tree.mca_vie.lineage.count", lineage.size());
-        context.drawCenteredString(font, header, (int) viewCenterX(), viewTop() + 5, 0xAAAAAA);
+        context.centeredText(font, header, (int) viewCenterX(), viewTop() + 5, 0xAAAAAA);
         if (!lineageWaiting && lineage.isEmpty()) {
             centeredMessage(context, Component.translatable("tree.mca_vie.no_result"));
             return;
@@ -952,9 +966,9 @@ public class TreeScreen extends Screen {
                 context.fill(left - 4, y, right + 4, y + LINEAGE_ROW_HEIGHT - 1, 0x20FFFFFF);
             }
             LineageRow row = rows.get(i);
-            context.drawString(font, row.status(), right - row.statusWidth(), y + 2, row.statusColor());
-            context.drawString(font, row.name(), left, y + 2, TreeTexts.nameColor(person.gender()));
-            context.drawString(font, row.second(), left, y + 11, 0xAAAAAA);
+            context.text(font, row.status(), right - row.statusWidth(), y + 2, row.statusColor());
+            context.text(font, row.name(), left, y + 2, TreeTexts.nameColor(person.gender()));
+            context.text(font, row.second(), left, y + 11, 0xAAAAAA);
         }
         context.disableScissor();
     }
@@ -965,21 +979,21 @@ public class TreeScreen extends Screen {
 
     private void renderPanel(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         int x0 = 6;
-        context.drawString(font, Component.translatable("tree.mca_vie.generations"), x0, TOP + 3, 0xFFFFFF);
-        context.drawString(font, Component.translatable("tree.mca_vie.up"), x0, TOP + 17, 0xAAAAAA);
-        context.drawString(font, Component.translatable("tree.mca_vie.down"), x0, TOP + 34, 0xAAAAAA);
+        context.text(font, Component.translatable("tree.mca_vie.generations"), x0, TOP + 3, 0xFFFFFF);
+        context.text(font, Component.translatable("tree.mca_vie.up"), x0, TOP + 17, 0xAAAAAA);
+        context.text(font, Component.translatable("tree.mca_vie.down"), x0, TOP + 34, 0xAAAAAA);
         int valueX = PANEL_WIDTH - 6 - 22;
-        context.drawCenteredString(font, generationText(up), valueX, TOP + 17, 0xFFFFFF);
-        context.drawCenteredString(font, generationText(down), valueX, TOP + 34, 0xFFFFFF);
-        context.drawString(font, Component.translatable("tree.mca_vie.search"), x0, TOP + 98, 0xFFFFFF);
+        context.centeredText(font, generationText(up), valueX, TOP + 17, 0xFFFFFF);
+        context.centeredText(font, generationText(down), valueX, TOP + 34, 0xFFFFFF);
+        context.text(font, Component.translatable("tree.mca_vie.search"), x0, TOP + 98, 0xFFFFFF);
 
         int top = resultsTop();
         int bottom = height - 6;
         if (searchResults.isEmpty()) {
             if (searchWaiting) {
-                context.drawString(font, Component.translatable("tree.mca_vie.loading"), x0, top + 2, 0x808080);
+                context.text(font, Component.translatable("tree.mca_vie.loading"), x0, top + 2, 0x808080);
             } else if (!searchText.isBlank() && searchDelay < 0) {
-                context.drawString(font, Component.translatable("tree.mca_vie.no_result"), x0, top + 2, 0x808080);
+                context.text(font, Component.translatable("tree.mca_vie.no_result"), x0, top + 2, 0x808080);
             }
             return;
         }
@@ -999,11 +1013,11 @@ public class TreeScreen extends Screen {
             if (hover) {
                 context.fill(2, y, PANEL_WIDTH - 3, y + RESULT_HEIGHT - 1, 0x40FFFFFF);
             }
-            context.drawString(font, TreeTexts.trim(font, TreeTexts.name(person), nameWidth),
+            context.text(font, TreeTexts.trim(font, TreeTexts.name(person), nameWidth),
                     x0, y + 1, TreeTexts.nameColor(person.gender()));
             Component years = TreeTexts.yearsLine(person, today);
             if (years != null) {
-                context.drawString(font, TreeTexts.trim(font, years.getString(), nameWidth), x0, y + 10, 0x909090);
+                context.text(font, TreeTexts.trim(font, years.getString(), nameWidth), x0, y + 10, 0x909090);
             }
             if (slots) {
                 drawSlot(context, "A", slotX(0), y + 4, person.id().equals(pathA), mouseX, mouseY);
@@ -1020,8 +1034,8 @@ public class TreeScreen extends Screen {
     private void drawSlot(GuiGraphicsExtractor context, String letter, int x, int y, boolean selected, int mouseX, int mouseY) {
         boolean hover = mouseX >= x && mouseX < x + 12 && mouseY >= y && mouseY < y + 12;
         context.fill(x, y, x + 12, y + 12, selected ? 0xFF6040A0 : hover ? 0xFF404060 : 0xFF202030);
-        context.renderOutline(x, y, 12, 12, selected ? CARD_BORDER_ROOT : 0xFF707090);
-        context.drawCenteredString(font, letter, x + 6, y + 2, 0xFFFFFF);
+        context.outline(x, y, 12, 12, selected ? CARD_BORDER_ROOT : 0xFF707090);
+        context.centeredText(font, letter, x + 6, y + 2, 0xFFFFFF);
     }
 
     private boolean clickResult(double mouseX, double mouseY) {
@@ -1130,7 +1144,7 @@ public class TreeScreen extends Screen {
             if (phone != null) {
                 boolean has = person.portrait() != null;
                 addAction(Component.translatable(has ? "tree.mca_vie.details.change_portrait" : "tree.mca_vie.details.set_portrait"),
-                        () -> minecraft.setScreen(new PortraitPickerScreen(TreeScreen.this, phone.state(), person.id(), TreeTexts.name(person))));
+                        () -> minecraft.gui.setScreen(new PortraitPickerScreen(TreeScreen.this, phone.state(), person.id(), TreeTexts.name(person))));
                 if (has) {
                     addAction(Component.translatable("tree.mca_vie.details.remove_portrait"), () -> {
                         PhoneClient.send(phone.number(), PhoneNetwork.OP_SET_PORTRAIT, buf -> {
@@ -1205,14 +1219,14 @@ public class TreeScreen extends Screen {
             context.fill(x, y + 1, x + w, y + h - 1, CARD_BG);
             context.fill(x + 1, y, x + w - 1, y + 1, CARD_BG);
             context.fill(x + 1, y + h - 1, x + w - 1, y + h, CARD_BG);
-            context.renderOutline(x + 1, y + 1, w - 2, h - 2, 0xFF5000FF);
+            context.outline(x + 1, y + 1, w - 2, h - 2, 0xFF5000FF);
             int hovered = lineAt(mouseX, mouseY);
             for (int i = 0; i < lines.size(); i++) {
                 int color = colors.get(i);
                 if (actions.get(i) != null && i == hovered) {
                     color = 0xFFFF55;
                 }
-                context.drawString(font, lines.get(i), x + 6, y + 5 + i * LINE, color);
+                context.text(font, lines.get(i), x + 6, y + 5 + i * LINE, color);
             }
             matrices.popPose();
         }

@@ -74,7 +74,7 @@ public final class MCAVieClient {
             UUID villager = buf.readUUID();
             long birthDay = buf.readLong();
             client.execute(() -> {
-                if (client.screen instanceof BirthDayHolder holder && holder.mcavie$getVillagerUuid().equals(villager)) {
+                if (client.gui.screen() instanceof BirthDayHolder holder && holder.mcavie$getVillagerUuid().equals(villager)) {
                     holder.mcavie$setBirthDay(birthDay);
                 }
             });
@@ -83,7 +83,7 @@ public final class MCAVieClient {
         ClientPlayNetworking.registerGlobalReceiver(SurnameNetwork.RANDOM_SURNAME_RESULT, (client, handler, buf, responseSender) -> {
             String surname = buf.readUtf();
             client.execute(() -> {
-                if (client.screen instanceof SurnameFieldHolder holder) {
+                if (client.gui.screen() instanceof SurnameFieldHolder holder) {
                     holder.mcavie$setSurname(surname);
                 }
             });

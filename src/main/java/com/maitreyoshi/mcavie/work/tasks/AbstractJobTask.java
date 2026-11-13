@@ -222,7 +222,7 @@ public abstract class AbstractJobTask extends Behavior<VillagerEntityMCA> {
         WorkRegistry.Record record = WorkManager.findRecord(villager);
         BlockPos depot = record == null ? null : record.depot;
         if (depot == null || !isLoaded(world, depot)
-                || (record.depotDimension != null && !record.depotDimension.equals(world.dimension().location()))) {
+                || (record.depotDimension != null && !record.depotDimension.equals(world.dimension().identifier()))) {
             return null;
         }
         BlockState state = world.getBlockState(depot);
@@ -359,7 +359,7 @@ public abstract class AbstractJobTask extends Behavior<VillagerEntityMCA> {
                 || server.getPlayerList().getOps().isEmpty() || server.getSpawnProtectionRadius() <= 0) {
             return true;
         }
-        BlockPos spawn = world.getSharedSpawnPos();
+        BlockPos spawn = world.getRespawnData().pos();
         int distance = Math.max(Math.abs(pos.getX() - spawn.getX()), Math.abs(pos.getZ() - spawn.getZ()));
         return distance > server.getSpawnProtectionRadius();
     }

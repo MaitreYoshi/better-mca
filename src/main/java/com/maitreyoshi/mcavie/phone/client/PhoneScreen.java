@@ -1,5 +1,8 @@
 package com.maitreyoshi.mcavie.phone.client;
 
+import net.minecraft.client.input.CharacterEvent;
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar.CalendarDate;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
@@ -271,15 +274,15 @@ public class PhoneScreen extends Screen {
     }
 
     private void centered(GuiGraphicsExtractor context, String text, int x, int y, int color) {
-        context.drawString(font, text, x - font.width(text) / 2, y, color, shadow(color));
+        context.text(font, text, x - font.width(text) / 2, y, color, shadow(color));
     }
 
     private void centered(GuiGraphicsExtractor context, Component text, int x, int y, int color) {
-        context.drawString(font, text, x - font.width(text) / 2, y, color, shadow(color));
+        context.text(font, text, x - font.width(text) / 2, y, color, shadow(color));
     }
 
     private void centered(GuiGraphicsExtractor context, FormattedCharSequence text, int x, int y, int color) {
-        context.drawString(font, text, x - font.width(text) / 2, y, color, shadow(color));
+        context.text(font, text, x - font.width(text) / 2, y, color, shadow(color));
     }
 
     private static void applyTheme() {
@@ -480,10 +483,13 @@ public class PhoneScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double x, double y, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double x = event.x();
+        double y = event.y();
+        int button = event.button();
         x /= ui();
         y /= ui();
-        if (super.mouseClicked(x, y, button)) {
+        if (super.mouseClicked(event, doubleClick)) {
             return true;
         }
         if (button != 0) {
@@ -514,7 +520,10 @@ public class PhoneScreen extends Screen {
     }
 
     @Override
-    public boolean mouseDragged(double x, double y, int button, double dx, double dy) {
+    public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+        double x = event.x();
+        double y = event.y();
+        int button = event.button();
         x /= ui();
         y /= ui();
         dx /= ui();
@@ -539,11 +548,14 @@ public class PhoneScreen extends Screen {
             }
             return true;
         }
-        return super.mouseDragged(x, y, button, dx, dy);
+        return super.mouseDragged(event, dx, dy);
     }
 
     @Override
-    public boolean mouseReleased(double x, double y, int button) {
+    public boolean mouseReleased(MouseButtonEvent event) {
+        double x = event.x();
+        double y = event.y();
+        int button = event.button();
         x /= ui();
         y /= ui();
         if (mapDragging && button == 0) {
@@ -573,11 +585,14 @@ public class PhoneScreen extends Screen {
             }
             return true;
         }
-        return super.mouseReleased(x, y, button);
+        return super.mouseReleased(event);
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
+        int scanCode = event.scancode();
+        int modifiers = event.modifiers();
         if (keyCode == GLFW.GLFW_KEY_ESCAPE && view != View.HOME && view != View.LOCK) {
             goBack();
             return true;
@@ -604,20 +619,22 @@ public class PhoneScreen extends Screen {
             eraseDigit();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Override
-    public boolean charTyped(char chr, int modifiers) {
+    public boolean charTyped(CharacterEvent event) {
+        char chr = (char) event.codepoint();
+        int modifiers = 0;
         if (usesKeypad() && chr >= '0' && chr <= '9') {
             typeDigit(chr - '0');
             return true;
         }
-        return super.charTyped(chr, modifiers);
+        return super.charTyped(event);
     }
 
     @Override
-    public boolean mouseScrolled(double x, double y, double amount) {
+    public boolean mouseScrolled(double x, double y, double scrollX, double amount) {
         if (view == View.CROP) {
             cropZoom = Mth.clamp(cropZoom * (amount > 0 ? 1.1f : 1 / 1.1f), 1f, MAX_CROP_ZOOM);
             return true;
@@ -635,7 +652,7 @@ public class PhoneScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor context, int realMouseX, int realMouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int realMouseX, int realMouseY, float delta) {
         int mouseX = Math.round(realMouseX / ui());
         int mouseY = Math.round(realMouseY / ui());
         this.mouseX = mouseX;
@@ -643,8 +660,8 @@ public class PhoneScreen extends Screen {
         hits.clear();
         cells.clear();
         drops.clear();
-        renderBackground(context);
-        context.pose().pushPose();
+        extractBackground(context, realMouseX, realMouseY, delta);
+        context.pose().pushMatrix();
         context.pose().scale(ui(), ui(), 1);
 
         int px = phoneLeft();
@@ -704,14 +721,14 @@ public class PhoneScreen extends Screen {
             hits.add(new Hit(barX - 6, barY - 4, barWidth + 12, 9, () -> switchTo(View.HOME)));
         }
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
 
         if (dragging && pressed != null) {
-            context.pose().pushPose();
+            context.pose().pushMatrix();
             context.pose().translate(0, 0, 200);
             context.fill(mouseX - 17, mouseY - 10, mouseX + 17, mouseY + 10, 0xFFFFFFFF);
             drawPhoto(context, pressed, mouseX - 16, mouseY - 9, 32, 18);
-            context.pose().popPose();
+            context.pose().popMatrix();
         }
 
         if (toast != null && ticks < toastUntil) {
@@ -723,7 +740,7 @@ public class PhoneScreen extends Screen {
                 centered(context, lines.get(i), sx + sw / 2, ty + 5 + i * 10, 0xFFFF8080);
             }
         }
-        context.pose().popPose();
+        context.pose().popMatrix();
     }
 
     private void renderMap(GuiGraphicsExtractor context) {
@@ -750,36 +767,36 @@ public class PhoneScreen extends Screen {
         // Carte orientee : le regard du joueur pointe vers le haut de l'ecran.
         mapAngle = PhoneSettings.mapRotate ? Mth.wrapDegrees(Mth.lerp(tickDelta, minecraft.player.yRotO, minecraft.player.getYRot()) + 180f) : 0f;
         scissor(context, sx, top, sx + sw, bottom);
-        context.pose().pushPose();
+        context.pose().pushMatrix();
         context.pose().translate(cx, cy, 0);
         context.pose().mulPose(Axis.ZP.rotationDegrees(mapAngle));
         context.pose().scale(scale, scale, 1);
         context.pose().translate((float) (PhoneMap.originX() - viewX), (float) (PhoneMap.originZ() - viewZ), 0);
         context.blit(PhoneMap.TEXTURE, 0, 0, 0, 0, size, size, size, size);
-        context.pose().popPose();
+        context.pose().popMatrix();
 
         double rad = Math.toRadians(mapAngle);
         double ox = (px - viewX) * scale;
         double oz = (pz - viewZ) * scale;
         float hx = cx + (float) (ox * Math.cos(rad) - oz * Math.sin(rad));
         float hz = cy + (float) (ox * Math.sin(rad) + oz * Math.cos(rad));
-        context.pose().pushPose();
+        context.pose().pushMatrix();
         context.pose().translate(hx, hz, 0);
         context.fill(-7, -7, 7, 7, 0xFFFFFFFF);
         PlayerFaceExtractor.draw(context, minecraft.player.getSkinTextureLocation(), -6, -6, 12);
-        context.pose().popPose();
+        context.pose().popMatrix();
         context.disableScissor();
 
         round(context, sx + 4, top + 4, 12, 12, 6, 0xC0000000);
-        context.pose().pushPose();
+        context.pose().pushMatrix();
         context.pose().translate(sx + 10, top + 10, 0);
         context.pose().mulPose(Axis.ZP.rotationDegrees(mapAngle));
         centered(context, "N", 0, -4, mapAngle == 0f ? WHITE : 0xFFFF6B6B);
-        context.pose().popPose();
+        context.pose().popMatrix();
         String coords = "X " + Mth.floor(px) + "  Z " + Mth.floor(pz);
         int cw = font.width(coords) + 8;
         round(context, sx + 4, bottom - 15, cw, 12, 5, 0xC0000000);
-        context.drawString(font, coords, sx + 8, bottom - 13, WHITE, false);
+        context.text(font, coords, sx + 8, bottom - 13, WHITE, false);
         if (Math.abs(mapPanX) > 1 || Math.abs(mapPanZ) > 1) {
             int bx = sx + sw - 18;
             int by = bottom - 18;
@@ -799,7 +816,7 @@ public class PhoneScreen extends Screen {
         int sw = sw();
         String clock = minecraft != null && minecraft.level != null ? clock(WorldCalendar.flowingNow(minecraft.level)) : "";
         int ink = view == View.HOME || view == View.LOCK || view == View.CROP || view == View.MAP ? WHITE : TEXT;
-        context.drawString(font, clock, sx + 10, sy + 4, ink, false);
+        context.text(font, clock, sx + 10, sy + 4, ink, false);
         round(context, sx + sw / 2 - 18, sy + 2, 36, 9, 4, 0xFF000000);
         context.fill(sx + sw / 2 + 10, sy + 5, sx + sw / 2 + 13, sy + 8, 0xFF1E2A44);
         int bx = sx + sw - 24;
@@ -835,11 +852,11 @@ public class PhoneScreen extends Screen {
         int sw = sw();
         int y = sy() + STATUS + 10;
         String clock = minecraft != null && minecraft.level != null ? clock(WorldCalendar.flowingNow(minecraft.level)) : "";
-        context.pose().pushPose();
+        context.pose().pushMatrix();
         context.pose().translate(sx + sw / 2f, y, 0);
         context.pose().scale(2.5f, 2.5f, 1);
         centered(context, clock, 0, 0, WHITE);
-        context.pose().popPose();
+        context.pose().popMatrix();
         y += 30;
         drawLockIcon(context, sx + sw / 2 - 4, y);
         y += 14;
@@ -898,11 +915,11 @@ public class PhoneScreen extends Screen {
         int top = sy() + STATUS;
         CalendarDate date = minecraft != null && minecraft.level != null ? WorldCalendar.flowingNow(minecraft.level) : null;
         if (date != null) {
-            context.pose().pushPose();
+            context.pose().pushMatrix();
             context.pose().translate(sx + sw / 2f, top + 8, 0);
             context.pose().scale(2f, 2f, 1);
             centered(context, clock(date), 0, 0, WHITE);
-            context.pose().popPose();
+            context.pose().popMatrix();
             Component day = Component.translatable("calendar.mca_vie.day." + date.dayOfWeek().getValue());
             centered(context, fit(day.getString() + " " + date.day() + "/" + date.month(), sw - 12), sx + sw / 2, top + 28, 0xFFDDE2F0);
         }
@@ -917,11 +934,11 @@ public class PhoneScreen extends Screen {
             int cy = gridTop + (i / columns) * (icon + 22);
             drawApp(context, app, cx, cy, icon);
             String label = fit(Component.translatable("gui.mca_vie.phone.app." + app.key()).getString(), (int) ((cell - 2) / 0.75f));
-            context.pose().pushPose();
+            context.pose().pushMatrix();
             context.pose().translate(cx + icon / 2f, cy + icon + 3, 0);
             context.pose().scale(0.75f, 0.75f, 1);
             centered(context, label, 0, 0, WHITE);
-            context.pose().popPose();
+            context.pose().popMatrix();
             hits.add(new Hit(cx - 2, cy - 2, icon + 4, icon + 14, () -> {
                 PhoneSettings.playAppClick();
                 if (app.view() == View.CAMERA) {
@@ -979,8 +996,8 @@ public class PhoneScreen extends Screen {
                 context.fill(sx, ry, sx + sw, ry + ROW, CARD_HOVER);
             }
             drawAvatar(context, sx + 8, ry + 5, 20, number);
-            context.drawString(font, fit(state.nameOf(number), sw - 64), sx + 34, ry + 6, TEXT, false);
-            context.drawString(font, String.format("%03d", number), sx + 34, ry + 17, MUTED, false);
+            context.text(font, fit(state.nameOf(number), sw - 64), sx + 34, ry + 6, TEXT, false);
+            context.text(font, String.format("%03d", number), sx + 34, ry + 17, MUTED, false);
             context.fill(sx + 34, ry + ROW - 1, sx + sw, ry + ROW, LINE);
             boolean trashHover = hovered(sx + sw - 22, ry + 7, 16, 16);
             drawCross(context, sx + sw - 18, ry + 11, trashHover ? DANGER : MUTED);
@@ -1030,13 +1047,13 @@ public class PhoneScreen extends Screen {
             String time = clock(WorldCalendar.flowingFromTicks(summary.time()));
             int timeWidth = font.width(time);
             Component title = Component.literal(fit(name, sw - 50 - timeWidth));
-            context.drawString(font, unread ? title.copy().withStyle(ChatFormatting.BOLD) : title, sx + 34, ry + 6, TEXT, false);
-            context.drawString(font, time, sx + sw - 8 - timeWidth, ry + 6, unread ? ACCENT : MUTED, false);
+            context.text(font, unread ? title.copy().withStyle(ChatFormatting.BOLD) : title, sx + 34, ry + 6, TEXT, false);
+            context.text(font, time, sx + sw - 8 - timeWidth, ry + 6, unread ? ACCENT : MUTED, false);
             String body = summary.photo() ? Component.translatable("gui.mca_vie.phone.photo").getString() : summary.preview();
             String preview = (summary.outgoing() ? Component.translatable("gui.mca_vie.phone.you").getString() + " " : "") + body;
             String count = summary.unread() > 99 ? "99+" : String.valueOf(summary.unread());
             int bw = Math.max(10, font.width(count) + 4);
-            context.drawString(font, fit(preview, sw - 42 - (unread ? bw + 4 : 0)), sx + 34, ry + 17, unread ? TEXT : MUTED, false);
+            context.text(font, fit(preview, sw - 42 - (unread ? bw + 4 : 0)), sx + 34, ry + 17, unread ? TEXT : MUTED, false);
             if (unread) {
                 round(context, sx + sw - 8 - bw, ry + 16, bw, 10, 5, ACCENT);
                 centered(context, count, sx + sw - 8 - bw / 2, ry + 17, WHITE);
@@ -1065,11 +1082,11 @@ public class PhoneScreen extends Screen {
         int y = contentTop() + 8;
         centered(context, fit(hint.getString(), sw - 12), sx + sw / 2, y, MUTED);
         String shown = numberInput.isEmpty() ? "_ _ _" : String.join(" ", numberInput.split(""));
-        context.pose().pushPose();
+        context.pose().pushMatrix();
         context.pose().translate(sx + sw / 2f, y + 14, 0);
         context.pose().scale(2f, 2f, 1);
         centered(context, shown, 0, 0, numberInput.isEmpty() ? MUTED : TEXT);
-        context.pose().popPose();
+        context.pose().popMatrix();
         int number = parseNumber(numberInput);
         PhoneClient.Person person = number >= 0 ? state.person(number) : null;
         if (person != null && !person.name().isEmpty()) {
@@ -1124,7 +1141,7 @@ public class PhoneScreen extends Screen {
             int bx = message.outgoing() ? x + w - bw : x;
             round(context, bx, y, bw, height, 6, message.outgoing() ? ACCENT : CARD);
             for (int l = 0; l < lines.size(); l++) {
-                context.drawString(font, lines.get(l), bx + 5, y + 4 + l * 10, message.outgoing() ? WHITE : TEXT, false);
+                context.text(font, lines.get(l), bx + 5, y + 4 + l * 10, message.outgoing() ? WHITE : TEXT, false);
             }
         }
         context.disableScissor();
@@ -1135,7 +1152,7 @@ public class PhoneScreen extends Screen {
         context.fill(sx(), barY - 2, sx() + sw(), barY - 1, LINE);
         round(context, sx() + 8, barY + 2, sw() - 38, 18, 9, CARD);
         if (draft.isEmpty() && (mainField == null || !mainField.isFocused())) {
-            context.drawString(font, Component.translatable("gui.mca_vie.phone.write"), sx() + 14, barY + 7, MUTED, false);
+            context.text(font, Component.translatable("gui.mca_vie.phone.write"), sx() + 14, barY + 7, MUTED, false);
         }
         int bx = sx() + sw() - 26;
         boolean hover = hovered(bx, barY + 1, 20, 20);
@@ -1148,7 +1165,7 @@ public class PhoneScreen extends Screen {
     private void openPhoto(UUID id, boolean fromGallery) {
         if (minecraft != null) {
             boolean saved = state.gallery().stream().anyMatch(p -> p.id().equals(id));
-            minecraft.setScreen(new PhotoViewerScreen(this, state.number(), id, fromGallery && !state.contacts().isEmpty(), fromGallery, !saved));
+            minecraft.gui.setScreen(new PhotoViewerScreen(this, state.number(), id, fromGallery && !state.contacts().isEmpty(), fromGallery, !saved));
         }
     }
 
@@ -1206,7 +1223,7 @@ public class PhoneScreen extends Screen {
             hits.add(new Hit(sx + sw - 22, hy + 4, 16, 16, () -> editFolder(0)));
         } else {
             boolean renameHover = hovered(sx + sw - 40, hy + 4, 16, 16);
-            context.drawString(font, "✎", sx + sw - 36, hy + 8, renameHover ? ACCENT_HOVER : ACCENT, false);
+            context.text(font, "✎", sx + sw - 36, hy + 8, renameHover ? ACCENT_HOVER : ACCENT, false);
             hits.add(new Hit(sx + sw - 40, hy + 4, 16, 16, () -> editFolder(folder)));
             boolean deleteHover = hovered(sx + sw - 22, hy + 4, 16, 16);
             drawCross(context, sx + sw - 18, hy + 8, deleteHover ? DANGER : MUTED);
@@ -1295,9 +1312,9 @@ public class PhoneScreen extends Screen {
         int iy = y + (h - 9) / 2;
         context.fill(ix, iy, ix + 5, iy + 2, 0xFFD69A2D);
         context.fill(ix, iy + 1, ix + 12, iy + 9, 0xFFF0B840);
-        context.drawString(font, fit(name, sw - 50), sx + 26, y + (h - 8) / 2, TEXT, false);
+        context.text(font, fit(name, sw - 50), sx + 26, y + (h - 8) / 2, TEXT, false);
         if (!count.isEmpty()) {
-            context.drawString(font, count, sx + sw - 8 - font.width(count), y + (h - 8) / 2, MUTED, false);
+            context.text(font, count, sx + sw - 8 - font.width(count), y + (h - 8) / 2, MUTED, false);
         }
         context.fill(sx + 26, y + h - 1, sx + sw, y + h, LINE);
         if (visible(y, h, top, bottom)) {
@@ -1311,7 +1328,7 @@ public class PhoneScreen extends Screen {
         int sx = sx();
         int sw = sw();
         int top = contentTop();
-        context.drawString(font, Component.translatable("gui.mca_vie.phone.folder_name"), sx + 10, top + 14, MUTED, false);
+        context.text(font, Component.translatable("gui.mca_vie.phone.folder_name"), sx + 10, top + 14, MUTED, false);
         round(context, sx + 8, top + 26, sw - 16, 16, 6, CARD);
         pill(context, sx + 20, top + 52, sw - 40, Component.translatable("gui.mca_vie.phone.folder_ok"), !folderInput.trim().isEmpty(), this::submitFolder);
     }
@@ -1375,8 +1392,8 @@ public class PhoneScreen extends Screen {
                 context.fill(sx, ry, sx + sw, ry + ROW, CARD_HOVER);
             }
             drawAvatar(context, sx + 8, ry + 5, 20, number);
-            context.drawString(font, fit(state.nameOf(number), sw - 44), sx + 34, ry + 6, TEXT, false);
-            context.drawString(font, String.format("%03d", number), sx + 34, ry + 17, MUTED, false);
+            context.text(font, fit(state.nameOf(number), sw - 44), sx + 34, ry + 6, TEXT, false);
+            context.text(font, String.format("%03d", number), sx + 34, ry + 17, MUTED, false);
             context.fill(sx + 34, ry + ROW - 1, sx + sw, ry + ROW, LINE);
             UUID id = photo;
             if (visible(ry, ROW, top, bottom)) {
@@ -1417,7 +1434,7 @@ public class PhoneScreen extends Screen {
     }
 
     private int section(GuiGraphicsExtractor context, int x, int y, String key) {
-        context.drawString(font, Component.translatable(key).withStyle(ChatFormatting.BOLD), x + 2, y + 2, MUTED, false);
+        context.text(font, Component.translatable(key).withStyle(ChatFormatting.BOLD), x + 2, y + 2, MUTED, false);
         return y + 13;
     }
 
@@ -1426,8 +1443,8 @@ public class PhoneScreen extends Screen {
         round(context, x, y, w, 20, 6, hover ? CARD_HOVER : CARD);
         String shown = value.getString();
         int vw = font.width(shown);
-        context.drawString(font, fit(label.getString(), w - vw - 22), x + 7, y + 6, TEXT, false);
-        context.drawString(font, shown, x + w - vw - 7, y + 6, ACCENT, false);
+        context.text(font, fit(label.getString(), w - vw - 22), x + 7, y + 6, TEXT, false);
+        context.text(font, shown, x + w - vw - 7, y + 6, ACCENT, false);
         hits.add(new Hit(x, y, w, 20, action));
         return y + 22;
     }
@@ -1457,12 +1474,12 @@ public class PhoneScreen extends Screen {
         int y = top + 8 - scroll;
         scissor(context, sx, top, sx + sw, bottom);
         round(context, x, y, w, 56, 8, CARD);
-        context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.my_number").getString(), w - 16), x + 8, y + 5, MUTED, false);
-        context.drawString(font, String.format("%03d", state.number()), x + 8, y + 16, TEXT, false);
+        context.text(font, fit(Component.translatable("gui.mca_vie.phone.my_number").getString(), w - 16), x + 8, y + 5, MUTED, false);
+        context.text(font, String.format("%03d", state.number()), x + 8, y + 16, TEXT, false);
         context.fill(x + 8, y + 27, x + w - 8, y + 28, LINE);
-        context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.lock_code").getString(), w - 16), x + 8, y + 32, MUTED, false);
+        context.text(font, fit(Component.translatable("gui.mca_vie.phone.lock_code").getString(), w - 16), x + 8, y + 32, MUTED, false);
         Component status = Component.translatable(state.hasCode() ? "gui.mca_vie.phone.on" : "gui.mca_vie.phone.off");
-        context.drawString(font, status, x + 8, y + 43, state.hasCode() ? 0xFF22C55E : TEXT, false);
+        context.text(font, status, x + 8, y + 43, state.hasCode() ? 0xFF22C55E : TEXT, false);
         y += 64;
         if (state.owner()) {
             y = option(context, x, y, w, Component.translatable("gui.mca_vie.phone.wallpaper"), Component.literal(">"), () -> {
@@ -1521,7 +1538,7 @@ public class PhoneScreen extends Screen {
 
         if (!state.owner()) {
             for (FormattedCharSequence line : font.split(Component.translatable("gui.mca_vie.phone.owner_only"), w)) {
-                context.drawString(font, line, x, y, MUTED, false);
+                context.text(font, line, x, y, MUTED, false);
                 y += 10;
             }
         } else {
@@ -1538,7 +1555,7 @@ public class PhoneScreen extends Screen {
             }
             y += 30;
             for (FormattedCharSequence line : font.split(Component.translatable(state.hasCode() ? "gui.mca_vie.phone.code_on" : "gui.mca_vie.phone.code_off"), w)) {
-                context.drawString(font, line, x, y, MUTED, false);
+                context.text(font, line, x, y, MUTED, false);
                 y += 10;
             }
         }
@@ -1559,7 +1576,7 @@ public class PhoneScreen extends Screen {
         int y = top + 6 - scroll;
         scissor(context, sx, top, sx + sw, bottom);
         for (FormattedCharSequence line : font.split(setting("apps_hint"), w)) {
-            context.drawString(font, line, x, y, MUTED, false);
+            context.text(font, line, x, y, MUTED, false);
             y += 10;
         }
         y += 4;
@@ -1574,7 +1591,7 @@ public class PhoneScreen extends Screen {
             context.blit(app.texture(), x + 4, y + 3, 16, 16, 0, 0, 128, 128, 128, 128);
             RenderSystem.disableBlend();
             int controls = 54;
-            context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.app." + app.key()).getString(), w - 26 - controls), x + 24, y + 7, visible ? TEXT : MUTED, false);
+            context.text(font, fit(Component.translatable("gui.mca_vie.phone.app." + app.key()).getString(), w - 26 - controls), x + 24, y + 7, visible ? TEXT : MUTED, false);
             int bx = x + w - controls;
             arrowButton(context, bx, y + 3, true, i > 0, () -> moveApp(index, -1));
             arrowButton(context, bx + 16, y + 3, false, i < list.size() - 1, () -> moveApp(index, 1));
@@ -1768,7 +1785,7 @@ public class PhoneScreen extends Screen {
         scroll = Math.min(scroll, Math.max(0, total - (bottom - top)));
         scissor(context, sx, top, sx + sw, bottom);
         int y = top - scroll;
-        context.drawString(font, Component.translatable("gui.mca_vie.phone.wallpaper_presets"), sx + 6, y + 3, MUTED, false);
+        context.text(font, Component.translatable("gui.mca_vie.phone.wallpaper_presets"), sx + 6, y + 3, MUTED, false);
         y += 14;
         for (int i = 0; i < WALLPAPERS.length; i++) {
             int px = sx + 4 + i * (presetW + 4);
@@ -1785,7 +1802,7 @@ public class PhoneScreen extends Screen {
             }
         }
         y += presetH + 8;
-        context.drawString(font, Component.translatable("gui.mca_vie.phone.app.gallery"), sx + 6, y + 3, MUTED, false);
+        context.text(font, Component.translatable("gui.mca_vie.phone.app.gallery"), sx + 6, y + 3, MUTED, false);
         y += 14;
         if (folder == 0) {
             for (Map.Entry<Integer, String> entry : folders) {
@@ -1903,7 +1920,7 @@ public class PhoneScreen extends Screen {
         LocalDate selectedDate = PhoneAgenda.date(agendaSelected);
         Component dayLabel = agendaSelected == today ? Component.translatable("gui.mca_vie.phone.agenda_today")
                 : Component.literal(Component.translatable("calendar.mca_vie.day." + selectedDate.getDayOfWeek().getValue()).getString() + " " + selectedDate.getDayOfMonth() + "/" + selectedDate.getMonthValue());
-        context.drawString(font, fit(dayLabel.getString(), sw - 16), sx + 8, y + 4, MUTED, false);
+        context.text(font, fit(dayLabel.getString(), sw - 16), sx + 8, y + 4, MUTED, false);
         int listTop = y + 15;
         List<PhoneClient.Event> events = new ArrayList<>();
         long selectedDay = agendaSelected;
@@ -1925,10 +1942,10 @@ public class PhoneScreen extends Screen {
                 continue;
             }
             context.fill(sx + 8, ry + 6, sx + 11, ry + 9, event.yearly() ? 0xFFF59E0B : ACCENT);
-            context.drawString(font, fit(event.title(), sw - 44), sx + 16, ry + 4, TEXT, false);
+            context.text(font, fit(event.title(), sw - 44), sx + 16, ry + 4, TEXT, false);
             if (event.yearly() && event.day() != selectedDay) {
                 int years = selectedDate.getYear() - PhoneAgenda.date(event.day()).getYear();
-                context.drawString(font, Component.translatable("gui.mca_vie.phone.agenda_years", years), sx + 16, ry + 13, MUTED, false);
+                context.text(font, Component.translatable("gui.mca_vie.phone.agenda_years", years), sx + 16, ry + 13, MUTED, false);
             }
             context.fill(sx + 16, ry + row - 1, sx + sw, ry + row, LINE);
             boolean crossHover = hovered(sx + sw - 22, ry + 2, 16, 16);
@@ -1953,7 +1970,7 @@ public class PhoneScreen extends Screen {
         int top = contentTop();
         LocalDate date = PhoneAgenda.date(agendaSelected);
         String when = date.getDayOfMonth() + " " + Component.translatable("calendar.mca_vie.month." + date.getMonthValue()).getString();
-        context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.agenda_title", when).getString(), sw - 20), sx + 10, top + 14, MUTED, false);
+        context.text(font, fit(Component.translatable("gui.mca_vie.phone.agenda_title", when).getString(), sw - 20), sx + 10, top + 14, MUTED, false);
         round(context, sx + 8, top + 26, sw - 16, 16, 6, CARD);
         int y = top + 50;
         boolean hover = hovered(sx + 8, y, sw - 16, 16);
@@ -1963,7 +1980,7 @@ public class PhoneScreen extends Screen {
         if (eventYearly) {
             context.fill(box + 3, y + 6, box + 7, y + 10, WHITE);
         }
-        context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.agenda_yearly").getString(), sw - 40), box + 15, y + 4, TEXT, false);
+        context.text(font, fit(Component.translatable("gui.mca_vie.phone.agenda_yearly").getString(), sw - 40), box + 15, y + 4, TEXT, false);
         hits.add(new Hit(sx + 8, y, sw - 16, 16, () -> eventYearly = !eventYearly));
         pill(context, sx + 20, y + 26, sw - 40, Component.translatable("gui.mca_vie.phone.folder_ok"), !eventInput.trim().isEmpty(), this::submitEvent);
     }
@@ -2017,7 +2034,7 @@ public class PhoneScreen extends Screen {
     private Component employeeWhere(PhoneEmployees.Employee e) {
         String pos = e.pos().getX() + ", " + e.pos().getY() + ", " + e.pos().getZ();
         var player = Minecraft.getInstance().player;
-        if (player != null && player.level().dimension().location().toString().equals(e.dimension())) {
+        if (player != null && player.level().dimension().identifier().toString().equals(e.dimension())) {
             int distance = (int) Math.sqrt(player.blockPosition().distSqr(e.pos()));
             return Component.translatable("gui.mca_vie.phone.employees.where", pos, distance);
         }
@@ -2064,10 +2081,10 @@ public class PhoneScreen extends Screen {
                 context.fill(sx, ry, sx + sw, ry + ROW, CARD_HOVER);
             }
             drawEmployeeHead(context, e, sx + 6, ry + 5, 20);
-            context.drawString(font, fit(e.name(), sw - 50), sx + 30, ry + 6, e.loaded() ? TEXT : MUTED, false);
+            context.text(font, fit(e.name(), sw - 50), sx + 30, ry + 6, e.loaded() ? TEXT : MUTED, false);
             String line = Job.byId(e.job()).getName().getString() + " · "
                     + (e.loaded() ? employeeStatus(e).getString() : Component.translatable("gui.mca_vie.phone.employees.away").getString());
-            context.drawString(font, fit(line, sw - 50), sx + 30, ry + 17, MUTED, false);
+            context.text(font, fit(line, sw - 50), sx + 30, ry + 17, MUTED, false);
             if (employeeAlert(e)) {
                 round(context, sx + sw - 14, ry + ROW / 2 - 3, 6, 6, 3, DANGER);
             }
@@ -2111,18 +2128,18 @@ public class PhoneScreen extends Screen {
         }
         y += frameH + 8;
         var job = Job.byId(e.job());
-        context.renderItem(job.icon(), x, y);
-        context.drawString(font, fit(job.getName().getString(), w - 22), x + 22, y + 4, TEXT, false);
+        context.item(job.icon(), x, y);
+        context.text(font, fit(job.getName().getString(), w - 22), x + 22, y + 4, TEXT, false);
         y += 24;
-        context.drawString(font, Component.translatable("gui.mca_vie.phone.employees.state"), x, y, MUTED, false);
+        context.text(font, Component.translatable("gui.mca_vie.phone.employees.state"), x, y, MUTED, false);
         y += 10;
         Component state = e.loaded() ? employeeStatus(e) : Component.translatable("gui.mca_vie.phone.employees.away");
         for (FormattedCharSequence l : font.split(state, w)) {
-            context.drawString(font, l, x, y, TEXT, false);
+            context.text(font, l, x, y, TEXT, false);
             y += 10;
         }
         y += 4;
-        context.drawString(font, Component.translatable("gui.mca_vie.phone.employees.health"), x, y, MUTED, false);
+        context.text(font, Component.translatable("gui.mca_vie.phone.employees.health"), x, y, MUTED, false);
         y += 11;
         float ratio = e.maxHealth() > 0 ? Mth.clamp(e.health() / e.maxHealth(), 0, 1) : 0;
         round(context, x, y, w, 6, 3, CARD);
@@ -2130,17 +2147,17 @@ public class PhoneScreen extends Screen {
             round(context, x, y, Math.max(6, (int) (w * ratio)), 6, 3, ratio < 0.5f ? DANGER : 0xFF30A46C);
         }
         y += 12;
-        context.drawString(font, Component.translatable("gui.mca_vie.phone.employees.position"), x, y, MUTED, false);
+        context.text(font, Component.translatable("gui.mca_vie.phone.employees.position"), x, y, MUTED, false);
         y += 10;
         for (FormattedCharSequence l : font.split(employeeWhere(e), w)) {
-            context.drawString(font, l, x, y, TEXT, false);
+            context.text(font, l, x, y, TEXT, false);
             y += 10;
         }
-        context.drawString(font, fit(employeeSeen(e).getString(), w), x, y, MUTED, false);
+        context.text(font, fit(employeeSeen(e).getString(), w), x, y, MUTED, false);
         y += 18;
         if (!e.loaded()) {
             for (FormattedCharSequence l : font.split(Component.translatable("gui.mca_vie.phone.employees.pending_hint"), w)) {
-                context.drawString(font, l, x, y, MUTED, false);
+                context.text(font, l, x, y, MUTED, false);
                 y += 10;
             }
             y += 4;
@@ -2194,12 +2211,12 @@ public class PhoneScreen extends Screen {
     private int renderEmployeeExtras(GuiGraphicsExtractor context, PhoneEmployees.Employee e, int x, int y, int w) {
         UUID id = e.uuid();
         if (!e.order().isEmpty()) {
-            context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.employees.order_active",
+            context.text(font, fit(Component.translatable("gui.mca_vie.phone.employees.order_active",
                     Component.translatable("gui.mca_vie.phone.employees.order." + e.order())).getString(), w), x, y, MUTED, false);
             y += 10;
         }
         if (!e.pending().isEmpty()) {
-            context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.employees.order_waiting",
+            context.text(font, fit(Component.translatable("gui.mca_vie.phone.employees.order_waiting",
                     Component.translatable("gui.mca_vie.phone.employees.order." + e.pending())).getString(), w), x, y, ACCENT, false);
             y += 10;
         }
@@ -2222,20 +2239,20 @@ public class PhoneScreen extends Screen {
         centered(context, fit(Component.translatable("gui.mca_vie.phone.employees.message").getString(), w - 12), x + w / 2, y + 6, WHITE);
         hits.add(new Hit(x, y, w, 20, () -> openEmployeeChat()));
         y += 28;
-        context.drawString(font, Component.translatable("gui.mca_vie.phone.employees.report"), x, y, MUTED, false);
+        context.text(font, Component.translatable("gui.mca_vie.phone.employees.report"), x, y, MUTED, false);
         CompoundTag report = e.report();
         int total = 0;
-        for (String key : report.getAllKeys()) {
-            total += report.getInt(key);
+        for (String key : report.keySet()) {
+            total += report.getIntOr(key, 0);
         }
         y += 10;
         if (report.isEmpty()) {
-            context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.employees.report_empty").getString(), w), x, y, MUTED, false);
+            context.text(font, fit(Component.translatable("gui.mca_vie.phone.employees.report_empty").getString(), w), x, y, MUTED, false);
             return y + 14;
         }
-        context.drawString(font, fit(Component.translatable("gui.mca_vie.phone.employees.report_total", total).getString(), w), x, y, TEXT, false);
+        context.text(font, fit(Component.translatable("gui.mca_vie.phone.employees.report_total", total).getString(), w), x, y, TEXT, false);
         y += 12;
-        List<String> keys = new ArrayList<>(report.getAllKeys());
+        List<String> keys = new ArrayList<>(report.keySet());
         keys.sort(Comparator.comparingInt(report::getInt).reversed());
         int cell = 34;
         int perRow = Math.max(1, w / cell);
@@ -2245,7 +2262,7 @@ public class PhoneScreen extends Screen {
             int cy = y + (i / perRow) * 20;
             var item = BuiltInRegistries.ITEM.get(Identifier.tryParse(keys.get(i)));
             context.renderItem(new ItemStack(item), cx, cy);
-            context.drawString(font, String.valueOf(report.getInt(keys.get(i))), cx + 17, cy + 5, TEXT, false);
+            context.text(font, String.valueOf(report.getInt(keys.get(i))), cx + 17, cy + 5, TEXT, false);
         }
         return y + ((shown + perRow - 1) / perRow) * 20 + 4;
     }
@@ -2366,7 +2383,7 @@ public class PhoneScreen extends Screen {
             int bx = line.outgoing() ? x + w - bw : x;
             round(context, bx, y, bw, height, 6, line.outgoing() ? ACCENT : CARD);
             for (int l = 0; l < lines.size(); l++) {
-                context.drawString(font, lines.get(l), bx + 5, y + 4 + l * 10, line.outgoing() ? WHITE : TEXT, false);
+                context.text(font, lines.get(l), bx + 5, y + 4 + l * 10, line.outgoing() ? WHITE : TEXT, false);
             }
         }
         context.disableScissor();
@@ -2391,7 +2408,7 @@ public class PhoneScreen extends Screen {
         context.fill(sx(), barY - 2, sx() + sw(), barY - 1, LINE);
         round(context, sx() + 8, barY + 2, sw() - 38, 18, 9, CARD);
         if (draft.isEmpty() && (mainField == null || !mainField.isFocused())) {
-            context.drawString(font, Component.translatable("gui.mca_vie.phone.write"), sx() + 14, barY + 7, MUTED, false);
+            context.text(font, Component.translatable("gui.mca_vie.phone.write"), sx() + 14, barY + 7, MUTED, false);
         }
         int bx = sx() + sw() - 26;
         boolean hover = hovered(bx, barY + 1, 20, 20);

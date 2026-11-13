@@ -117,7 +117,7 @@ public class GhostRenderer extends EntityRenderer<GhostEntity> {
 
         @Override
         public VertexConsumer vertex(double x, double y, double z) {
-            delegate.vertex(x, y, z);
+            delegate.addVertex(x, y, z);
             return this;
         }
 
@@ -169,7 +169,7 @@ public class GhostRenderer extends EntityRenderer<GhostEntity> {
         @Override
         public void vertex(float x, float y, float z, float red, float green, float blue, float alpha, float u, float v, int overlay, int light,
                            float normalX, float normalY, float normalZ) {
-            delegate.vertex(x, y, z, pale((int) (red * 255), 0) / 255f, pale((int) (green * 255), 5) / 255f, pale((int) (blue * 255), 20) / 255f,
+            delegate.addVertex(x, y, z, pale((int) (red * 255), 0) / 255f, pale((int) (green * 255), 5) / 255f, pale((int) (blue * 255), 20) / 255f,
                     alpha * this.alpha, u, v, overlay, light, normalX, normalY, normalZ);
         }
     }

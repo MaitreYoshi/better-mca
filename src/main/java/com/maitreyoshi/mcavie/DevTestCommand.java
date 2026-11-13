@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie;
 
+import net.minecraft.server.permissions.Permissions;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.LongArgumentType;
 import com.maitreyoshi.mcavie.life.WellbeingRegistry;
@@ -46,10 +47,10 @@ final class DevTestCommand {
 
     static void register() {
         CommandRegistrationEvent.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(
-                Commands.literal("surnametest").requires(s -> s.hasPermission(2))
+                Commands.literal("surnametest").requires(s -> s.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                         .then(Commands.literal("family").executes(ctx -> {
                             ServerLevel world = ctx.getSource().getLevel();
-                            BlockPos pos = world.getSharedSpawnPos();
+                            BlockPos pos = world.getRespawnData().pos();
                             VillagerEntityMCA father = VillagerFactory.newVillager(world).withGender(Gender.MALE).withAge(0).withPosition(pos).spawn(EntitySpawnReason.COMMAND);
                             VillagerEntityMCA mother = VillagerFactory.newVillager(world).withGender(Gender.FEMALE).withAge(0).withPosition(pos).spawn(EntitySpawnReason.COMMAND);
                             world.getServer().execute(() -> {
@@ -67,7 +68,7 @@ final class DevTestCommand {
                         })))
                         .then(Commands.literal("tomb").executes(ctx -> {
                             ServerLevel world = ctx.getSource().getLevel();
-                            BlockPos pos = world.getSharedSpawnPos();
+                            BlockPos pos = world.getRespawnData().pos();
                             java.util.List<VillagerEntityMCA> nearby = world.getEntitiesOfClass(VillagerEntityMCA.class, new AABB(pos).inflate(32), e -> true);
                             if (nearby.isEmpty()) {
                                 ctx.getSource().sendFailure(Component.literal("Aucun villageois proche"));
@@ -75,7 +76,7 @@ final class DevTestCommand {
                             }
                             VillagerEntityMCA v = nearby.get(0);
                             BlockPos tombPos = pos.offset(3, 0, 0);
-                            world.setBlockAndUpdate(tombPos, BlocksMCA.GRAVELLING_HEADSTONE.get().defaultBlockState());
+                            world.setBlockAndUpdate(tombPos, BlocksMCA.GRAVELLING_HEADSTONE.defaultBlockState());
                             TombstoneBlock.Data.of(world.getBlockEntity(tombPos)).ifPresent(tomb -> {
                                 tomb.setEntity(v);
                                 String name = tomb.getEntityName().map(Component::getString).orElse("(vide)");
@@ -146,7 +147,7 @@ final class DevTestCommand {
                             ServerLevel world = ctx.getSource().getLevel();
                             int value = IntegerArgumentType.getInteger(ctx, "value");
                             WellbeingRegistry registry = WellbeingRegistry.get(world.getServer());
-                            for (VillagerEntityMCA v : world.getEntitiesOfClass(VillagerEntityMCA.class, new AABB(world.getSharedSpawnPos()).inflate(32), e -> true)) {
+                            for (VillagerEntityMCA v : world.getEntitiesOfClass(VillagerEntityMCA.class, new AABB(world.getRespawnData().pos()).inflate(32), e -> true)) {
                                 Optional.ofNullable(registry.get(v.getUUID())).ifPresent(r -> {
                                     r.happiness = value;
                                     r.lastSentHappiness = value;
@@ -212,7 +213,7 @@ final class DevTestCommand {
                         }))
                         .then(Commands.literal("tree").executes(ctx -> {
                             ServerLevel world = ctx.getSource().getLevel();
-                            VillagerEntityMCA youngest = world.getEntitiesOfClass(VillagerEntityMCA.class, new AABB(world.getSharedSpawnPos()).inflate(32), e -> true).stream()
+                            VillagerEntityMCA youngest = world.getEntitiesOfClass(VillagerEntityMCA.class, new AABB(world.getRespawnData().pos()).inflate(32), e -> true).stream()
                                     .min(java.util.Comparator.comparingInt(VillagerEntityMCA::getAge)).orElse(null);
                             if (youngest == null) {
                                 ctx.getSource().sendFailure(Component.literal("Aucun villageois proche"));
@@ -240,7 +241,7 @@ final class DevTestCommand {
                                 ctx.getSource().sendFailure(Component.literal("Métier inconnu : " + jobName));
                                 return 0;
                             }
-                            BlockPos spawn = world.getSharedSpawnPos();
+                            BlockPos spawn = world.getRespawnData().pos();
                             world.getEntitiesOfClass(VillagerEntityMCA.class, new AABB(spawn).inflate(32), v -> v.getAge() >= 0 && WorkManager.getJob(v) == Job.NONE).stream()
                                     .min(java.util.Comparator.comparingDouble(v -> v.distanceToSqr(spawn.getX(), spawn.getY(), spawn.getZ())))
                                     .ifPresent(v -> {
@@ -251,9 +252,9 @@ final class DevTestCommand {
                         })))
                         .then(Commands.literal("depot").executes(ctx -> {
                             ServerLevel world = ctx.getSource().getLevel();
-                            BlockPos chest = world.getSharedSpawnPos().offset(0, 0, 3);
+                            BlockPos chest = world.getRespawnData().pos().offset(0, 0, 3);
                             world.setBlockAndUpdate(chest, net.minecraft.world.level.block.Blocks.CHEST.defaultBlockState());
-                            for (VillagerEntityMCA v : world.getEntitiesOfClass(VillagerEntityMCA.class, new AABB(world.getSharedSpawnPos()).inflate(48), e -> WorkManager.getJob(e) != Job.NONE)) {
+                            for (VillagerEntityMCA v : world.getEntitiesOfClass(VillagerEntityMCA.class, new AABB(world.getRespawnData().pos()).inflate(48), e -> WorkManager.getJob(e) != Job.NONE)) {
                                 WorkManager.getRecord(v).depot = chest;
                                 WorkManager.markDirty(v);
                             }
@@ -262,7 +263,7 @@ final class DevTestCommand {
                         .then(Commands.literal("chest").executes(ctx -> {
                             ServerLevel world = ctx.getSource().getLevel();
                             StringBuilder out = new StringBuilder("Coffre : ");
-                            if (world.getBlockEntity(world.getSharedSpawnPos().offset(0, 0, 3)) instanceof net.minecraft.world.Container inv) {
+                            if (world.getBlockEntity(world.getRespawnData().pos().offset(0, 0, 3)) instanceof net.minecraft.world.Container inv) {
                                 for (int i = 0; i < inv.getContainerSize(); i++) {
                                     if (!inv.getItem(i).isEmpty()) {
                                         out.append(inv.getItem(i).getCount()).append(' ').append(inv.getItem(i).getItem()).append(", ");
@@ -393,7 +394,7 @@ final class DevTestCommand {
                         .then(Commands.literal("work").executes(ctx -> {
                             ServerLevel world = ctx.getSource().getLevel();
                             StringBuilder out = new StringBuilder("Heure de travail : " + WorkManager.isWorkTime(world) + "\n");
-                            for (VillagerEntityMCA v : world.getEntitiesOfClass(VillagerEntityMCA.class, new AABB(world.getSharedSpawnPos()).inflate(48), e -> true)) {
+                            for (VillagerEntityMCA v : world.getEntitiesOfClass(VillagerEntityMCA.class, new AABB(world.getRespawnData().pos()).inflate(48), e -> true)) {
                                 Job job = WorkManager.getJob(v);
                                 if (job == Job.NONE) {
                                     continue;
@@ -417,7 +418,7 @@ final class DevTestCommand {
                         }))
                         .then(Commands.literal("graves").executes(ctx -> {
                             ServerLevel world = ctx.getSource().getLevel();
-                            BlockPos center = world.getSharedSpawnPos();
+                            BlockPos center = world.getRespawnData().pos();
                             for (BlockPos p : BlockPos.betweenClosed(center.offset(-12, -4, -12), center.offset(12, 4, 12))) {
                                 TombstoneBlock.Data.of(world.getBlockEntity(p)).filter(TombstoneBlock.Data::hasEntity).ifPresent(tomb -> {
                                     String line = "Tombe en " + p.toShortString() + " : " + tomb.getEntityName().map(Component::getString).orElse("?");
@@ -428,7 +429,7 @@ final class DevTestCommand {
                         }))
                         .then(Commands.literal("list").executes(ctx -> {
                             ServerLevel world = ctx.getSource().getLevel();
-                            BlockPos pos = world.getSharedSpawnPos();
+                            BlockPos pos = world.getRespawnData().pos();
                             SurnameRegistry registry = SurnameRegistry.get(world.getServer());
                             FamilyTree tree = FamilyTree.get(world);
                             for (VillagerEntityMCA v : world.getEntitiesOfClass(VillagerEntityMCA.class, new AABB(pos).inflate(32), e -> true)) {

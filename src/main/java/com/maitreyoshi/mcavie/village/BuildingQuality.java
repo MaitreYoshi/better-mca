@@ -62,7 +62,7 @@ public enum BuildingQuality {
         }
 
         public static Measure fromNbt(CompoundTag nbt) {
-            return new Measure(nbt.getInt("lights"), nbt.getInt("windows"), nbt.getInt("decor"), nbt.getInt("floor"), nbt.getInt("storeys"));
+            return new Measure(nbt.getIntOr("lights", 0), nbt.getIntOr("windows", 0), nbt.getIntOr("decor", 0), nbt.getIntOr("floor", 0), nbt.getIntOr("storeys", 0));
         }
     }
 

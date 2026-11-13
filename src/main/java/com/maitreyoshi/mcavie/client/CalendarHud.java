@@ -45,7 +45,7 @@ public final class CalendarHud {
         int width = font.width(text);
         int x = (context.guiWidth() - width) / 2;
         context.fill(x - PADDING, TOP - PADDING, x + width + PADDING, TOP + font.lineHeight + PADDING - 1, 0x80000000);
-        context.drawString(font, text, x, TOP, 0xFFFFFF);
+        context.text(font, text, x, TOP, 0xFFFFFF);
     }
 
     private static Component format(CalendarDate date) {

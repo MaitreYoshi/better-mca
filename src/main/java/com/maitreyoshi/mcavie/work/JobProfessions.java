@@ -3,7 +3,6 @@ package com.maitreyoshi.mcavie.work;
 import com.google.common.collect.ImmutableSet;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.compat.Registration;
-import dev.architectury.registry.level.entity.trade.TradeRegistry;
 import com.maitreyoshi.mcavie.mixin.VillagerEntityInvoker;
 import org.jetbrains.annotations.Nullable;
 
@@ -15,17 +14,26 @@ import net.minecraft.world.entity.ai.village.poi.PoiType;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerData;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
-import net.minecraft.world.item.trading.VillagerTrades;
+import net.minecraft.world.item.trading.ItemCost;
+import net.minecraft.world.item.trading.MerchantOffers;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.alchemy.Potion;
+import net.minecraft.core.Holder;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
+import java.util.ArrayList;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.alchemy.PotionUtils;
 import net.minecraft.world.item.alchemy.Potions;
 import net.minecraft.world.item.trading.MerchantOffer;
 
 public final class JobProfessions {
     private static final Map<Job, VillagerProfession> BY_JOB = new EnumMap<>(Job.class);
     private static final int[] TRADE_XP = {2, 10, 20, 30, 30};
+    private static final Map<Job, List<List<Factory>>> TRADES = new EnumMap<>(Job.class);
 
     private JobProfessions() {
     }
@@ -47,8 +55,9 @@ public final class JobProfessions {
             if (!job.isCraft()) {
                 continue;
             }
-            Registration.register(Registries.VILLAGER_PROFESSION, job.id(), () -> new VillagerProfession(MCAVie.MOD_ID + "." + job.id(),
-                    PoiType.NONE, PoiType.NONE, ImmutableSet.of(), ImmutableSet.of(), null), profession -> {
+            Registration.register(Registries.VILLAGER_PROFESSION, job.id(), () -> new VillagerProfession(
+                    Component.translatable("entity.minecraft.villager." + MCAVie.MOD_ID + "." + job.id()),
+                    holder -> false, holder -> false, ImmutableSet.of(), ImmutableSet.of(), null, Int2ObjectMaps.emptyMap()), profession -> {
                 BY_JOB.put(job, profession);
                 if (BY_JOB.size() == total) {
                     registerTrades();
@@ -77,7 +86,7 @@ public final class JobProfessions {
                 List.of(buy(Items.TROPICAL_FISH, 6, 1)),
                 List.of(sell(Items.COD_BUCKET, 1, 5)));
         trades(Job.BREEDER,
-                List.of(buy(Items.WHEAT, 20, 1), sell(Items.WHITE_WOOL, 3, 1)),
+                List.of(buy(Items.WHEAT, 20, 1), sell(Items.WOOL.white(), 3, 1)),
                 List.of(buy(Items.CARROT, 22, 1), sell(Items.EGG, 8, 1)),
                 List.of(sell(Items.LEATHER, 3, 1), sell(Items.SHEARS, 1, 2)),
                 List.of(sell(Items.LEAD, 1, 2)),
@@ -126,33 +135,51 @@ public final class JobProfessions {
      */
     public static void syncTradeLevel(Villager villager, Job job, int jobLevel) {
         VillagerProfession profession = BY_JOB.get(job);
-        if (profession == null || villager.level().isClientSide() || villager.getVillagerData().getProfession() != profession) {
+        if (profession == null || villager.level().isClientSide() || villager.getVillagerData().profession().value() != profession) {
             return;
         }
         int target = Math.max(1, Math.min(5, jobLevel));
-        int current = villager.getVillagerData().getLevel();
+        int current = villager.getVillagerData().level();
         if (current >= target) {
             return;
         }
         villager.getOffers();
         while (current < target) {
             current++;
-            villager.setVillagerData(villager.getVillagerData().setLevel(current));
-            ((VillagerEntityInvoker) villager).mcavie$fillRecipes();
+            villager.setVillagerData(villager.getVillagerData().withLevel(current));
+            ((VillagerEntityInvoker) villager).mcavie$fillRecipes((ServerLevel) villager.level());
         }
         villager.setVillagerXp(Math.max(villager.getVillagerXp(), VillagerData.getMinXpPerLevel(target)));
     }
 
     @SafeVarargs
     private static void trades(Job job, List<Factory>... levels) {
-        VillagerProfession profession = BY_JOB.get(job);
-        for (int i = 0; i < levels.length; i++) {
-            int level = i + 1;
-            List<Factory> offers = levels[i];
-            TradeRegistry.registerVillagerTrade(profession, level, offers.stream()
-                    .<VillagerTrades.ItemListing>map(offer -> (entity, random) -> offer.create(TRADE_XP[level - 1]))
-                    .toArray(VillagerTrades.ItemListing[]::new));
+        TRADES.put(job, List.of(levels));
+    }
+
+    /**
+     * Offres de nos métiers (les échanges vanilla 26.x sont en données, on garde les nôtres en code) :
+     * appelé par le mixin de Villager.updateTrades ; renvoie false si ce n'est pas un de nos métiers.
+     */
+    public static boolean addTrades(Villager villager, RandomSource random) {
+        VillagerProfession profession = villager.getVillagerData().profession().value();
+        for (Map.Entry<Job, VillagerProfession> entry : BY_JOB.entrySet()) {
+            if (entry.getValue() != profession) {
+                continue;
+            }
+            List<List<Factory>> levels = TRADES.get(entry.getKey());
+            int level = villager.getVillagerData().level();
+            if (levels == null || level < 1 || level > levels.size()) {
+                return true;
+            }
+            List<Factory> pool = new ArrayList<>(levels.get(level - 1));
+            MerchantOffers offers = villager.getOffers();
+            for (int i = 0; i < 2 && !pool.isEmpty(); i++) {
+                offers.add(pool.remove(random.nextInt(pool.size())).create(TRADE_XP[level - 1]));
+            }
+            return true;
         }
+        return false;
     }
 
     private interface Factory {
@@ -160,7 +187,7 @@ public final class JobProfessions {
     }
 
     private static Factory buy(Item item, int count, int emeralds) {
-        return xp -> new MerchantOffer(new ItemStack(item, count), new ItemStack(Items.EMERALD, emeralds), 16, xp, 0.05F);
+        return xp -> new MerchantOffer(new ItemCost(item, count), new ItemStack(Items.EMERALD, emeralds), 16, xp, 0.05F);
     }
 
     private static Factory sell(Item item, int count, int emeralds) {
@@ -168,10 +195,10 @@ public final class JobProfessions {
     }
 
     private static Factory sell(ItemStack stack, int emeralds) {
-        return xp -> new MerchantOffer(new ItemStack(Items.EMERALD, emeralds), stack.copy(), 12, xp, 0.05F);
+        return xp -> new MerchantOffer(new ItemCost(Items.EMERALD, emeralds), stack.copy(), 12, xp, 0.05F);
     }
 
-    private static ItemStack potion(net.minecraft.world.item.alchemy.Potion potion) {
-        return PotionUtils.setPotion(new ItemStack(Items.POTION), potion);
+    private static ItemStack potion(Holder<Potion> potion) {
+        return PotionContents.createItemStack(Items.POTION, potion);
     }
 }

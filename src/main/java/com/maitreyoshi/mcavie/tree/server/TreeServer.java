@@ -119,8 +119,8 @@ public final class TreeServer {
     }
 
     private static TreeProtocol.Response handle(MinecraftServer server, ServerPlayer player, TreeProtocol.Request request) {
-        FamilyTree.get(player.serverLevel()).getOrCreate(player);
-        return handle(server, player.serverLevel(), player.getUUID(), request);
+        FamilyTree.get(player.level()).getOrCreate(player);
+        return handle(server, player.level(), player.getUUID(), request);
     }
 
     public static TreeProtocol.Response handle(MinecraftServer server, ServerLevel world, UUID viewerId, TreeProtocol.Request request) {

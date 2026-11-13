@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import com.maitreyoshi.mcavie.compat.Saved;
 import com.maitreyoshi.mcavie.MCAVie;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
@@ -17,15 +18,15 @@ public class OrientationRegistry extends SavedData {
     private final Map<UUID, Integer> entries = new HashMap<>();
 
     public static OrientationRegistry get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(OrientationRegistry::fromNbt, OrientationRegistry::new, DATA_ID);
+        return Saved.get(server.overworld(), OrientationRegistry::fromNbt, OrientationRegistry::new, OrientationRegistry::save, DATA_ID);
     }
 
     private static OrientationRegistry fromNbt(CompoundTag nbt) {
         OrientationRegistry registry = new OrientationRegistry();
-        CompoundTag villagers = nbt.getCompound("villagers");
-        for (String key : villagers.getAllKeys()) {
+        CompoundTag villagers = nbt.getCompoundOrEmpty("villagers");
+        for (String key : villagers.keySet()) {
             try {
-                registry.entries.put(UUID.fromString(key), (int) villagers.getByte(key));
+                registry.entries.put(UUID.fromString(key), (int) villagers.getByteOr(key, (byte) 0));
             } catch (IllegalArgumentException e) {
                 MCAVie.LOGGER.warn("UUID invalide dans le registre des orientations : {}", key);
             }
@@ -33,8 +34,7 @@ public class OrientationRegistry extends SavedData {
         return registry;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag nbt) {
+        public CompoundTag save(CompoundTag nbt) {
         CompoundTag villagers = new CompoundTag();
         entries.forEach((uuid, value) -> villagers.putByte(uuid.toString(), value.byteValue()));
         nbt.put("villagers", villagers);

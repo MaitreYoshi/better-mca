@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.life;
 
+import com.maitreyoshi.mcavie.compat.Saved;
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
@@ -49,23 +51,22 @@ public class Ghosts extends SavedData {
     private final Map<UUID, CompoundTag> looks = new HashMap<>();
 
     public static Ghosts get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(Ghosts::fromNbt, Ghosts::new, DATA_ID);
+        return Saved.get(server.overworld(), Ghosts::fromNbt, Ghosts::new, Ghosts::save, DATA_ID);
     }
 
     private static Ghosts fromNbt(CompoundTag nbt) {
         Ghosts ghosts = new Ghosts();
-        CompoundTag all = nbt.getCompound("looks");
-        for (String key : all.getAllKeys()) {
+        CompoundTag all = nbt.getCompoundOrEmpty("looks");
+        for (String key : all.keySet()) {
             try {
-                ghosts.looks.put(UUID.fromString(key), all.getCompound(key));
+                ghosts.looks.put(UUID.fromString(key), all.getCompoundOrEmpty(key));
             } catch (IllegalArgumentException ignored) {
             }
         }
         return ghosts;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag nbt) {
+        public CompoundTag save(CompoundTag nbt) {
         CompoundTag all = new CompoundTag();
         looks.forEach((id, look) -> all.put(id.toString(), look));
         nbt.put("looks", all);
@@ -93,7 +94,7 @@ public class Ghosts extends SavedData {
     private static CompoundTag strip(CompoundTag nbt) {
         CompoundTag copy = nbt.copy();
         // maison = position du lit (mémoire HOME du PNJ), gardée avant d'alléger le NBT
-        int[] home = nbt.getCompound("Brain").getCompound("memories").getCompound("minecraft:home").getCompound("value").getIntArray("pos");
+        int[] home = nbt.getCompoundOrEmpty("Brain").getCompoundOrEmpty("memories").getCompoundOrEmpty("minecraft:home").getCompoundOrEmpty("value").getIntArray("pos").orElse(new int[0]);
         if (home.length == 3) {
             copy.putIntArray(HOME, home);
         }
@@ -118,15 +119,15 @@ public class Ghosts extends SavedData {
             if (be == null) {
                 continue;
             }
-            CompoundTag data = be.saveWithoutMetadata().getCompound("entityData");
-            if (data.hasUUID("UUID") && missing.remove(data.getUUID("UUID"))) {
-                put(data.getUUID("UUID"), strip(data));
+            CompoundTag data = be.saveWithoutMetadata().getCompoundOrEmpty("entityData");
+            if (Nbt.hasUUID(data, "UUID") && missing.remove(Nbt.getUUID(data, "UUID"))) {
+                put(Nbt.getUUID(data, "UUID"), strip(data));
             }
         }
     }
 
     public static boolean isNight(Level world) {
-        long time = world.getDayTime() % 24000L;
+        long time = world.getOverworldClockTime() % 24000L;
         return time >= 13000L && time < 23000L;
     }
 
@@ -139,16 +140,16 @@ public class Ghosts extends SavedData {
     }
 
     public static void open(ServerPlayer player, GhostAltarBlockEntity altar) {
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         Ghosts ghosts = get(server);
         PortraitRegistry portraits = PortraitRegistry.get(server);
         Map<UUID, FamilyTreeNode> nodes = ((FamilyTreeAccessor) FamilyTree.get(server.overworld())).mcavie$getEntries();
         List<FamilyTreeNode> dead = nodes.values().stream()
                 .filter(n -> n.isDeceased() && !n.isPlayer() && portraits.get(n.id()) != null).toList();
         List<UUID> missing = new ArrayList<>(dead.stream().map(FamilyTreeNode::id).filter(id -> ghosts.look(id) == null).toList());
-        ghosts.searchTombs(player.serverLevel(), altar.getBlockPos(), missing);
+        ghosts.searchTombs(player.level(), altar.getBlockPos(), missing);
         // seulement les défunts dont le lit était dans la maison où l'autel est posé
-        Building house = VillageManager.get(player.serverLevel()).findNearestVillage(altar.getBlockPos(), 0)
+        Building house = VillageManager.get(player.level()).findNearestVillage(altar.getBlockPos(), 0)
                 .flatMap(v -> v.getBuildingAt(altar.getBlockPos())).orElse(null);
         List<Entry> entries = new ArrayList<>(dead.stream().filter(n -> livedIn(ghosts.look(n.id()), house))
                 .map(n -> new Entry(n.id(), n.getName(), true)).toList());
@@ -174,7 +175,7 @@ public class Ghosts extends SavedData {
         if (look == null || house == null) {
             return false;
         }
-        int[] home = look.getIntArray(HOME);
+        int[] home = look.getIntArray(HOME).orElse(new int[0]);
         return home.length == 3 && house.containsPos(new BlockPos(home[0], home[1], home[2]));
     }
 

@@ -145,7 +145,7 @@ public class GhostEntity extends PathfinderMob {
     }
 
     private Component name() {
-        String json = look().getString("CustomName");
+        String json = look().getStringOr("CustomName", "");
         Component name = json.isEmpty() ? null : Component.Serializer.fromJson(json);
         return name == null ? Component.translatable("entity.mca_vie.ghost") : name;
     }

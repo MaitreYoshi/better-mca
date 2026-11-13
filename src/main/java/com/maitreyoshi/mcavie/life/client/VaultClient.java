@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life.client;
 
+import net.minecraft.client.input.KeyEvent;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import com.maitreyoshi.mcavie.life.TombstoneBlocks;
@@ -46,7 +47,7 @@ public final class VaultClient {
         ClientPlayNetworking.registerGlobalReceiver(VaultBlock.TITLE_OPEN, (client, handler, buf, responseSender) -> {
             BlockPos pos = buf.readBlockPos();
             String title = buf.readUtf();
-            client.execute(() -> client.setScreen(new TitleScreen(pos, title)));
+            client.execute(() -> client.gui.setScreen(new TitleScreen(pos, title)));
         });
     }
 
@@ -189,20 +190,23 @@ public final class VaultClient {
         }
 
         @Override
-        public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
+        int scanCode = event.scancode();
+        int modifiers = event.modifiers();
             if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
                 send();
                 return true;
             }
-            return super.keyPressed(keyCode, scanCode, modifiers);
+            return super.keyPressed(event);
         }
 
         @Override
-        public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-            renderBackground(context);
-            context.drawCenteredString(font, title, width / 2, height / 2 - 48, 0xFFFFFF);
-            context.drawCenteredString(font, Component.translatable("gui.mca_vie.vault.hint"), width / 2, height / 2 - 34, 0xA0A0A0);
-            super.render(context, mouseX, mouseY, delta);
+        public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+            extractBackground(context, mouseX, mouseY, delta);
+            context.centeredText(font, title, width / 2, height / 2 - 48, 0xFFFFFF);
+            context.centeredText(font, Component.translatable("gui.mca_vie.vault.hint"), width / 2, height / 2 - 34, 0xA0A0A0);
+            super.extractRenderState(context, mouseX, mouseY, delta);
         }
     }
 }

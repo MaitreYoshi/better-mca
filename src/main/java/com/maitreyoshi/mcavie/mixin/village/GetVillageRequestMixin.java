@@ -19,7 +19,7 @@ public abstract class GetVillageRequestMixin {
         Village.findNearest(player).ifPresent(village -> {
             VillageState state = VillageState.of(village);
             state.deadResidents.clear();
-            FamilyTree tree = FamilyTree.get(player.serverLevel());
+            FamilyTree tree = FamilyTree.get(player.level());
             for (java.util.UUID uuid : village.getResidentNames().keySet()) {
                 if (tree.getOrEmpty(uuid).map(FamilyTreeNode::isDeceased).orElse(false)) {
                     state.deadResidents.add(uuid);

@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import com.maitreyoshi.mcavie.compat.Saved;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import net.minecraft.nbt.CompoundTag;
@@ -26,27 +27,27 @@ public class LifeRegistry extends SavedData {
     private final Map<UUID, Long> forcedAges = new HashMap<>();
 
     public static LifeRegistry get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(LifeRegistry::fromNbt, LifeRegistry::new, DATA_ID);
+        return Saved.get(server.overworld(), LifeRegistry::fromNbt, LifeRegistry::new, LifeRegistry::save, DATA_ID);
     }
 
     private static LifeRegistry fromNbt(CompoundTag nbt) {
         LifeRegistry registry = new LifeRegistry();
-        read(nbt.getCompound("births"), registry.births);
-        read(nbt.getCompound("deaths"), registry.deaths);
-        read(nbt.getCompound("zombies"), registry.zombies);
-        read(nbt.getCompound("resurrected_at"), registry.resurrectedAt);
-        read(nbt.getCompound("forced_ages"), registry.forcedAges);
-        read(nbt.getCompound("exact_births"), registry.exactBirths);
-        read(nbt.getCompound("exact_deaths"), registry.exactDeaths);
-        readLives(nbt.getCompound("lives"), registry.pastLives);
-        readLives(nbt.getCompound("past_lives"), registry.legacyLives);
+        read(nbt.getCompoundOrEmpty("births"), registry.births);
+        read(nbt.getCompoundOrEmpty("deaths"), registry.deaths);
+        read(nbt.getCompoundOrEmpty("zombies"), registry.zombies);
+        read(nbt.getCompoundOrEmpty("resurrected_at"), registry.resurrectedAt);
+        read(nbt.getCompoundOrEmpty("forced_ages"), registry.forcedAges);
+        read(nbt.getCompoundOrEmpty("exact_births"), registry.exactBirths);
+        read(nbt.getCompoundOrEmpty("exact_deaths"), registry.exactDeaths);
+        readLives(nbt.getCompoundOrEmpty("lives"), registry.pastLives);
+        readLives(nbt.getCompoundOrEmpty("past_lives"), registry.legacyLives);
         return registry;
     }
 
     private static void readLives(CompoundTag entries, Map<UUID, long[]> into) {
-        for (String key : entries.getAllKeys()) {
+        for (String key : entries.keySet()) {
             try {
-                into.put(UUID.fromString(key), entries.getLongArray(key));
+                into.put(UUID.fromString(key), entries.getLongArray(key).orElse(new long[0]));
             } catch (IllegalArgumentException e) {
                 MCAVie.LOGGER.warn("UUID invalide dans le registre des âges : {}", key);
             }
@@ -54,9 +55,9 @@ public class LifeRegistry extends SavedData {
     }
 
     private static void read(CompoundTag entries, Map<UUID, Long> into) {
-        for (String key : entries.getAllKeys()) {
+        for (String key : entries.keySet()) {
             try {
-                into.put(UUID.fromString(key), entries.getLong(key));
+                into.put(UUID.fromString(key), entries.getLongOr(key, 0L));
             } catch (IllegalArgumentException e) {
                 MCAVie.LOGGER.warn("UUID invalide dans le registre des âges : {}", key);
             }
@@ -69,8 +70,7 @@ public class LifeRegistry extends SavedData {
         return entries;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag nbt) {
+        public CompoundTag save(CompoundTag nbt) {
         nbt.put("births", write(births));
         nbt.put("deaths", write(deaths));
         nbt.put("zombies", write(zombies));

@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.work;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.aging.AgingConfig;
 import com.maitreyoshi.mcavie.phone.PhoneEmployees;
 import com.maitreyoshi.mcavie.village.VillageDecrees;
@@ -17,7 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import net.conczin.mca.entity.VillagerEntityMCA;
-import net.conczin.mca.entity.ai.ActivityMCA;
+import net.conczin.mca.entity.ai.ActivitiesMCA;
 import net.conczin.mca.entity.ai.Chore;
 import net.conczin.mca.entity.ai.MoveState;
 import net.conczin.mca.entity.ai.relationship.AgeState;
@@ -208,7 +209,7 @@ public final class WorkManager {
         WorkNetwork.sendJobInfo(villager);
 
         if (shouldWork) {
-            villager.getBrain().setActiveActivityIfPossible(ActivityMCA.CHORE.get());
+            villager.getBrain().setActiveActivityIfPossible(ActivitiesMCA.CHORE);
             giveTool(villager, job);
         } else {
             villager.getBrain().setActiveActivityIfPossible(Activity.IDLE);
@@ -264,7 +265,7 @@ public final class WorkManager {
         ItemStack back = ItemStack.EMPTY;
         for (int i = 0; i < inventory.getContainerSize() && !original.isEmpty(); i++) {
             ItemStack stack = inventory.getItem(i);
-            if (ItemStack.isSameItemSameTags(stack, original)) {
+            if (ItemStack.isSameItemSameComponents(stack, original)) {
                 back = stack.split(original.getCount());
                 break;
             }
@@ -273,7 +274,7 @@ public final class WorkManager {
     }
 
     private static boolean isMarkedTool(ItemStack stack) {
-        return !stack.isEmpty() && stack.hasTag() && stack.getTag().contains(TOOL_KEY);
+        return !stack.isEmpty() && Nbt.hasTag(stack) && Nbt.tag(stack).contains(TOOL_KEY);
     }
 
     public static boolean isWorkTool(ItemStack stack) {
@@ -286,8 +287,8 @@ public final class WorkManager {
     }
 
     private static ItemStack originalOf(ItemStack tool) {
-        CompoundTag mark = tool.getTag() == null ? null : tool.getTag().getCompound(TOOL_KEY);
-        return mark == null || !mark.contains("held") ? ItemStack.EMPTY : ItemStack.of(mark.getCompound("held"));
+        CompoundTag mark = Nbt.tag(tool) == null ? null : Nbt.tag(tool).getCompoundOrEmpty(TOOL_KEY);
+        return mark == null || !mark.contains("held") ? ItemStack.EMPTY : ItemStack.of(mark.getCompoundOrEmpty("held"));
     }
 
     private static int ageInYears(VillagerEntityMCA villager, ServerLevel world) {
@@ -388,8 +389,8 @@ public final class WorkManager {
     public static void keepWorking(VillagerEntityMCA villager) {
         if (isWorking(villager) && !isInDanger(villager)) {
             villager.getBrain().getActiveNonCoreActivity().ifPresent(activity -> {
-                if (!activity.equals(ActivityMCA.CHORE.get())) {
-                    villager.getBrain().setActiveActivityIfPossible(ActivityMCA.CHORE.get());
+                if (!activity.equals(ActivitiesMCA.CHORE)) {
+                    villager.getBrain().setActiveActivityIfPossible(ActivitiesMCA.CHORE);
                 }
             });
         }
@@ -438,7 +439,7 @@ public final class WorkManager {
             return false;
         }
         WorkRegistry registry = WorkRegistry.get(world.getServer());
-        Identifier dimension = world.dimension().location();
+        Identifier dimension = world.dimension().identifier();
         BlockPos origin = villager.blockPosition();
         int chunkRadius = (WORKSTATION_SEARCH_RADIUS >> 4) + 1;
         int cx = origin.getX() >> 4;
@@ -491,9 +492,9 @@ public final class WorkManager {
         }
         markDirty(villager);
         if (job == Job.GUARD) {
-            villager.setProfession(ProfessionsMCA.GUARD.get());
+            villager.setProfession(ProfessionsMCA.GUARD);
         } else if (job == Job.ARCHER) {
-            villager.setProfession(ProfessionsMCA.ARCHER.get());
+            villager.setProfession(ProfessionsMCA.ARCHER);
         } else if (professionFor(job) != null) {
             syncProfession(villager, job);
         } else if (villager.isGuard() || isSyncedProfession(villager, previous)) {

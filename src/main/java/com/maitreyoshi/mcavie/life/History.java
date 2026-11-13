@@ -239,7 +239,7 @@ public final class History {
             village.markDirty();
             Component text = Component.translatable("msg.mca_vie.history.summary", village.getName(), years, c.births, c.marriages, c.deaths)
                     .withStyle(ChatFormatting.GOLD);
-            world.getServer().getPlayerList().getPlayers().forEach(player -> player.displayClientMessage(text, false));
+            world.getServer().getPlayerList().getPlayers().forEach(player -> player.sendSystemMessage(text));
             MCAVie.LOGGER.info("Histoire de {} : {} naissances, {} mariages, {} décès", village.getName(), c.births, c.marriages, c.deaths);
         });
     }

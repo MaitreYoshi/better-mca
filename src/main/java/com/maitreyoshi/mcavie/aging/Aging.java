@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.aging;
 
+import net.minecraft.core.Holder;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.work.Job;
@@ -33,8 +34,8 @@ public final class Aging {
     public static final Identifier AGE = MCAVie.id("aging_age");
     public static final Identifier CONFIG = MCAVie.id("aging_config");
 
-    private static final UUID SPEED_ID = UUID.fromString("5d6f0b8e-3c1a-4f7e-9b2d-8a4c6e1f2a01");
-    private static final UUID HEALTH_ID = UUID.fromString("5d6f0b8e-3c1a-4f7e-9b2d-8a4c6e1f2a02");
+    private static final Identifier SPEED_ID = MCAVie.id("aging_speed");
+    private static final Identifier HEALTH_ID = MCAVie.id("aging_health");
 
     private Aging() {
     }
@@ -43,7 +44,7 @@ public final class Aging {
         AgingConfig.load();
         EntityTrackingEvents.START_TRACKING.register((entity, player) -> {
             if (entity instanceof VillagerEntityMCA) {
-                player.server.tell(new TickTask(player.server.getTickCount(), () -> {
+                player.level().getServer().schedule(new TickTask(player.level().getServer().getTickCount(), () -> {
                     int years = years(entity);
                     if (years >= 0 && !player.hasDisconnected()) {
                         sendTo(player, entity, years);
@@ -108,14 +109,14 @@ public final class Aging {
         }
     }
 
-    private static void setModifier(VillagerEntityMCA villager, Attribute attribute, UUID id, float amount) {
+    private static void setModifier(VillagerEntityMCA villager, Holder<Attribute> attribute, Identifier id, float amount) {
         AttributeInstance instance = villager.getAttribute(attribute);
         if (instance == null) {
             return;
         }
         instance.removeModifier(id);
         if (amount != 0) {
-            instance.addTransientModifier(new AttributeModifier(id, "mca_vie aging", amount, AttributeModifier.Operation.MULTIPLY_TOTAL));
+            instance.addTransientModifier(new AttributeModifier(id, amount, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL));
         }
     }
 

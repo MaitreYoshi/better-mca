@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.phone;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar.CalendarDate;
 import org.jetbrains.annotations.Nullable;
@@ -33,7 +34,7 @@ public class PhotoItem extends Item {
     public static ItemStack create(UUID photo, String author, long date) {
         ItemStack stack = new ItemStack(PhoneServer.PHOTO);
         CompoundTag nbt = stack.getOrCreateTagElement(PHOTO_KEY);
-        nbt.putUUID("id", photo);
+        Nbt.putUUID(nbt, "id", photo);
         nbt.putString("author", author);
         nbt.putLong("date", date);
         return stack;
@@ -42,7 +43,7 @@ public class PhotoItem extends Item {
     @Nullable
     public static UUID photoOf(ItemStack stack) {
         CompoundTag nbt = stack.getItem() instanceof PhotoItem ? stack.getTagElement(PHOTO_KEY) : null;
-        return nbt != null && nbt.hasUUID("id") ? nbt.getUUID("id") : null;
+        return nbt != null && Nbt.hasUUID(nbt, "id") ? Nbt.getUUID(nbt, "id") : null;
     }
 
     @Override
@@ -97,9 +98,9 @@ public class PhotoItem extends Item {
         }
         CompoundTag nbt = stack.getTagElement(PHOTO_KEY);
         Direction top = PhotoFrameEntity.topFor(side, player.getDirection());
-        PhotoFrameEntity frame = new PhotoFrameEntity(world, pos, side, top, width, height, photo, nbt.getString("author"), nbt.getLong("date"));
+        PhotoFrameEntity frame = new PhotoFrameEntity(world, pos, side, top, width, height, photo, nbt.getStringOr("author", ""), nbt.getLongOr("date", 0L));
         if (!frame.survives()) {
-            player.displayClientMessage(Component.translatable("msg.mca_vie.photo.no_support"), true);
+            player.sendOverlayMessage(Component.translatable("msg.mca_vie.photo.no_support"));
             return;
         }
         frame.playPlacementSound();
@@ -115,10 +116,10 @@ public class PhotoItem extends Item {
         if (nbt == null) {
             return;
         }
-        if (!nbt.getString("author").isEmpty()) {
-            tooltip.add(Component.translatable("item.mca_vie.photo.author", nbt.getString("author")).withStyle(ChatFormatting.GRAY));
+        if (!nbt.getStringOr("author", "").isEmpty()) {
+            tooltip.add(Component.translatable("item.mca_vie.photo.author", nbt.getStringOr("author", "")).withStyle(ChatFormatting.GRAY));
         }
-        CalendarDate date = WorldCalendar.flowingFromTicks(nbt.getLong("date"));
+        CalendarDate date = WorldCalendar.flowingFromTicks(nbt.getLongOr("date", 0L));
         tooltip.add(Component.translatable("item.mca_vie.photo.date", date.day() + "/" + date.month() + "/" + date.year()).withStyle(ChatFormatting.GRAY));
         tooltip.add(Component.translatable("item.mca_vie.photo.hint").withStyle(ChatFormatting.DARK_GRAY));
     }

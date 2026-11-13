@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.village;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.life.Wellbeing;
 import net.conczin.mca.entity.VillagerEntityMCA;
@@ -233,7 +234,7 @@ public final class VillageMarket {
                 .withStyle(ChatFormatting.GOLD));
         for (ServerPlayer player : world.players()) {
             if (state.orders.stream().anyMatch(o -> o.ready && o.player.equals(player.getUUID()))) {
-                player.displayClientMessage(Component.translatable("msg.mca_vie.market.ready", village.getName()).withStyle(ChatFormatting.GREEN), false);
+                player.sendSystemMessage(Component.translatable("msg.mca_vie.market.ready", village.getName()).withStyle(ChatFormatting.GREEN));
             }
         }
     }
@@ -243,7 +244,7 @@ public final class VillageMarket {
         for (Container inventory : storage) {
             for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
                 ItemStack stack = inventory.getItem(slot);
-                if (stack.is(item) && !stack.hasTag()) {
+                if (stack.is(item) && !Nbt.hasTag(stack)) {
                     total += stack.getCount();
                 }
             }
@@ -255,7 +256,7 @@ public final class VillageMarket {
         for (Container inventory : storage) {
             for (int slot = 0; slot < inventory.getContainerSize() && amount > 0; slot++) {
                 ItemStack stack = inventory.getItem(slot);
-                if (stack.is(item) && !stack.hasTag()) {
+                if (stack.is(item) && !Nbt.hasTag(stack)) {
                     int take = Math.min(amount, stack.getCount());
                     stack.shrink(take);
                     inventory.setChanged();
@@ -266,7 +267,7 @@ public final class VillageMarket {
     }
 
     public static void order(ServerPlayer player, int villageId, String itemId, int lots) {
-        Optional<Village> found = VillageManager.get(player.serverLevel()).getOrEmpty(villageId);
+        Optional<Village> found = VillageManager.get(player.level()).getOrEmpty(villageId);
         if (found.isEmpty()) {
             return;
         }
@@ -274,22 +275,22 @@ public final class VillageMarket {
         VillageState state = VillageState.of(village);
         VillageConfig config = VillageConfig.get();
         if (!state.marketActive) {
-            player.displayClientMessage(Component.translatable("msg.mca_vie.market.inactive"), true);
+            player.sendOverlayMessage(Component.translatable("msg.mca_vie.market.inactive"));
             return;
         }
         if (config.unitsPerEmerald(itemId) == 0 || !village.isWithinBorder(player)) {
-            player.displayClientMessage(Component.translatable("msg.mca_vie.market.unknown"), true);
+            player.sendOverlayMessage(Component.translatable("msg.mca_vie.market.unknown"));
             return;
         }
         long pending = state.orders.stream().filter(o -> o.player.equals(player.getUUID())).count();
         if (pending >= config.maxOrdersPerPlayer) {
-            player.displayClientMessage(Component.translatable("msg.mca_vie.market.too_many", config.maxOrdersPerPlayer), true);
+            player.sendOverlayMessage(Component.translatable("msg.mca_vie.market.too_many", config.maxOrdersPerPlayer));
             return;
         }
         lots = Math.max(1, Math.min(config.maxLotsPerOrder, lots));
         int price = lots * config.orderLotPrice;
         if (!takeEmeralds(player, price)) {
-            player.displayClientMessage(Component.translatable("msg.mca_vie.market.no_money", price), true);
+            player.sendOverlayMessage(Component.translatable("msg.mca_vie.market.no_money", price));
             return;
         }
         VillageState.Order order = new VillageState.Order();
@@ -306,7 +307,7 @@ public final class VillageMarket {
     }
 
     public static void collect(ServerPlayer player, int villageId) {
-        VillageManager.get(player.serverLevel()).getOrEmpty(villageId).ifPresent(village -> {
+        VillageManager.get(player.level()).getOrEmpty(villageId).ifPresent(village -> {
             if (!village.isWithinBorder(player)) {
                 return;
             }
@@ -324,7 +325,7 @@ public final class VillageMarket {
             }
             if (given > 0) {
                 village.markDirty();
-                player.displayClientMessage(Component.translatable("msg.mca_vie.market.collected", given), true);
+                player.sendOverlayMessage(Component.translatable("msg.mca_vie.market.collected", given));
             }
         });
     }
@@ -342,7 +343,7 @@ public final class VillageMarket {
         int available = 0;
         for (int slot = 0; slot < inventory.getContainerSize(); slot++) {
             ItemStack stack = inventory.getItem(slot);
-            if (stack.is(Items.EMERALD) && !stack.hasTag()) {
+            if (stack.is(Items.EMERALD) && !Nbt.hasTag(stack)) {
                 available += stack.getCount();
             }
         }
@@ -351,7 +352,7 @@ public final class VillageMarket {
         }
         for (int slot = 0; slot < inventory.getContainerSize() && amount > 0; slot++) {
             ItemStack stack = inventory.getItem(slot);
-            if (stack.is(Items.EMERALD) && !stack.hasTag()) {
+            if (stack.is(Items.EMERALD) && !Nbt.hasTag(stack)) {
                 int take = Math.min(amount, stack.getCount());
                 stack.shrink(take);
                 amount -= take;

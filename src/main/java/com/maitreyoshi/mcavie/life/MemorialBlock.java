@@ -201,7 +201,7 @@ public class MemorialBlock extends Block implements EntityBlock {
                 : net.conczin.mca.server.world.data.VillageManager.get(world).findNearestVillage(memorial.getBlockPos(), 32);
         if (village.isEmpty()) {
             if (player != null) {
-                player.displayClientMessage(Component.translatable("tomb.mca_vie.no_village").withStyle(ChatFormatting.RED), true);
+                player.sendOverlayMessage(Component.translatable("tomb.mca_vie.no_village").withStyle(ChatFormatting.RED));
             }
             return;
         }
@@ -274,7 +274,7 @@ public class MemorialBlock extends Block implements EntityBlock {
 
     private static void openEdit(ServerPlayer player, MemorialBlockEntity memorial) {
         if (!canEdit(player, memorial)) {
-            player.displayClientMessage(Component.translatable("block.mca_vie.war_memorial.not_owner").withStyle(ChatFormatting.RED), true);
+            player.sendOverlayMessage(Component.translatable("block.mca_vie.war_memorial.not_owner").withStyle(ChatFormatting.RED));
             return;
         }
         FriendlyByteBuf out = PacketByteBufs.create();
@@ -290,7 +290,7 @@ public class MemorialBlock extends Block implements EntityBlock {
     }
 
     private static void setTexts(ServerPlayer player, BlockPos pos, String title, String dates) {
-        ServerLevel world = player.serverLevel();
+        ServerLevel world = player.level();
         if (player.distanceToSqr(pos.getCenter()) > 100 || !(world.getBlockEntity(pos) instanceof MemorialBlockEntity memorial)
                 || !canEdit(player, memorial)) {
             return;

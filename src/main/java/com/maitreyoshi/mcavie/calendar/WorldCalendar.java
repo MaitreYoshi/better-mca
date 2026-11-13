@@ -71,7 +71,7 @@ public final class WorldCalendar {
         if (last.speed() == speed) {
             return;
         }
-        state.setSegments(withSpeed(segments, s.overworld().getDayTime(), speed));
+        state.setSegments(withSpeed(segments, s.overworld().getOverworldClockTime(), speed));
         server = s;
         serverSegments = state.segments();
         s.getPlayerList().getPlayers().forEach(WorldCalendar::sendSegments);
@@ -195,7 +195,7 @@ public final class WorldCalendar {
     }
 
     public static CalendarDate now(Level world) {
-        return fromTicks(world.getDayTime());
+        return fromTicks(world.getOverworldClockTime());
     }
 
     public static CalendarDate fromTicks(long ticks) {
@@ -203,7 +203,7 @@ public final class WorldCalendar {
     }
 
     public static CalendarDate flowingNow(Level world) {
-        return fromTicks(world.getDayTime(), true);
+        return fromTicks(world.getOverworldClockTime(), true);
     }
 
     public static CalendarDate flowingFromTicks(long ticks) {
@@ -235,7 +235,7 @@ public final class WorldCalendar {
     }
 
     public static long exactCalendarDay(Level world) {
-        long shifted = Math.max(0, world.getDayTime() + TICKS_OFFSET);
+        long shifted = Math.max(0, world.getOverworldClockTime() + TICKS_OFFSET);
         return Math.floorDiv(flowingCalendarTicks(shifted / TICKS_PER_DAY, shifted % TICKS_PER_DAY), TICKS_PER_DAY);
     }
 

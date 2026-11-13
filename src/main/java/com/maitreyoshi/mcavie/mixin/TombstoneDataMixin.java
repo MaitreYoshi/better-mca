@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.mixin;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.calendar.WorldCalendar;
 import com.maitreyoshi.mcavie.life.LifeRegistry;
 import com.maitreyoshi.mcavie.life.TombstoneDetails;
@@ -149,7 +150,7 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
             nbt.putString(TITLE_KEY, mcavie$vaultTitle);
         }
         if (mcavie$vaultOwner != null) {
-            nbt.putUUID(OWNER_KEY, mcavie$vaultOwner);
+            Nbt.putUUID(nbt, OWNER_KEY, mcavie$vaultOwner);
         }
     }
 
@@ -167,18 +168,18 @@ public abstract class TombstoneDataMixin implements TombstoneDetails.Holder {
     @Inject(method = "readFromStack", at = @At("TAIL"), remap = false)
     private void mcavie$readDatesFromStack(ItemStack stack, CallbackInfo ci) {
         CompoundTag data = stack == null ? null : stack.getTagElement("entityData");
-        mcavie$years = data != null && data.contains(KEY) ? data.getString(KEY) : null;
+        mcavie$years = data != null && data.contains(KEY) ? data.getStringOr(KEY, "") : null;
         mcavie$details = TombstoneDetails.read(data);
         computedName = null;
     }
 
     @Inject(method = "load", at = @At("TAIL"))
     private void mcavie$readDates(CompoundTag nbt, CallbackInfo ci) {
-        mcavie$years = nbt.contains(KEY) ? nbt.getString(KEY) : null;
+        mcavie$years = nbt.contains(KEY) ? nbt.getStringOr(KEY, "") : null;
         TombstoneDetails previous = mcavie$details;
         mcavie$details = TombstoneDetails.read(nbt);
-        mcavie$vaultTitle = nbt.contains(TITLE_KEY) ? nbt.getString(TITLE_KEY) : null;
-        mcavie$vaultOwner = nbt.hasUUID(OWNER_KEY) ? nbt.getUUID(OWNER_KEY) : null;
+        mcavie$vaultTitle = nbt.contains(TITLE_KEY) ? nbt.getStringOr(TITLE_KEY, "") : null;
+        mcavie$vaultOwner = Nbt.hasUUID(nbt, OWNER_KEY) ? Nbt.getUUID(nbt, OWNER_KEY) : null;
         computedName = null;
         BlockEntity self = (BlockEntity) (Object) this;
         Level world = self.getLevel();

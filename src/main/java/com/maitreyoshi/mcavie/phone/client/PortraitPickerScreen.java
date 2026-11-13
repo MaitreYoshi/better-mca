@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.phone.client;
 
+import net.minecraft.client.input.MouseButtonEvent;
 import com.maitreyoshi.mcavie.phone.PhoneNetwork;
 import com.maitreyoshi.mcavie.tree.client.TreeScreen;
 import java.util.List;
@@ -39,7 +40,7 @@ public class PortraitPickerScreen extends Screen {
     @Override
     public void onClose() {
         assert minecraft != null;
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
     }
 
     @Override
@@ -78,13 +79,13 @@ public class PortraitPickerScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        renderBackground(context);
-        context.drawCenteredString(font, title, width / 2, 10, 0xFFFFFF);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        extractBackground(context, mouseX, mouseY, delta);
+        context.centeredText(font, title, width / 2, 10, 0xFFFFFF);
         if (gallery.isEmpty()) {
-            context.drawCenteredString(font, Component.translatable("gui.mca_vie.phone.no_photos"), width / 2, height / 2 - 4, 0xA0A0A0);
+            context.centeredText(font, Component.translatable("gui.mca_vie.phone.no_photos"), width / 2, height / 2 - 4, 0xA0A0A0);
         } else {
-            context.drawCenteredString(font, Component.translatable("gui.mca_vie.portrait.hint"), width / 2, 20, 0xA0A0A0);
+            context.centeredText(font, Component.translatable("gui.mca_vie.portrait.hint"), width / 2, 20, 0xA0A0A0);
         }
         int columns = columns();
         int left = left();
@@ -105,15 +106,18 @@ public class PortraitPickerScreen extends Screen {
             }
             context.fill(x, y, x + side, y + CELL_H, 0x90000000);
             context.fill(x + CELL_W - side, y, x + CELL_W, y + CELL_H, 0x90000000);
-            context.renderOutline(x + side, y, CELL_H, CELL_H, i == hovered ? 0xFFFFFF55 : 0x80FFFFFF);
+            context.outline(x + side, y, CELL_H, CELL_H, i == hovered ? 0xFFFFFF55 : 0x80FFFFFF);
         }
         context.disableScissor();
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (super.mouseClicked(mouseX, mouseY, button)) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
+        if (super.mouseClicked(event, doubleClick)) {
             return true;
         }
         int index = button == 0 ? indexAt(mouseX, mouseY) : -1;
@@ -131,7 +135,7 @@ public class PortraitPickerScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double amount) {
         scroll = Math.max(0, Math.min(maxScroll(), scroll - amount * 20));
         return true;
     }

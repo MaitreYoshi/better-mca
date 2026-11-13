@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.life;
 
+import com.maitreyoshi.mcavie.compat.Saved;
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayNetworking;
@@ -53,7 +55,7 @@ public final class TombReservations {
             if (player.level().isClientSide || !(player instanceof ServerPlayer serverPlayer) || hand != InteractionHand.MAIN_HAND) {
                 return EventResult.pass();
             }
-            ServerLevel world = serverPlayer.serverLevel();
+            ServerLevel world = serverPlayer.level();
             if (world.getBlockState(pos).getBlock() instanceof VaultBlock) {
                 return EventResult.pass();
             }
@@ -67,7 +69,7 @@ public final class TombReservations {
             }
             Claim claim = Registry.get(world.getServer()).at(GlobalPos.of(world.dimension(), pos));
             if (claim != null) {
-                player.displayClientMessage(Component.translatable("tomb.mca_vie.reserved_for", claim.name()).withStyle(ChatFormatting.GOLD), true);
+                player.sendOverlayMessage(Component.translatable("tomb.mca_vie.reserved_for", claim.name()).withStyle(ChatFormatting.GOLD));
             }
             return EventResult.pass();
         });
@@ -90,7 +92,7 @@ public final class TombReservations {
         }
         Claim claim = Registry.get(world.getServer()).at(GlobalPos.of(world.dimension(), pos));
         if (claim != null) {
-            player.displayClientMessage(Component.translatable("tomb.mca_vie.reserved_for", claim.name()).withStyle(ChatFormatting.GOLD), true);
+            player.sendOverlayMessage(Component.translatable("tomb.mca_vie.reserved_for", claim.name()).withStyle(ChatFormatting.GOLD));
         }
     }
 
@@ -126,7 +128,7 @@ public final class TombReservations {
     private static void open(ServerPlayer player, ServerLevel world, BlockPos pos) {
         Optional<Village> village = village(world, pos, player);
         if (village.isEmpty()) {
-            player.displayClientMessage(Component.translatable("tomb.mca_vie.no_village").withStyle(ChatFormatting.RED), true);
+            player.sendOverlayMessage(Component.translatable("tomb.mca_vie.no_village").withStyle(ChatFormatting.RED));
             return;
         }
         Registry registry = Registry.get(world.getServer());
@@ -149,7 +151,7 @@ public final class TombReservations {
     }
 
     private static void choose(ServerPlayer player, BlockPos pos, UUID villager) {
-        ServerLevel world = player.serverLevel();
+        ServerLevel world = player.level();
         if (player.distanceToSqr(pos.getCenter()) > MAX_REACH * MAX_REACH || emptyTomb(world, pos).isEmpty()) {
             return;
         }
@@ -157,7 +159,7 @@ public final class TombReservations {
         Registry registry = Registry.get(world.getServer());
         if (villager == null) {
             registry.releaseAt(target);
-            player.displayClientMessage(Component.translatable("tomb.mca_vie.cleared").withStyle(ChatFormatting.YELLOW), true);
+            player.sendOverlayMessage(Component.translatable("tomb.mca_vie.cleared").withStyle(ChatFormatting.YELLOW));
             return;
         }
         Optional<Candidate> candidate = village(world, pos, player)
@@ -166,7 +168,7 @@ public final class TombReservations {
             return;
         }
         registry.claim(target, villager, candidate.get().name());
-        player.displayClientMessage(Component.translatable("tomb.mca_vie.reserved", candidate.get().name()).withStyle(ChatFormatting.GREEN), true);
+        player.sendOverlayMessage(Component.translatable("tomb.mca_vie.reserved", candidate.get().name()).withStyle(ChatFormatting.GREEN));
     }
 
     public static Optional<BlockPos> findTomb(ServerLevel world, Entity dead, BlockPos deathPos, int chunkRange) {
@@ -197,7 +199,7 @@ public final class TombReservations {
         private final Map<GlobalPos, Claim> claims = new HashMap<>();
 
         static Registry get(MinecraftServer server) {
-            return server.overworld().getDataStorage().computeIfAbsent(Registry::fromNbt, Registry::new, DATA_ID);
+            return Saved.get(server.overworld(), Registry::fromNbt, Registry::new, Registry::save, DATA_ID);
         }
 
         Claim at(GlobalPos tomb) {
@@ -232,23 +234,22 @@ public final class TombReservations {
 
         private static Registry fromNbt(CompoundTag nbt) {
             Registry registry = new Registry();
-            ListTag list = nbt.getList("tombs", 10);
+            ListTag list = nbt.getListOrEmpty("tombs");
             for (int i = 0; i < list.size(); i++) {
-                CompoundTag c = list.getCompound(i);
-                ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, Identifier.parse(c.getString("dim")));
-                registry.claims.put(GlobalPos.of(dimension, BlockPos.of(c.getLong("pos"))), new Claim(c.getUUID("villager"), c.getString("name")));
+                CompoundTag c = list.getCompoundOrEmpty(i);
+                ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, Identifier.parse(c.getStringOr("dim", "")));
+                registry.claims.put(GlobalPos.of(dimension, BlockPos.of(c.getLongOr("pos", 0L))), new Claim(Nbt.getUUID(c, "villager"), c.getStringOr("name", "")));
             }
             return registry;
         }
 
-        @Override
-        public CompoundTag save(CompoundTag nbt) {
+                public CompoundTag save(CompoundTag nbt) {
             ListTag list = new ListTag();
             claims.forEach((tomb, claim) -> {
                 CompoundTag c = new CompoundTag();
-                c.putString("dim", tomb.dimension().location().toString());
+                c.putString("dim", tomb.dimension().identifier().toString());
                 c.putLong("pos", tomb.pos().asLong());
-                c.putUUID("villager", claim.villager());
+                Nbt.putUUID(c, "villager", claim.villager());
                 c.putString("name", claim.name());
                 list.add(c);
             });

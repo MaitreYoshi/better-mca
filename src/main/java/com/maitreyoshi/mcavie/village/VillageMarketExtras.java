@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.village;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.life.Wellbeing;
 import net.conczin.mca.entity.VillagerEntityMCA;
 import net.conczin.mca.server.world.data.Building;
@@ -137,7 +138,7 @@ public final class VillageMarketExtras {
                 int n = (int) Math.min(64, left);
                 inventory.setItem(slot, new ItemStack(Items.EMERALD, n));
                 left -= n;
-            } else if (stack.is(Items.EMERALD) && !stack.hasTag() && stack.getCount() < stack.getMaxStackSize()) {
+            } else if (stack.is(Items.EMERALD) && !Nbt.hasTag(stack) && stack.getCount() < stack.getMaxStackSize()) {
                 int n = (int) Math.min(stack.getMaxStackSize() - stack.getCount(), left);
                 stack.grow(n);
                 left -= n;

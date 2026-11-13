@@ -65,7 +65,7 @@ public class DepositTask extends Behavior<VillagerEntityMCA> {
         int[] movable = movable(inventory);
         ItemStack held = WorkManager.heldOriginal(villager);
         for (int i = 0; i < inventory.getContainerSize() && !held.isEmpty(); i++) {
-            if (movable[i] > 0 && ItemStack.isSameItemSameTags(inventory.getItem(i), held)) {
+            if (movable[i] > 0 && ItemStack.isSameItemSameComponents(inventory.getItem(i), held)) {
                 movable[i] = Math.max(0, movable[i] - held.getCount());
                 break;
             }
@@ -150,7 +150,7 @@ public class DepositTask extends Behavior<VillagerEntityMCA> {
     }
 
     private static void notifyFull(ServerLevel world, VillagerEntityMCA villager) {
-        long day = world.getDayTime() / 24000L;
+        long day = world.getOverworldClockTime() / 24000L;
         Long last = NOTIFIED.get(villager.getUUID());
         if (last != null && last == day) {
             return;
@@ -160,7 +160,7 @@ public class DepositTask extends Behavior<VillagerEntityMCA> {
         Component message = Component.translatable(record == null || record.depot == null ? "job.mca_vie.no_depot_full" : "job.mca_vie.depot_full",
                 villager.getName()).withStyle(ChatFormatting.YELLOW);
         for (ServerPlayer player : recipients(world, villager, record)) {
-            player.displayClientMessage(message, false);
+            player.sendSystemMessage(message);
         }
     }
 
@@ -195,7 +195,7 @@ public class DepositTask extends Behavior<VillagerEntityMCA> {
                 if (movable[j] <= 0 || !to.canPlaceItem(i, stack)) {
                     continue;
                 }
-                if (slot.isEmpty() || (ItemStack.isSameItemSameTags(slot, stack) && slot.getCount() < Math.min(slot.getMaxStackSize(), to.getMaxStackSize()))) {
+                if (slot.isEmpty() || (ItemStack.isSameItemSameComponents(slot, stack) && slot.getCount() < Math.min(slot.getMaxStackSize(), to.getMaxStackSize()))) {
                     return true;
                 }
             }
@@ -279,7 +279,7 @@ public class DepositTask extends Behavior<VillagerEntityMCA> {
     public static ItemStack insert(Container to, ItemStack stack) {
         for (int i = 0; i < to.getContainerSize() && !stack.isEmpty(); i++) {
             ItemStack slot = to.getItem(i);
-            if (!slot.isEmpty() && ItemStack.isSameItemSameTags(slot, stack) && to.canPlaceItem(i, stack)) {
+            if (!slot.isEmpty() && ItemStack.isSameItemSameComponents(slot, stack) && to.canPlaceItem(i, stack)) {
                 int move = Math.min(stack.getCount(), Math.min(slot.getMaxStackSize(), to.getMaxStackSize()) - slot.getCount());
                 if (move > 0) {
                     slot.grow(move);

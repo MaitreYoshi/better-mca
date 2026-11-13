@@ -38,7 +38,7 @@ public abstract class BreedableRelationshipMixin extends Relationship<VillagerEn
             if (!player.getAbilities().instabuild) {
                 stack.shrink(1);
             }
-            player.displayClientMessage(Component.translatable("gui.mca_vie.cured", villager.getName()), true);
+            player.sendOverlayMessage(Component.translatable("gui.mca_vie.cured", villager.getName()));
             ci.cancel();
         }
     }

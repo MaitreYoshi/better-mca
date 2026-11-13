@@ -6,9 +6,9 @@ import net.minecraft.server.network.ServerGamePacketListenerImpl;
 
 public final class ServerPlayConnectionEvents {
     public static final Event<Join> JOIN = listener -> PlayerEvent.PLAYER_JOIN.register(player ->
-            listener.onPlayReady(player.connection, new PacketSender(player), player.server));
+            listener.onPlayReady(player.connection, new PacketSender(player), player.level().getServer()));
     public static final Event<Disconnect> DISCONNECT = listener -> PlayerEvent.PLAYER_QUIT.register(player ->
-            listener.onPlayDisconnect(player.connection, player.server));
+            listener.onPlayDisconnect(player.connection, player.level().getServer()));
 
     private ServerPlayConnectionEvents() {
     }

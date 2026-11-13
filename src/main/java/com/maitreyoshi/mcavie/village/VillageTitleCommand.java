@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.village;
 
+import net.minecraft.server.permissions.Permissions;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
@@ -23,7 +24,7 @@ public final class VillageTitleCommand {
 
     public static void register() {
         CommandRegistrationEvent.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(
-                Commands.literal("villagetitle").requires(s -> s.hasPermission(2))
+                Commands.literal("villagetitle").requires(s -> s.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                         .then(Commands.literal("set")
                                 .then(Commands.argument("player", EntityArgument.player())
                                         .then(Commands.argument("title", StringArgumentType.word())
@@ -39,7 +40,7 @@ public final class VillageTitleCommand {
     }
 
     private static Optional<Village> village(CommandContext<CommandSourceStack> ctx, ServerPlayer player) {
-        Optional<Village> village = VillageManager.get(player.serverLevel()).findNearestVillage(player);
+        Optional<Village> village = VillageManager.get(player.level()).findNearestVillage(player);
         if (village.isEmpty()) {
             ctx.getSource().sendFailure(Component.translatable("command.mca_vie.title.no_village", player.getDisplayName()));
         }

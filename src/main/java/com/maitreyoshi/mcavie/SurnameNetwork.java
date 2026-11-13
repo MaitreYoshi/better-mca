@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.life.LifeRegistry;
 import com.maitreyoshi.mcavie.life.Wellbeing;
 import com.maitreyoshi.mcavie.compat.EntityTrackingEvents;
@@ -59,9 +60,9 @@ public final class SurnameNetwork {
                     return;
                 }
                 CompoundTag nbt = BabyItem.getBabyNbt(stack);
-                String surname = Surnames.babySurname(player.serverLevel(), player,
-                        nbt.hasUUID("father") ? nbt.getUUID("father") : null,
-                        nbt.hasUUID("mother") ? nbt.getUUID("mother") : null);
+                String surname = Surnames.babySurname(player.level(), player,
+                        Nbt.hasUUID(nbt, "father") ? Nbt.getUUID(nbt, "father") : null,
+                        Nbt.hasUUID(nbt, "mother") ? Nbt.getUUID(nbt, "mother") : null);
                 if (surname != null) {
                     FriendlyByteBuf out = PacketByteBufs.create();
                     out.writeUtf(SurnameText.display(surname, baby.getGender()));
@@ -96,7 +97,7 @@ public final class SurnameNetwork {
                 Surnames.uppercasePlayer(handler.player);
             }
             if (surname == null && net.conczin.mca.server.world.data.PlayerSaveData.get(handler.player).isEntityDataSet()) {
-                handler.player.displayClientMessage(net.minecraft.network.chat.Component.translatable("command.mca_vie.none"), false);
+                handler.player.sendSystemMessage(net.minecraft.network.chat.Component.translatable("command.mca_vie.none"));
             }
         });
     }

@@ -235,9 +235,9 @@ public final class VillageJustice {
     }
 
     public static void judge(ServerPlayer player, int villageId, UUID suspect, int verdict) {
-        VillageManager.get(player.serverLevel()).getOrEmpty(villageId).ifPresent(village -> {
+        VillageManager.get(player.level()).getOrEmpty(villageId).ifPresent(village -> {
             if (!VillageRights.personalRank(village, player).isAtLeast(VillageRights.JUSTICE)) {
-                player.displayClientMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.JUSTICE.getTranslationKey())), true);
+                player.sendOverlayMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.JUSTICE.getTranslationKey())));
                 return;
             }
             VillageState state = VillageState.of(village);
@@ -246,9 +246,9 @@ public final class VillageJustice {
             if (found.isEmpty() || (verdict != PRISON && verdict != PARDON)) {
                 return;
             }
-            ServerLevel world = player.serverLevel();
+            ServerLevel world = player.level();
             if (verdict == PRISON && !state.prisonActive) {
-                player.displayClientMessage(Component.translatable("msg.mca_vie.justice.no_prison"), true);
+                player.sendOverlayMessage(Component.translatable("msg.mca_vie.justice.no_prison"));
                 return;
             }
             state.cases.remove(found.get());

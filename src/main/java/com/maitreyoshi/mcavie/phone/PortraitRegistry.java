@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.phone;
 
+import com.maitreyoshi.mcavie.compat.Saved;
 import com.maitreyoshi.mcavie.MCAVie;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
@@ -19,15 +20,15 @@ public class PortraitRegistry extends SavedData {
     private final Set<UUID> images = new HashSet<>();
 
     public static PortraitRegistry get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(PortraitRegistry::fromNbt, PortraitRegistry::new, DATA_ID);
+        return Saved.get(server.overworld(), PortraitRegistry::fromNbt, PortraitRegistry::new, PortraitRegistry::save, DATA_ID);
     }
 
     private static PortraitRegistry fromNbt(CompoundTag nbt) {
         PortraitRegistry registry = new PortraitRegistry();
-        CompoundTag entries = nbt.getCompound("portraits");
-        for (String key : entries.getAllKeys()) {
+        CompoundTag entries = nbt.getCompoundOrEmpty("portraits");
+        for (String key : entries.keySet()) {
             try {
-                UUID image = UUID.fromString(entries.getString(key));
+                UUID image = UUID.fromString(entries.getStringOr(key, ""));
                 registry.portraits.put(UUID.fromString(key), image);
                 registry.images.add(image);
             } catch (IllegalArgumentException e) {
@@ -37,8 +38,7 @@ public class PortraitRegistry extends SavedData {
         return registry;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag nbt) {
+        public CompoundTag save(CompoundTag nbt) {
         CompoundTag entries = new CompoundTag();
         portraits.forEach((person, image) -> entries.putString(person.toString(), image.toString()));
         nbt.put("portraits", entries);

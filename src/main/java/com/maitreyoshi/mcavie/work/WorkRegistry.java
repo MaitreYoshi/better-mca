@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.work;
 
+import com.maitreyoshi.mcavie.compat.Saved;
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.MCAVie;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -21,15 +23,15 @@ public class WorkRegistry extends SavedData {
     private final Map<UUID, Record> records = new HashMap<>();
 
     public static WorkRegistry get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(WorkRegistry::fromNbt, WorkRegistry::new, DATA_ID);
+        return Saved.get(server.overworld(), WorkRegistry::fromNbt, WorkRegistry::new, WorkRegistry::save, DATA_ID);
     }
 
     private static WorkRegistry fromNbt(CompoundTag nbt) {
         WorkRegistry registry = new WorkRegistry();
-        CompoundTag entries = nbt.getCompound("villagers");
-        for (String key : entries.getAllKeys()) {
+        CompoundTag entries = nbt.getCompoundOrEmpty("villagers");
+        for (String key : entries.keySet()) {
             try {
-                registry.records.put(UUID.fromString(key), Record.fromNbt(entries.getCompound(key)));
+                registry.records.put(UUID.fromString(key), Record.fromNbt(entries.getCompoundOrEmpty(key)));
             } catch (IllegalArgumentException e) {
                 MCAVie.LOGGER.warn("UUID invalide dans le registre des métiers : {}", key);
             }
@@ -37,8 +39,7 @@ public class WorkRegistry extends SavedData {
         return registry;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag nbt) {
+        public CompoundTag save(CompoundTag nbt) {
         CompoundTag entries = new CompoundTag();
         records.forEach((uuid, record) -> entries.put(uuid.toString(), record.toNbt()));
         nbt.put("villagers", entries);
@@ -150,7 +151,7 @@ public class WorkRegistry extends SavedData {
                 nbt.putString("formerJob", formerJob);
             }
             if (employer != null) {
-                nbt.putUUID("employer", employer);
+                Nbt.putUUID(nbt, "employer", employer);
             }
             if (depotDimension != null) {
                 nbt.putString("depotDimension", depotDimension.toString());
@@ -190,32 +191,32 @@ public class WorkRegistry extends SavedData {
 
         static Record fromNbt(CompoundTag nbt) {
             Record record = new Record();
-            record.job = Job.byId(nbt.getInt("job"));
-            record.center = nbt.contains("center") ? NbtUtils.readBlockPos(nbt.getCompound("center")) : null;
-            record.radius = nbt.contains("radius") ? nbt.getInt("radius") : DEFAULT_RADIUS;
-            record.depot = nbt.contains("depot") ? NbtUtils.readBlockPos(nbt.getCompound("depot")) : null;
-            record.level = Math.max(1, nbt.getInt("level"));
-            record.experience = nbt.getInt("experience");
-            record.apprenticeChosen = nbt.getBoolean("apprenticeChosen");
-            record.formerJob = nbt.contains("formerJob") ? nbt.getString("formerJob") : null;
-            record.employer = nbt.hasUUID("employer") ? nbt.getUUID("employer") : null;
-            record.depotDimension = nbt.contains("depotDimension") ? Identifier.tryParse(nbt.getString("depotDimension")) : null;
-            record.lastName = nbt.contains("lastName") ? nbt.getString("lastName") : null;
-            record.lastPos = nbt.contains("lastPos") ? NbtUtils.readBlockPos(nbt.getCompound("lastPos")) : null;
-            record.lastDimension = nbt.contains("lastDimension") ? Identifier.tryParse(nbt.getString("lastDimension")) : null;
-            record.lastHealth = nbt.getFloat("lastHealth");
-            record.lastMaxHealth = nbt.contains("lastMaxHealth") ? nbt.getFloat("lastMaxHealth") : 20;
-            record.lastStatus = nbt.contains("lastStatus") ? nbt.getInt("lastStatus") : -1;
-            record.lastSeen = nbt.getLong("lastSeen");
-            record.look = nbt.contains("look") ? nbt.getCompound("look") : null;
-            record.pendingOrder = nbt.contains("pendingOrder") ? nbt.getString("pendingOrder") : null;
-            record.chat = nbt.contains("chat") ? nbt.getCompound("chat") : null;
-            record.order = nbt.contains("order") ? nbt.getString("order") : null;
-            record.alerts = nbt.getInt("alerts");
-            record.reportDay = nbt.contains("reportDay") ? nbt.getLong("reportDay") : -1;
-            record.report = nbt.getCompound("report");
-            record.pendingHearts = nbt.getInt("pendingHearts");
-            record.pendingMood = nbt.getInt("pendingMood");
+            record.job = Job.byId(nbt.getIntOr("job", 0));
+            record.center = nbt.contains("center") ? NbtUtils.readBlockPos(nbt.getCompoundOrEmpty("center")) : null;
+            record.radius = nbt.contains("radius") ? nbt.getIntOr("radius", 0) : DEFAULT_RADIUS;
+            record.depot = nbt.contains("depot") ? NbtUtils.readBlockPos(nbt.getCompoundOrEmpty("depot")) : null;
+            record.level = Math.max(1, nbt.getIntOr("level", 0));
+            record.experience = nbt.getIntOr("experience", 0);
+            record.apprenticeChosen = nbt.getBooleanOr("apprenticeChosen", false);
+            record.formerJob = nbt.contains("formerJob") ? nbt.getStringOr("formerJob", "") : null;
+            record.employer = Nbt.hasUUID(nbt, "employer") ? Nbt.getUUID(nbt, "employer") : null;
+            record.depotDimension = nbt.contains("depotDimension") ? Identifier.tryParse(nbt.getStringOr("depotDimension", "")) : null;
+            record.lastName = nbt.contains("lastName") ? nbt.getStringOr("lastName", "") : null;
+            record.lastPos = nbt.contains("lastPos") ? NbtUtils.readBlockPos(nbt.getCompoundOrEmpty("lastPos")) : null;
+            record.lastDimension = nbt.contains("lastDimension") ? Identifier.tryParse(nbt.getStringOr("lastDimension", "")) : null;
+            record.lastHealth = nbt.getFloatOr("lastHealth", 0f);
+            record.lastMaxHealth = nbt.contains("lastMaxHealth") ? nbt.getFloatOr("lastMaxHealth", 0f) : 20;
+            record.lastStatus = nbt.contains("lastStatus") ? nbt.getIntOr("lastStatus", 0) : -1;
+            record.lastSeen = nbt.getLongOr("lastSeen", 0L);
+            record.look = nbt.contains("look") ? nbt.getCompoundOrEmpty("look") : null;
+            record.pendingOrder = nbt.contains("pendingOrder") ? nbt.getStringOr("pendingOrder", "") : null;
+            record.chat = nbt.contains("chat") ? nbt.getCompoundOrEmpty("chat") : null;
+            record.order = nbt.contains("order") ? nbt.getStringOr("order", "") : null;
+            record.alerts = nbt.getIntOr("alerts", 0);
+            record.reportDay = nbt.contains("reportDay") ? nbt.getLongOr("reportDay", 0L) : -1;
+            record.report = nbt.getCompoundOrEmpty("report");
+            record.pendingHearts = nbt.getIntOr("pendingHearts", 0);
+            record.pendingMood = nbt.getIntOr("pendingMood", 0);
             return record;
         }
     }

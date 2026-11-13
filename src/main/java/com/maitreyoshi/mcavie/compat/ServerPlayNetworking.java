@@ -12,15 +12,16 @@ public final class ServerPlayNetworking {
     }
 
     public static void registerGlobalReceiver(Identifier id, PlayChannelHandler handler) {
-        NetworkManager.registerReceiver(NetworkManager.Side.C2S, id, (buf, context) -> {
+        RawPayload.initServer();
+        RawPayload.SERVER.put(id, (buf, context) -> {
             if (context.getPlayer() instanceof ServerPlayer player) {
-                handler.receive(player.server, player, player.connection, buf, new PacketSender(player));
+                handler.receive(player.level().getServer(), player, player.connection, buf, new PacketSender(player));
             }
         });
     }
 
     public static void send(ServerPlayer player, Identifier id, FriendlyByteBuf buf) {
-        NetworkManager.sendToPlayer(player, id, buf);
+        NetworkManager.sendToPlayer(player, RawPayload.of(RawPayload.S2C, id, buf));
     }
 
     @FunctionalInterface

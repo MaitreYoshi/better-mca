@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life.client;
 
+import net.minecraft.client.input.MouseButtonEvent;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import com.maitreyoshi.mcavie.life.GhostAltarBlockEntity;
@@ -51,7 +52,7 @@ public final class GhostAltarClient {
             for (int i = 0; i < count; i++) {
                 entries.add(new Entry(buf.readUUID(), buf.readUtf(), buf.readBoolean()));
             }
-            client.execute(() -> client.setScreen(new ChooseScreen(pos, house, current, entries)));
+            client.execute(() -> client.gui.setScreen(new ChooseScreen(pos, house, current, entries)));
         });
     }
 
@@ -86,7 +87,7 @@ public final class GhostAltarClient {
         }
 
         private static void vertex(VertexConsumer buffer, Matrix4f m, float x, float y, float z, float u, float v, int light) {
-            buffer.vertex(m, x, y, z).color(235, 225, 205, 255).uv(u, v).uv2(light).endVertex();
+            buffer.addVertex(m, x, y, z).color(235, 225, 205, 255).uv(u, v).uv2(light).endVertex();
         }
     }
 
@@ -155,11 +156,11 @@ public final class GhostAltarClient {
         }
 
         @Override
-        public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-            renderBackground(context);
-            context.drawCenteredString(font, title, width / 2, 10, 0xFFFFFF);
+        public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+            extractBackground(context, mouseX, mouseY, delta);
+            context.centeredText(font, title, width / 2, 10, 0xFFFFFF);
             Component hint = Component.translatable(!house ? "gui.mca_vie.ghost_altar.no_house" : entries.isEmpty() ? "gui.mca_vie.ghost_altar.empty" : "gui.mca_vie.ghost_altar.hint");
-            context.drawCenteredString(font, hint, width / 2, 21, 0xA0A0A0);
+            context.centeredText(font, hint, width / 2, 21, 0xA0A0A0);
             int hovered = indexAt(mouseX, mouseY);
             context.enableScissor(0, TOP, width, height - BOTTOM);
             for (int i = 0; i < entries.size(); i++) {
@@ -173,19 +174,22 @@ public final class GhostAltarClient {
                     context.fill(left(), y, left() + ROW_W, y + ROW_H, selected ? 0x6050A0C0 : 0x40FFFFFF);
                 }
                 int color = selected ? 0xB0E0FF : entry.look() ? 0xFFFFFF : 0x808080;
-                context.drawString(font, entry.name(), left() + 4, y + 3, color);
+                context.text(font, entry.name(), left() + 4, y + 3, color);
                 if (!entry.look()) {
                     Component tag = Component.translatable("gui.mca_vie.ghost_altar.no_look");
-                    context.drawString(font, tag, left() + ROW_W - 4 - font.width(tag), y + 3, 0x808080);
+                    context.text(font, tag, left() + ROW_W - 4 - font.width(tag), y + 3, 0x808080);
                 }
             }
             context.disableScissor();
-            super.render(context, mouseX, mouseY, delta);
+            super.extractRenderState(context, mouseX, mouseY, delta);
         }
 
         @Override
-        public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (super.mouseClicked(mouseX, mouseY, button)) {
+        public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
+            if (super.mouseClicked(event, doubleClick)) {
                 return true;
             }
             int index = button == 0 ? indexAt(mouseX, mouseY) : -1;
@@ -197,7 +201,7 @@ public final class GhostAltarClient {
         }
 
         @Override
-        public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+        public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double amount) {
             int max = Math.max(0, entries.size() * ROW_H - (height - TOP - BOTTOM));
             scroll = Math.max(0, Math.min(max, scroll - amount * ROW_H * 2));
             return true;

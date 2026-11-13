@@ -18,7 +18,7 @@ public abstract class MinecraftClientMixin {
         if (screen instanceof FamilyTreeScreen tree && ClientPlayNetworking.canSend(TreeProtocol.REQUEST)) {
             ci.cancel();
             Minecraft client = (Minecraft) (Object) this;
-            TreeClient.open(((FamilyTreeScreenAccessor) tree).mcavie$getFocusedEntityId(), client.screen);
+            TreeClient.open(((FamilyTreeScreenAccessor) tree).mcavie$getFocusedEntityId(), client.gui.screen());
         }
     }
 }

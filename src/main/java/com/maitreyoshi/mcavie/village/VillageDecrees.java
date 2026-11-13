@@ -88,17 +88,17 @@ public final class VillageDecrees {
     }
 
     public static void launch(ServerPlayer player, int villageId, Decree decree) {
-        ServerLevel world = player.serverLevel();
+        ServerLevel world = player.level();
         VillageManager.get(world).getOrEmpty(villageId).ifPresent(village -> {
             if (!VillageRights.personalRank(village, player).isAtLeast(VillageRights.DECREES)) {
-                player.displayClientMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.DECREES.getTranslationKey())), true);
+                player.sendOverlayMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.DECREES.getTranslationKey())));
                 return;
             }
             VillageState state = VillageState.of(village);
             long today = WorldCalendar.now(world).dayIndex();
             MutableComponent reason = unavailable(village, decree, today);
             if (reason != null) {
-                player.displayClientMessage(reason.withStyle(ChatFormatting.RED), true);
+                player.sendOverlayMessage(reason.withStyle(ChatFormatting.RED));
                 return;
             }
 
@@ -108,7 +108,7 @@ public final class VillageDecrees {
                     long first = weeklyCost(village, decree, world, today);
                     if (first > state.treasury) {
                         state.activeDecrees.remove(decree);
-                        player.displayClientMessage(Component.translatable("gui.mca_vie.decree.no_money", first).withStyle(ChatFormatting.RED), true);
+                        player.sendOverlayMessage(Component.translatable("gui.mca_vie.decree.no_money", first).withStyle(ChatFormatting.RED));
                         return;
                     }
                     state.treasury -= first;
@@ -130,12 +130,12 @@ public final class VillageDecrees {
                             .filter(b -> state.isDecayed(village, b))
                             .findAny();
                     if (building.isEmpty()) {
-                        player.displayClientMessage(Component.translatable("msg.mca_vie.decree.no_decayed").withStyle(ChatFormatting.RED), true);
+                        player.sendOverlayMessage(Component.translatable("msg.mca_vie.decree.no_decayed").withStyle(ChatFormatting.RED));
                         return;
                     }
                     cost = renovationCost(village, building.get());
                     if (cost > state.treasury) {
-                        player.displayClientMessage(Component.translatable("gui.mca_vie.decree.no_money", cost).withStyle(ChatFormatting.RED), true);
+                        player.sendOverlayMessage(Component.translatable("gui.mca_vie.decree.no_money", cost).withStyle(ChatFormatting.RED));
                         return;
                     }
                     state.clearDecay(village, building.get());
@@ -143,7 +143,7 @@ public final class VillageDecrees {
                 case RECRUIT_GUARD -> {
                     cost = launchCost(village, decree);
                     if (!recruitGuard(village, world, state)) {
-                        player.displayClientMessage(Component.translatable("msg.mca_vie.decree.no_guard").withStyle(ChatFormatting.RED), true);
+                        player.sendOverlayMessage(Component.translatable("msg.mca_vie.decree.no_guard").withStyle(ChatFormatting.RED));
                         return;
                     }
                 }

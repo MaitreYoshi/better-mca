@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.tree.server;
 
+import com.maitreyoshi.mcavie.compat.Saved;
 import com.maitreyoshi.mcavie.MCAVie;
 import net.conczin.mca.server.world.data.FamilyTree;
 import net.conczin.mca.server.world.data.FamilyTreeNode;
@@ -38,32 +39,31 @@ public class SpouseRegistry extends SavedData {
     private final Set<String> divorced = new HashSet<>();
 
     public static SpouseRegistry get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(SpouseRegistry::fromNbt, SpouseRegistry::new, DATA_ID);
+        return Saved.get(server.overworld(), SpouseRegistry::fromNbt, SpouseRegistry::new, SpouseRegistry::save, DATA_ID);
     }
 
     private static SpouseRegistry fromNbt(CompoundTag nbt) {
         SpouseRegistry registry = new SpouseRegistry();
-        CompoundTag entries = nbt.getCompound("spouses");
-        for (String key : entries.getAllKeys()) {
+        CompoundTag entries = nbt.getCompoundOrEmpty("spouses");
+        for (String key : entries.keySet()) {
             try {
                 Set<UUID> set = registry.spouses.computeIfAbsent(UUID.fromString(key), k -> new LinkedHashSet<>());
-                ListTag list = entries.getList(key, Tag.TAG_STRING);
+                ListTag list = entries.getListOrEmpty(key);
                 for (int i = 0; i < list.size(); i++) {
-                    set.add(UUID.fromString(list.getString(i)));
+                    set.add(UUID.fromString(list.getStringOr(i, "")));
                 }
             } catch (IllegalArgumentException e) {
                 MCAVie.LOGGER.warn("UUID invalide dans le registre des conjoints : {}", key);
             }
         }
-        ListTag list = nbt.getList("divorced", Tag.TAG_STRING);
+        ListTag list = nbt.getListOrEmpty("divorced");
         for (int i = 0; i < list.size(); i++) {
-            registry.divorced.add(list.getString(i));
+            registry.divorced.add(list.getStringOr(i, ""));
         }
         return registry;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag nbt) {
+        public CompoundTag save(CompoundTag nbt) {
         CompoundTag entries = new CompoundTag();
         spouses.forEach((uuid, set) -> {
             ListTag list = new ListTag();

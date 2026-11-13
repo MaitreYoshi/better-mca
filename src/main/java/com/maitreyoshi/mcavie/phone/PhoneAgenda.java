@@ -93,7 +93,7 @@ public final class PhoneAgenda {
                 ? Component.translatable("msg.mca_vie.phone.agenda_today")
                 : Component.literal(date.getDayOfMonth() + "/" + date.getMonthValue());
         String key = event.yearly() ? "msg.mca_vie.phone.agenda_reminder_yearly" : "msg.mca_vie.phone.agenda_reminder";
-        player.displayClientMessage(Component.translatable(key, when, Component.literal(event.title()).withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.GOLD), false);
-        player.displayClientMessage(Component.translatable("msg.mca_vie.phone.agenda_overlay", event.title()), true);
+        player.sendSystemMessage(Component.translatable(key, when, Component.literal(event.title()).withStyle(ChatFormatting.WHITE)).withStyle(ChatFormatting.GOLD));
+        player.sendOverlayMessage(Component.translatable("msg.mca_vie.phone.agenda_overlay", event.title()));
     }
 }

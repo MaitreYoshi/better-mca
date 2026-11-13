@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.tree.server;
 
+import net.minecraft.server.permissions.Permissions;
 import com.maitreyoshi.mcavie.tree.server.mixin.FamilyTreeAccessor;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -24,7 +25,7 @@ public final class TreeMergeCommand {
 
     public static void register() {
         CommandRegistrationEvent.EVENT.register((dispatcher, registryAccess, environment) -> dispatcher.register(
-                Commands.literal("treemerge").requires(s -> s.hasPermission(2))
+                Commands.literal("treemerge").requires(s -> s.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER))
                         .then(Commands.literal("list")
                                 .then(Commands.argument("name", StringArgumentType.greedyString())
                                         .executes(TreeMergeCommand::list)))

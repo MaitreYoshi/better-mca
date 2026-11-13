@@ -62,8 +62,8 @@ public final class CivilRegistry {
         }
 
         static Entry fromNbt(CompoundTag nbt) {
-            return new Entry(nbt.getInt("kind"), nbt.getLong("day"), nbt.getString("name"), nbt.getString("other"), nbt.getInt("age"),
-                    nbt.contains("exact") ? nbt.getLong("exact") : NO_EXACT);
+            return new Entry(nbt.getIntOr("kind", 0), nbt.getLongOr("day", 0L), nbt.getStringOr("name", ""), nbt.getStringOr("other", ""), nbt.getIntOr("age", 0),
+                    nbt.contains("exact") ? nbt.getLongOr("exact", 0L) : NO_EXACT);
         }
     }
 

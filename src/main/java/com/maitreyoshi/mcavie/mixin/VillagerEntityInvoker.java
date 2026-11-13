@@ -7,5 +7,5 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 @Mixin(Villager.class)
 public interface VillagerEntityInvoker {
     @Invoker("updateTrades")
-    void mcavie$fillRecipes();
+    void mcavie$fillRecipes(net.minecraft.server.level.ServerLevel level);
 }

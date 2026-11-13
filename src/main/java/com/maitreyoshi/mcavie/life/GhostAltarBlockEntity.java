@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
@@ -59,14 +60,14 @@ public class GhostAltarBlockEntity extends BlockEntity {
     protected void saveAdditional(CompoundTag nbt) {
         super.saveAdditional(nbt);
         if (person != null) {
-            nbt.putUUID("person", person);
+            Nbt.putUUID(nbt, "person", person);
         }
     }
 
     @Override
     public void load(CompoundTag nbt) {
         super.load(nbt);
-        person = nbt.hasUUID("person") ? nbt.getUUID("person") : null;
+        person = Nbt.hasUUID(nbt, "person") ? Nbt.getUUID(nbt, "person") : null;
     }
 
     @Override

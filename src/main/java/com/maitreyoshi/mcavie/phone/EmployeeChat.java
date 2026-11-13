@@ -108,16 +108,16 @@ public final class EmployeeChat {
     }
 
     private static void sendLog(ServerPlayer player, UUID uuid) {
-        WorkRegistry.Record record = WorkRegistry.get(player.getServer()).get(uuid);
+        WorkRegistry.Record record = WorkRegistry.get(player.level().getServer()).get(uuid);
         FriendlyByteBuf buf = PacketByteBufs.create();
         buf.writeUUID(uuid);
         ListTag log = record != null && player.getUUID().equals(record.employer) && record.chat != null
-                ? record.chat.getList("log", Tag.TAG_COMPOUND) : new ListTag();
+                ? record.chat.getListOrEmpty("log") : new ListTag();
         buf.writeVarInt(log.size());
         for (int i = 0; i < log.size(); i++) {
-            CompoundTag line = log.getCompound(i);
-            buf.writeBoolean(line.getBoolean("o"));
-            buf.writeUtf(line.getString("t"));
+            CompoundTag line = log.getCompoundOrEmpty(i);
+            buf.writeBoolean(line.getBooleanOr("o", false));
+            buf.writeUtf(line.getStringOr("t", ""));
         }
         ServerPlayNetworking.send(player, LOG, buf);
     }
@@ -143,7 +143,7 @@ public final class EmployeeChat {
     }
 
     private static void log(CompoundTag chat, boolean outgoing, String text) {
-        ListTag log = chat.getList("log", Tag.TAG_COMPOUND);
+        ListTag log = chat.getListOrEmpty("log");
         CompoundTag line = new CompoundTag();
         line.putBoolean("o", outgoing);
         line.putString("t", text);
@@ -155,7 +155,7 @@ public final class EmployeeChat {
     }
 
     private static void receive(ServerPlayer player, UUID uuid, String raw, String lang) {
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         WorkRegistry registry = WorkRegistry.get(server);
         WorkRegistry.Record record = registry.get(uuid);
         if (record == null || !player.getUUID().equals(record.employer) || record.job == Job.NONE
@@ -172,16 +172,16 @@ public final class EmployeeChat {
             return;
         }
         // la tension retombe avec le temps
-        long elapsed = now - chat.getLong("lastTime");
-        if (chat.getInt("tension") > 0 && elapsed > TENSION_DECAY_TICKS) {
-            chat.putInt("tension", Math.max(0, chat.getInt("tension") - (int) (elapsed / TENSION_DECAY_TICKS)));
+        long elapsed = now - chat.getLongOr("lastTime", 0L);
+        if (chat.getIntOr("tension", 0) > 0 && elapsed > TENSION_DECAY_TICKS) {
+            chat.putInt("tension", Math.max(0, chat.getIntOr("tension", 0) - (int) (elapsed / TENSION_DECAY_TICKS)));
         }
         String normalized = EmployeeDialogues.normalize(text);
         // bouderie : messages ignorés jusqu'à la fin du blocage
-        long blocked = chat.getLong("blockedUntil");
+        long blocked = chat.getLongOr("blockedUntil", 0L);
         if (blocked > now) {
             chat.putLong("lastTime", now);
-            if (!chat.getBoolean("blockNoticed")) {
+            if (!chat.getBooleanOr("blockNoticed", false)) {
                 chat.putBoolean("blockNoticed", true);
                 answer(chat, "...");
             }
@@ -198,15 +198,15 @@ public final class EmployeeChat {
             return;
         }
         // anti-spam : trop rapide ou même message répété
-        boolean repeated = !normalized.isEmpty() && normalized.equals(chat.getString("lastText"));
+        boolean repeated = !normalized.isEmpty() && normalized.equals(chat.getStringOr("lastText", ""));
         if (elapsed < SPAM_TICKS || repeated) {
-            chat.putInt("spam", chat.getInt("spam") + 1);
+            chat.putInt("spam", chat.getIntOr("spam", 0) + 1);
         } else {
             chat.putInt("spam", 0);
         }
         chat.putLong("lastTime", now);
         chat.putString("lastText", normalized);
-        if (chat.getInt("spam") >= 3) {
+        if (chat.getIntOr("spam", 0) >= 3) {
             say(chat, dialogues, "spam", context);
             return;
         }
@@ -217,12 +217,12 @@ public final class EmployeeChat {
         EmployeeDialogues.Match match = dialogues.classify(normalized);
         String effect = match != null ? match.intent().effect() : "none";
         // confirmation de licenciement en attente
-        if (chat.getBoolean("fireAsk")) {
+        if (chat.getBooleanOr("fireAsk", false)) {
             chat.putBoolean("fireAsk", false);
             if ("yes".equals(effect)) {
                 say(chat, dialogues, "fire_done", context);
                 String name = PhoneEmployees.dismiss(server, uuid, record);
-                player.displayClientMessage(Component.translatable("job.mca_vie.fired", name), true);
+                player.sendOverlayMessage(Component.translatable("job.mca_vie.fired", name));
                 return;
             }
             if ("no".equals(effect)) {
@@ -233,15 +233,15 @@ public final class EmployeeChat {
         EmployeeTopics.Topic topic = EmployeeTopics.analyze(normalized);
         if (topic != null && EmployeeTopics.ANAPHORA.equals(topic.subject())) {
             // « il a quel âge ? » : la personne dont on vient de parler
-            String lastSubject = chat.getString("lastSubject");
+            String lastSubject = chat.getStringOr("lastSubject", "");
             topic = EmployeeTopics.PERSONS.contains(lastSubject)
-                    ? new EmployeeTopics.Topic(lastSubject, topic.intent(), chat.getString("lastDetail"), false, true) : null;
+                    ? new EmployeeTopics.Topic(lastSubject, topic.intent(), chat.getStringOr("lastDetail", ""), false, true) : null;
         }
         if (topic != null && topicWins(topic, effect, normalized, dialogues)) {
             sayTopic(chat, dialogues, topic, context);
             return;
         }
-        if ("ask_you".equals(effect) && "topic".equals(chat.getString("lastIntent")) && normalized.split(" ").length <= 4) {
+        if ("ask_you".equals(effect) && "topic".equals(chat.getStringOr("lastIntent", "")) && normalized.split(" ").length <= 4) {
             say(chat, dialogues, "how_are_you", context);
             return;
         }
@@ -252,8 +252,8 @@ public final class EmployeeChat {
         String id = match.intent().id();
         // « pourquoi ? », « et toi ? » : suite du sujet précédent
         if (("ask_why".equals(effect) || "ask_you".equals(effect)) && normalized.split(" ").length <= 4) {
-            String follow = dialogues.followup(chat.getString("lastIntent"), "ask_why".equals(effect) ? "why" : "you",
-                    chat.getString("lastReply"), RANDOM);
+            String follow = dialogues.followup(chat.getStringOr("lastIntent", ""), "ask_why".equals(effect) ? "why" : "you",
+                    chat.getStringOr("lastReply", ""), RANDOM);
             if (follow != null) {
                 answer(chat, fill(follow, context));
                 return;
@@ -262,8 +262,8 @@ public final class EmployeeChat {
         switch (effect) {
             case "insult", "offensive", "threat" -> {
                 boolean strong = !"insult".equals(effect);
-                int tension = chat.getInt("tension") + (strong ? 2 : 1);
-                int streak = chat.getInt("streak") + 1;
+                int tension = chat.getIntOr("tension", 0) + (strong ? 2 : 1);
+                int streak = chat.getIntOr("streak", 0) + 1;
                 chat.putInt("tension", tension);
                 chat.putInt("streak", streak);
                 consequence(context, strong ? -6 : -3, strong ? -4 : -2);
@@ -272,7 +272,7 @@ public final class EmployeeChat {
                     chat.putInt("tension", 0);
                     chat.putInt("streak", 0);
                     String name = PhoneEmployees.dismiss(server, uuid, record);
-                    player.displayClientMessage(Component.translatable("msg.mca_vie.employee.resigned", name), true);
+                    player.sendOverlayMessage(Component.translatable("msg.mca_vie.employee.resigned", name));
                     return;
                 }
                 if (streak >= 4 || tension >= BLOCK_TENSION) {
@@ -286,7 +286,7 @@ public final class EmployeeChat {
             }
             case "apology" -> {
                 chat.putInt("streak", 0);
-                int tension = chat.getInt("tension");
+                int tension = chat.getIntOr("tension", 0);
                 if (tension > 0) {
                     chat.putInt("tension", Math.max(0, tension - 2));
                     consequence(context, 0, 1);
@@ -296,14 +296,14 @@ public final class EmployeeChat {
             }
             case "compliment", "thanks" -> {
                 chat.putInt("streak", 0);
-                chat.putInt("tension", Math.max(0, chat.getInt("tension") - 1));
+                chat.putInt("tension", Math.max(0, chat.getIntOr("tension", 0) - 1));
                 long day = PhoneEmployees.today(server);
-                if (chat.getLong("complDay") != day) {
+                if (chat.getLongOr("complDay", 0L) != day) {
                     chat.putLong("complDay", day);
                     chat.putInt("complCount", 0);
                 }
-                if (now >= chat.getLong("complNext") && chat.getInt("complCount") < COMPLIMENTS_PER_DAY) {
-                    chat.putInt("complCount", chat.getInt("complCount") + 1);
+                if (now >= chat.getLongOr("complNext", 0L) && chat.getIntOr("complCount", 0) < COMPLIMENTS_PER_DAY) {
+                    chat.putInt("complCount", chat.getIntOr("complCount", 0) + 1);
                     chat.putLong("complNext", now + COMPLIMENT_COOLDOWN);
                     consequence(context, 1, 1);
                 } else if ("compliment".equals(effect)) {
@@ -333,7 +333,7 @@ public final class EmployeeChat {
         useWarmth(chat);
         EmployeeDialogues.Intent intent = dialogues.intent(id);
         boolean casual = intent != null && EmployeeLife.casual(id, intent.effect());
-        String last = chat.getString("lastReply");
+        String last = chat.getStringOr("lastReply", "");
         String contextual = life != null ? life.replace(id, casual, state, recent(chat), RANDOM) : null;
         String raw = contextual != null ? contextual : dialogues.reply(id, state.mood(), last, RANDOM);
         if (life != null && contextual == null && casual) {
@@ -371,7 +371,7 @@ public final class EmployeeChat {
             raw = life.relance(recent, RANDOM, state);
         }
         if (raw == null) {
-            raw = dialogues.reply("fallback", state.mood(), chat.getString("lastReply"), RANDOM);
+            raw = dialogues.reply("fallback", state.mood(), chat.getStringOr("lastReply", ""), RANDOM);
         }
         boolean declaration = Set.of("love", "miss", "likeme", "proposal").contains(topic.subject());
         if (declaration) {
@@ -385,21 +385,21 @@ public final class EmployeeChat {
     }
 
     private static void useWarmth(CompoundTag chat) {
-        chat.putInt("warm", Math.max(0, chat.getInt("warm") - 1));
+        chat.putInt("warm", Math.max(0, chat.getIntOr("warm", 0) - 1));
     }
 
     private static List<String> recent(CompoundTag chat) {
-        ListTag list = chat.getList("recent", Tag.TAG_STRING);
+        ListTag list = chat.getListOrEmpty("recent");
         List<String> out = new ArrayList<>(list.size());
         for (int i = 0; i < list.size(); i++) {
-            out.add(list.getString(i));
+            out.add(list.getStringOr(i, ""));
         }
         return out;
     }
 
     private static void answer(CompoundTag chat, String text) {
         chat.putString("lastReply", text);
-        ListTag recent = chat.getList("recent", Tag.TAG_STRING);
+        ListTag recent = chat.getListOrEmpty("recent");
         recent.add(StringTag.valueOf(text));
         while (recent.size() > 3) {
             recent.remove(0);
@@ -425,15 +425,15 @@ public final class EmployeeChat {
 
     private record Context(ServerPlayer player, UUID uuid, WorkRegistry.Record record, @Nullable VillagerEntityMCA villager, String lang) {
         EmployeeLife.State life(CompoundTag chat) {
-            MinecraftServer server = player.getServer();
-            int hour = (int) ((server.overworld().getDayTime() + 6000) % 24000 / 1000);
+            MinecraftServer server = player.level().getServer();
+            int hour = (int) ((server.overworld().getOverworldClockTime() + 6000) % 24000 / 1000);
             String part = EmployeeLife.partOfDay(hour);
             boolean working = villager != null ? WorkManager.isWorking(villager) : record.lastStatus >= 0;
             // PNJ non chargé : présumé endormi la nuit, sauf s'il travaillait à son dernier passage
             String activity = villager != null && villager.isSleeping() ? "sleeping" : working ? "working"
                     : villager == null && "night".equals(part) ? "sleeping" : "idle";
             int hearts = villager != null ? villager.getVillagerBrain().getMemoriesForPlayer(player).getHearts()
-                    : chat.contains("hearts") ? chat.getInt("hearts") : 20;
+                    : chat.contains("hearts") ? chat.getIntOr("hearts", 0) : 20;
             FamilyTree tree = FamilyTree.get(server.overworld());
             FamilyTreeNode node = tree.getOrEmpty(uuid).orElse(null);
             String kin = "";
@@ -444,7 +444,7 @@ public final class EmployeeChat {
                         : node.father().equals(self) || node.mother().equals(self) ? "child"
                         : node.children().contains(self) ? "parent" : "";
             }
-            boolean warm = chat.getInt("warm") > 0 && chat.getInt("tension") < 2;
+            boolean warm = chat.getIntOr("warm", 0) > 0 && chat.getIntOr("tension", 0) < 2;
             String mood = warm ? "good" : EmployeeLife.adjustMood(mood(chat), EmployeeLife.State.relation(hearts, kin));
             return new EmployeeLife.State(activity, kin, hearts, part, record.job.name().toLowerCase(Locale.ROOT), mood, warm, profile(server, tree, node));
         }
@@ -490,8 +490,8 @@ public final class EmployeeChat {
         }
 
         String mood(CompoundTag chat) {
-            int value = villager != null ? villager.getVillagerBrain().getMoodValue() : chat.getInt("mood");
-            if (chat.getInt("tension") >= 2) {
+            int value = villager != null ? villager.getVillagerBrain().getMoodValue() : chat.getIntOr("mood", 0);
+            if (chat.getIntOr("tension", 0) >= 2) {
                 return "bad";
             }
             return value >= 5 ? "good" : value <= -5 ? "bad" : "neutral";
@@ -499,26 +499,26 @@ public final class EmployeeChat {
     }
 
     private static String fill(String source, Context c) {
-        boolean female = FamilyTree.get(c.player.getServer().overworld()).getOrEmpty(c.uuid)
+        boolean female = FamilyTree.get(c.player.level().getServer().overworld()).getOrEmpty(c.uuid)
                 .map(n -> n.gender() == Gender.FEMALE).orElse(false);
         String text = EmployeeLife.accord(source, female);
         if (!text.contains("{")) {
             return text;
         }
-        MinecraftServer server = c.player.getServer();
+        MinecraftServer server = c.player.level().getServer();
         WorkRegistry.Record r = c.record;
         String name = c.villager != null ? c.villager.getName().getString() : PhoneEmployees.nameOf(server, c.uuid, r);
         BlockPos pos = c.villager != null ? c.villager.blockPosition() : r.lastPos != null ? r.lastPos : r.center;
-        String dimension = c.villager != null ? c.villager.level().dimension().location().toString()
+        String dimension = c.villager != null ? c.villager.level().dimension().identifier().toString()
                 : r.lastDimension != null ? r.lastDimension.toString() : "";
         String distance = "?";
-        if (pos != null && c.player.level().dimension().location().toString().equals(dimension)) {
+        if (pos != null && c.player.level().dimension().identifier().toString().equals(dimension)) {
             distance = String.valueOf((int) Math.sqrt(c.player.blockPosition().distSqr(pos)));
         }
         float health = c.villager != null ? c.villager.getHealth() : r.lastHealth;
         float max = c.villager != null ? c.villager.getMaxHealth() : r.lastMaxHealth;
         int status = c.villager != null ? PhoneEmployees.statusOf(c.villager) : r.lastStatus;
-        long time = (server.overworld().getDayTime() + 6000) % 24000;
+        long time = (server.overworld().getOverworldClockTime() + 6000) % 24000;
         FamilyTree tree = FamilyTree.get(server.overworld());
         FamilyTreeNode node = tree.getOrEmpty(c.uuid).orElse(null);
         String partner = node != null && !node.partner().equals(Util.NIL_UUID)
@@ -544,7 +544,7 @@ public final class EmployeeChat {
         if (report.isEmpty()) {
             return token(Component.translatable("gui.mca_vie.phone.employees.report_none"));
         }
-        List<String> keys = new ArrayList<>(report.getAllKeys());
+        List<String> keys = new ArrayList<>(report.keySet());
         keys.sort(Comparator.comparingInt(report::getInt).reversed());
         StringBuilder b = new StringBuilder();
         for (int i = 0; i < Math.min(4, keys.size()); i++) {

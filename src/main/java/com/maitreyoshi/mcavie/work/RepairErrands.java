@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.work;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.work.tasks.DepositTask;
 import net.conczin.mca.entity.VillagerEntityMCA;
 import net.minecraft.core.BlockPos;
@@ -104,7 +105,7 @@ public final class RepairErrands {
         BlockPos best = null;
         Mode mode = null;
         double bestDistance = SEARCH_SQ;
-        Identifier dimension = world.dimension().location();
+        Identifier dimension = world.dimension().identifier();
         for (WorkRegistry.Record record : WorkRegistry.get(world.getServer()).all()) {
             if (record.job != Job.BLACKSMITH || record.depot == null
                     || (record.depotDimension != null && !record.depotDimension.equals(dimension))) {
@@ -140,7 +141,7 @@ public final class RepairErrands {
             }
             ItemStack tagged = stack.copy();
             CompoundTag mark = new CompoundTag();
-            mark.putUUID("owner", villager.getUUID());
+            Nbt.putUUID(mark, "owner", villager.getUUID());
             mark.putString("slot", slot.getName());
             tagged.getOrCreateTag().put(TAG, mark);
             ItemStack rest = DepositTask.insert(forge, tagged);
@@ -157,11 +158,11 @@ public final class RepairErrands {
             if (!isRepairedFor(stack, villager.getUUID())) {
                 continue;
             }
-            CompoundTag mark = stack.getTag().getCompound(TAG);
-            EquipmentSlot slot = slotByName(mark.getString("slot"));
+            CompoundTag mark = Nbt.tag(stack).getCompoundOrEmpty(TAG);
+            EquipmentSlot slot = slotByName(mark.getStringOr("slot", ""));
             ItemStack item = stack.copy();
-            item.getTag().remove(TAG);
-            if (item.getTag().isEmpty()) {
+            Nbt.tag(item).remove(TAG);
+            if (Nbt.tag(item).isEmpty()) {
                 item.setTag(null);
             }
             if (slot != null && villager.getItemBySlot(slot).isEmpty()) {
@@ -188,11 +189,11 @@ public final class RepairErrands {
     }
 
     private static boolean isRepairedFor(ItemStack stack, UUID owner) {
-        if (stack.isEmpty() || !stack.hasTag() || !stack.getTag().contains(TAG) || stack.getDamageValue() > 0) {
+        if (stack.isEmpty() || !Nbt.hasTag(stack) || !Nbt.tag(stack).contains(TAG) || stack.getDamageValue() > 0) {
             return false;
         }
-        CompoundTag mark = stack.getTag().getCompound(TAG);
-        return mark.hasUUID("owner") && owner.equals(mark.getUUID("owner"));
+        CompoundTag mark = Nbt.tag(stack).getCompoundOrEmpty(TAG);
+        return Nbt.hasUUID(mark, "owner") && owner.equals(Nbt.getUUID(mark, "owner"));
     }
 
     private static boolean hasRepaired(Container forge, UUID owner) {

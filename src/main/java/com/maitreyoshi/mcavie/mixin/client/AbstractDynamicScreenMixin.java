@@ -30,7 +30,7 @@ public abstract class AbstractDynamicScreenMixin extends Screen {
             return;
         }
         boolean mercenary = holder.mcavie$getVillagerEntity() instanceof net.conczin.mca.entity.VillagerEntityMCA villager
-                && villager.getProfession() == net.conczin.mca.registry.ProfessionsMCA.MERCENARY.get();
+                && villager.getProfession() == net.conczin.mca.registry.ProfessionsMCA.MERCENARY;
         if (!mercenary) {
             for (GuiEventListener element : new ArrayList<>(children())) {
                 if (element instanceof AbstractWidget widget && widget.getMessage().getContents() instanceof TranslatableContents content
@@ -52,10 +52,10 @@ public abstract class AbstractDynamicScreenMixin extends Screen {
         int h = lowest != null ? lowest.getHeight() : 20;
 
         addRenderableWidget(Button.builder(Component.translatable("job.mca_vie.button"), b ->
-                        Minecraft.getInstance().setScreen(new JobScreen(holder.mcavie$getVillagerEntity(), this)))
+                        Minecraft.getInstance().gui.setScreen(new JobScreen(holder.mcavie$getVillagerEntity(), this)))
                 .bounds(x, y, w, h).build());
         addRenderableWidget(Button.builder(Component.translatable("gui.mca_vie.relations.button"), b ->
-                        Minecraft.getInstance().setScreen(new RelationsScreen(holder.mcavie$getVillagerEntity(), this)))
+                        Minecraft.getInstance().gui.setScreen(new RelationsScreen(holder.mcavie$getVillagerEntity(), this)))
                 .bounds(x, y + h + 2, w, h).build());
     }
 

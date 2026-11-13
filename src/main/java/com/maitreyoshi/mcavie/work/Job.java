@@ -11,7 +11,7 @@ public enum Job {
     FARMER("farmer", Items.WHEAT, Items.STONE_HOE),
     LUMBERJACK("lumberjack", Items.OAK_LOG, Items.STONE_AXE),
     FISHER("fisher", Items.COD, Items.FISHING_ROD),
-    BREEDER("breeder", Items.WHITE_WOOL, Items.SHEARS),
+    BREEDER("breeder", Items.WOOL.white(), Items.SHEARS),
     DOCTOR("doctor", Items.GOLDEN_APPLE, Items.GLASS_BOTTLE),
     GUARD("guard", Items.IRON_SWORD, Items.AIR),
     ARCHER("archer", Items.BOW, Items.AIR),

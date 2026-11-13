@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.calendar;
 
+import com.maitreyoshi.mcavie.compat.Saved;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -14,27 +15,26 @@ public class CalendarState extends SavedData {
     private final List<WorldCalendar.Segment> segments = new ArrayList<>();
 
     public static CalendarState get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(CalendarState::fromNbt, CalendarState::new, DATA_ID);
+        return Saved.get(server.overworld(), CalendarState::fromNbt, CalendarState::new, CalendarState::save, DATA_ID);
     }
 
     private static CalendarState fromNbt(CompoundTag nbt) {
         CalendarState state = new CalendarState();
-        ListTag list = nbt.getList("segments", Tag.TAG_COMPOUND);
+        ListTag list = nbt.getListOrEmpty("segments");
         for (int i = 0; i < list.size(); i++) {
-            CompoundTag entry = list.getCompound(i);
-            double speed = entry.getDouble("speed");
+            CompoundTag entry = list.getCompoundOrEmpty(i);
+            double speed = entry.getDoubleOr("speed", 0d);
             if (speed > 0) {
                 // anciens mondes : segments en jours entiers ; désormais en ticks pour garder la date exacte au changement de vitesse
-                long game = entry.contains("gameTick") ? entry.getLong("gameTick") : entry.getLong("game") * WorldCalendar.TICKS_PER_DAY;
-                long calendar = entry.contains("calendarTick") ? entry.getLong("calendarTick") : entry.getLong("calendar") * WorldCalendar.TICKS_PER_DAY;
+                long game = entry.contains("gameTick") ? entry.getLongOr("gameTick", 0L) : entry.getLongOr("game", 0L) * WorldCalendar.TICKS_PER_DAY;
+                long calendar = entry.contains("calendarTick") ? entry.getLongOr("calendarTick", 0L) : entry.getLongOr("calendar", 0L) * WorldCalendar.TICKS_PER_DAY;
                 state.segments.add(new WorldCalendar.Segment(game, calendar, speed));
             }
         }
         return state;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag nbt) {
+        public CompoundTag save(CompoundTag nbt) {
         ListTag list = new ListTag();
         for (WorldCalendar.Segment segment : segments) {
             CompoundTag entry = new CompoundTag();

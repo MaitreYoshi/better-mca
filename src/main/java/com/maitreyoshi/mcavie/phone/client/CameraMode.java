@@ -95,7 +95,7 @@ public final class CameraMode {
         selfie = false;
         previousPerspective = client.options.getCameraType();
         client.options.setCameraType(CameraType.FIRST_PERSON);
-        client.setScreen(null);
+        client.gui.setScreen(null);
     }
 
     public static void update(State phone) {
@@ -120,7 +120,7 @@ public final class CameraMode {
         zoom = 1;
         targetZoom = 1;
         if (reopen && phone != null) {
-            Minecraft.getInstance().setScreen(new PhoneScreen(phone));
+            Minecraft.getInstance().gui.setScreen(new PhoneScreen(phone));
             PhoneClient.send(phone.number(), PhoneNetwork.OP_REFRESH, buf -> {
             });
         }
@@ -133,7 +133,7 @@ public final class CameraMode {
         if (state == null) {
             return;
         }
-        if (client.player == null || client.screen != null || !holds(client)) {
+        if (client.player == null || client.gui.screen() != null || !holds(client)) {
             stop(false);
             return;
         }
@@ -195,7 +195,7 @@ public final class CameraMode {
             return;
         }
         if (thumbnail.length > PhoneNetwork.MAX_THUMB_BYTES || full.length > PhoneNetwork.MAX_FULL_BYTES) {
-            client.player.displayClientMessage(Component.translatable("msg.mca_vie.phone.photo_too_big"), true);
+            client.player.sendOverlayMessage(Component.translatable("msg.mca_vie.phone.photo_too_big"));
             return;
         }
         flash = FLASH_TICKS;
@@ -284,12 +284,12 @@ public final class CameraMode {
             context.fill(width / 2, height / 2 - 4, width / 2 + 1, height / 2 + 5, 0x90FFFFFF);
             context.fill(x + m + 4, y + m + 4, x + m + 8, y + m + 8, 0xFFE5484D);
             if (selfie) {
-                context.drawString(client.font, Component.translatable("gui.mca_vie.phone.selfie"), x + m + 12, y + m + 4, 0xFFFFFF);
+                context.text(client.font, Component.translatable("gui.mca_vie.phone.selfie"), x + m + 12, y + m + 4, 0xFFFFFF);
             }
             String level = String.format("x%.1f", zoom);
             int lw = client.font.width(level);
             context.fill(x + w - m - lw - 12, y + m + 4, x + w - m - 4, y + m + 18, 0x90000000);
-            context.drawString(client.font, level, x + w - m - lw - 8, y + m + 7, 0xFFFFFF);
+            context.text(client.font, level, x + w - m - lw - 8, y + m + 7, 0xFFFFFF);
             int barX = x + w - m - 8;
             int barTop = y + h / 4;
             int barBottom = y + h * 3 / 4;
@@ -299,7 +299,7 @@ public final class CameraMode {
             Component hint = Component.translatable("gui.mca_vie.phone.camera_hint", client.options.keySwapOffhand.getTranslatedKeyMessage());
             int tw = client.font.width(hint);
             context.fill(width / 2 - tw / 2 - 6, y + h - m - 18, width / 2 + tw / 2 + 6, y + h - m - 4, 0x90000000);
-            context.drawCenteredString(client.font, hint, width / 2, y + h - m - 15, 0xFFFFFF);
+            context.centeredText(client.font, hint, width / 2, y + h - m - 15, 0xFFFFFF);
         }
         if (flash > 0) {
             int alpha = (int) (200 * (flash - tickDelta) / FLASH_TICKS);

@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.phone;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
@@ -221,7 +222,7 @@ public class PhotoFrameEntity extends HangingEntity {
         super.addAdditionalSaveData(nbt);
         UUID photo = photo();
         if (photo != null) {
-            nbt.putUUID("photo", photo);
+            Nbt.putUUID(nbt, "photo", photo);
         }
         nbt.putInt("w", widthHalves());
         nbt.putInt("h", heightHalves());
@@ -233,22 +234,22 @@ public class PhotoFrameEntity extends HangingEntity {
 
     @Override
     public void readAdditionalSaveData(CompoundTag nbt) {
-        if (nbt.hasUUID("photo")) {
-            this.entityData.set(PHOTO, Optional.of(nbt.getUUID("photo")));
+        if (Nbt.hasUUID(nbt, "photo")) {
+            this.entityData.set(PHOTO, Optional.of(Nbt.getUUID(nbt, "photo")));
         }
         if (nbt.contains("w")) {
-            this.entityData.set(WIDTH, clamp(nbt.getInt("w")));
-            this.entityData.set(HEIGHT, clamp(nbt.getInt("h")));
+            this.entityData.set(WIDTH, clamp(nbt.getIntOr("w", 0)));
+            this.entityData.set(HEIGHT, clamp(nbt.getIntOr("h", 0)));
         } else {
-            int size = Math.max(1, nbt.getInt("size"));
+            int size = Math.max(1, nbt.getIntOr("size", 0));
             this.entityData.set(WIDTH, clamp(2 * size));
             this.entityData.set(HEIGHT, clamp(Math.round(size * 9f / 8f)));
         }
-        this.entityData.set(TOP, nbt.getByte("top") & 3);
-        this.author = nbt.getString("author");
-        this.date = nbt.getLong("date");
+        this.entityData.set(TOP, nbt.getByteOr("top", (byte) 0) & 3);
+        this.author = nbt.getStringOr("author", "");
+        this.date = nbt.getLongOr("date", 0L);
         super.readAdditionalSaveData(nbt);
-        setDirection(nbt.contains("dir") ? Direction.from3DDataValue(nbt.getByte("dir")) : Direction.from2DDataValue(nbt.getByte("facing")));
+        setDirection(nbt.contains("dir") ? Direction.from3DDataValue(nbt.getByteOr("dir", (byte) 0)) : Direction.from2DDataValue(nbt.getByteOr("facing", (byte) 0)));
     }
 
     @Override

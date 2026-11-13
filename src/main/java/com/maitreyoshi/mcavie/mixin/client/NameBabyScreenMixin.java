@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.mixin.client;
 
+import net.minecraft.client.input.KeyEvent;
+import net.minecraft.client.input.MouseButtonEvent;
 import com.maitreyoshi.mcavie.SurnameText;
 import com.maitreyoshi.mcavie.client.MCAVieClient;
 import com.maitreyoshi.mcavie.client.SurnameFieldHolder;
@@ -70,7 +72,10 @@ public abstract class NameBabyScreenMixin extends Screen implements SurnameField
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
         if (mcavie$surnameField != null) {
             if (mcavie$surnameField.isMouseOver(mouseX, mouseY)) {
                 mcavie$surnameFocused = true;
@@ -78,17 +83,20 @@ public abstract class NameBabyScreenMixin extends Screen implements SurnameField
                 mcavie$surnameFocused = false;
             }
         }
-        return super.mouseClicked(mouseX, mouseY, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
-    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    public boolean keyPressed(KeyEvent event) {
+        int keyCode = event.key();
+        int scanCode = event.scancode();
+        int modifiers = event.modifiers();
         if (keyCode == 258 && mcavie$surnameField != null) {
             mcavie$surnameFocused = !mcavie$surnameFocused;
             mcavie$applyFocus();
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        return super.keyPressed(event);
     }
 
     @Inject(method = "render", at = @At("TAIL"))

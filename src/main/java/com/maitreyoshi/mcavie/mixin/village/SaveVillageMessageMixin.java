@@ -30,7 +30,7 @@ public abstract class SaveVillageMessageMixin {
     @Inject(method = "receive", at = @At("HEAD"), cancellable = true)
     private void mcavie$checkRights(ServerPlayer player, CallbackInfo ci) {
         ci.cancel();
-        VillageManager.get(player.serverLevel()).getOrEmpty(id).ifPresent(village -> {
+        VillageManager.get(player.level()).getOrEmpty(id).ifPresent(village -> {
             Rank rank = VillageRights.personalRank(village, player);
             if (rank.isAtLeast(VillageRights.SET_TAXES)) {
                 village.setTaxes(VillageRights.clampTaxes(village, taxes));

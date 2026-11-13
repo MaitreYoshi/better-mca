@@ -47,7 +47,7 @@ public abstract class TimeCommandMixin {
 
     @WrapOperation(method = "setTime", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/level/ServerLevel;setDayTime(J)V"))
     private static void mcavie$keepDay(ServerLevel world, long time, Operation<Void> original) {
-        long current = world.getDayTime();
+        long current = world.getOverworldClockTime();
         long target = Math.floorDiv(current, WorldCalendar.TICKS_PER_DAY) * WorldCalendar.TICKS_PER_DAY + Math.floorMod(time, WorldCalendar.TICKS_PER_DAY);
         if (target < current) {
             target += WorldCalendar.TICKS_PER_DAY;

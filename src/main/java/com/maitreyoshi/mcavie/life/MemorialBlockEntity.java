@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import net.conczin.mca.server.world.data.VillageManager;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
@@ -94,24 +95,24 @@ public class MemorialBlockEntity extends BlockEntity {
             nbt.putString("dates", dates);
         }
         if (owner != null) {
-            nbt.putUUID("owner", owner);
+            Nbt.putUUID(nbt, "owner", owner);
         }
     }
 
     @Override
     public void load(CompoundTag nbt) {
         super.load(nbt);
-        village = nbt.contains("village") ? nbt.getInt("village") : -1;
-        title = nbt.contains("title") ? nbt.getString("title") : null;
-        dates = nbt.contains("dates") ? nbt.getString("dates") : null;
-        owner = nbt.hasUUID("owner") ? nbt.getUUID("owner") : null;
-        first = nbt.getInt("first");
+        village = nbt.contains("village") ? nbt.getIntOr("village", 0) : -1;
+        title = nbt.contains("title") ? nbt.getStringOr("title", "") : null;
+        dates = nbt.contains("dates") ? nbt.getStringOr("dates", "") : null;
+        owner = Nbt.hasUUID(nbt, "owner") ? Nbt.getUUID(nbt, "owner") : null;
+        first = nbt.getIntOr("first", 0);
         if (nbt.contains("village_name")) {
-            villageName = nbt.getString("village_name");
+            villageName = nbt.getStringOr("village_name", "");
         }
         if (nbt.contains("fallen")) {
             fallen.clear();
-            for (Tag element : nbt.getList("fallen", Tag.TAG_COMPOUND)) {
+            for (Tag element : nbt.getListOrEmpty("fallen")) {
                 MemorialRegistry.Fallen entry = MemorialRegistry.Fallen.read((CompoundTag) element);
                 if (entry != null) {
                     fallen.add(entry);

@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.village;
 
+import com.maitreyoshi.mcavie.compat.Saved;
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.compat.ServerTickEvents;
 import dev.architectury.event.EventResult;
 import dev.architectury.event.events.common.EntityEvent;
@@ -62,8 +64,8 @@ public final class BedClaims {
             return onBedClick(serverPlayer, pos);
         });
         EntityEvent.LIVING_DEATH.register((entity, source) -> {
-            if (entity instanceof VillagerEntityMCA villager && entity.getServer() != null) {
-                Registry.get(entity.getServer()).release(villager.getUUID());
+            if (entity instanceof VillagerEntityMCA villager && entity.level().getServer() != null) {
+                Registry.get(entity.level().getServer()).release(villager.getUUID());
             }
             return EventResult.pass();
         });
@@ -78,11 +80,11 @@ public final class BedClaims {
             return;
         }
         PENDING.put(player.getUUID(), new Pending(villager.getUUID(), player.level().getGameTime() + PICK_TICKS));
-        player.displayClientMessage(Component.translatable("bed.mca_vie.pick", villager.getName()).withStyle(ChatFormatting.YELLOW), false);
+        player.sendSystemMessage(Component.translatable("bed.mca_vie.pick", villager.getName()).withStyle(ChatFormatting.YELLOW));
     }
 
     private static EventResult onBedClick(ServerPlayer player, BlockPos pos) {
-        ServerLevel world = player.serverLevel();
+        ServerLevel world = player.level();
         BlockState state = world.getBlockState(pos);
         boolean bed = state.getBlock() instanceof BedBlock;
         Pending pending = PENDING.remove(player.getUUID());
@@ -95,7 +97,7 @@ public final class BedClaims {
         if (bed && !player.isShiftKeyDown()) {
             Claim claim = Registry.get(world.getServer()).at(GlobalPos.of(world.dimension(), head(pos, state)));
             if (claim != null) {
-                player.displayClientMessage(Component.translatable("bed.mca_vie.owned", claim.name()).withStyle(ChatFormatting.GOLD), true);
+                player.sendOverlayMessage(Component.translatable("bed.mca_vie.owned", claim.name()).withStyle(ChatFormatting.GOLD));
                 return EventResult.interruptTrue();
             }
         }
@@ -107,7 +109,7 @@ public final class BedClaims {
         Registry registry = Registry.get(world.getServer());
         Claim claim = registry.at(target);
         if (claim != null && !claim.villager().equals(villager.getUUID())) {
-            player.displayClientMessage(Component.translatable("bed.mca_vie.taken", claim.name()).withStyle(ChatFormatting.RED), false);
+            player.sendSystemMessage(Component.translatable("bed.mca_vie.taken", claim.name()).withStyle(ChatFormatting.RED));
             return;
         }
         if (!isBed(world, head)) {
@@ -239,7 +241,7 @@ public final class BedClaims {
         private final Map<GlobalPos, Claim> claims = new HashMap<>();
 
         static Registry get(MinecraftServer server) {
-            return server.overworld().getDataStorage().computeIfAbsent(Registry::fromNbt, Registry::new, DATA_ID);
+            return Saved.get(server.overworld(), Registry::fromNbt, Registry::new, Registry::save, DATA_ID);
         }
 
         Claim at(GlobalPos bed) {
@@ -260,24 +262,23 @@ public final class BedClaims {
 
         private static Registry fromNbt(CompoundTag nbt) {
             Registry registry = new Registry();
-            ListTag list = nbt.getList("beds", 10);
+            ListTag list = nbt.getListOrEmpty("beds");
             for (int i = 0; i < list.size(); i++) {
-                CompoundTag c = list.getCompound(i);
-                ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, Identifier.parse(c.getString("dim")));
-                BlockPos pos = BlockPos.of(c.getLong("pos"));
-                registry.claims.put(GlobalPos.of(dimension, pos), new Claim(c.getUUID("villager"), c.getString("name")));
+                CompoundTag c = list.getCompoundOrEmpty(i);
+                ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, Identifier.parse(c.getStringOr("dim", "")));
+                BlockPos pos = BlockPos.of(c.getLongOr("pos", 0L));
+                registry.claims.put(GlobalPos.of(dimension, pos), new Claim(Nbt.getUUID(c, "villager"), c.getStringOr("name", "")));
             }
             return registry;
         }
 
-        @Override
-        public CompoundTag save(CompoundTag nbt) {
+                public CompoundTag save(CompoundTag nbt) {
             ListTag list = new ListTag();
             claims.forEach((bed, claim) -> {
                 CompoundTag c = new CompoundTag();
-                c.putString("dim", bed.dimension().location().toString());
+                c.putString("dim", bed.dimension().identifier().toString());
                 c.putLong("pos", bed.pos().asLong());
-                c.putUUID("villager", claim.villager());
+                Nbt.putUUID(c, "villager", claim.villager());
                 c.putString("name", claim.name());
                 list.add(c);
             });

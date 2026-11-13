@@ -51,7 +51,7 @@ public class PhotoFrameRenderer extends EntityRenderer<PhotoFrameEntity> {
                     w / 2, h / 2, 0, uv[0], uv[1], uv[2], uv[3], light);
         }
         matrices.popPose();
-        super.render(entity, yaw, tickDelta, matrices, consumers, light);
+        super.extractRenderState(entity, yaw, tickDelta, matrices, consumers, light);
     }
 
     private static void quad(VertexConsumer buffer, Matrix4f position, Matrix3f normal, float hw, float hh, float z,
@@ -63,7 +63,7 @@ public class PhotoFrameRenderer extends EntityRenderer<PhotoFrameEntity> {
     }
 
     private static void vertex(VertexConsumer buffer, Matrix4f position, Matrix3f normal, float x, float y, float z, float u, float v, int light) {
-        buffer.vertex(position, x, y, z).color(255, 255, 255, 255).uv(u, v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light)
+        buffer.addVertex(position, x, y, z).color(255, 255, 255, 255).uv(u, v).overlayCoords(OverlayTexture.NO_OVERLAY).uv2(light)
                 .normal(normal, 0, 0, -1).endVertex();
     }
 

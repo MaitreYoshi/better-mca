@@ -116,7 +116,7 @@ public class PhotoSizeScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double amount) {
         int delta = amount > 0 ? 1 : -1;
         if (hasShiftDown()) {
             setHeight(heightHalves + delta);
@@ -132,10 +132,10 @@ public class PhotoSizeScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        renderBackground(context);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        extractBackground(context, mouseX, mouseY, delta);
         int cx = width / 2;
-        context.drawCenteredString(font, title, cx, 10, 0xFFFFFF);
+        context.centeredText(font, title, cx, 10, 0xFFFFFF);
         int areaTop = 26;
         int areaBottom = height - 110;
         int areaW = width - 32;
@@ -156,12 +156,12 @@ public class PhotoSizeScreen extends Screen {
                     Math.max(1, Math.round((uv[2] - uv[0]) * tw)), Math.max(1, Math.round((uv[3] - uv[1]) * th)), tw, th);
         }
         int y = height - 102;
-        context.drawCenteredString(font, Component.translatable("gui.mca_vie.photo_size.width", blocks(widthHalves)), cx, y + 6, 0xFFFFFF);
-        context.drawCenteredString(font, Component.translatable("gui.mca_vie.photo_size.height", blocks(heightHalves)), cx, y + 30, 0xFFFFFF);
+        context.centeredText(font, Component.translatable("gui.mca_vie.photo_size.width", blocks(widthHalves)), cx, y + 6, 0xFFFFFF);
+        context.centeredText(font, Component.translatable("gui.mca_vie.photo_size.height", blocks(heightHalves)), cx, y + 30, 0xFFFFFF);
         if (!fits) {
-            context.drawCenteredString(font, Component.translatable("msg.mca_vie.photo.no_support"), cx, areaBottom + 2, 0xFF5555);
+            context.centeredText(font, Component.translatable("msg.mca_vie.photo.no_support"), cx, areaBottom + 2, 0xFF5555);
         }
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
     private static String blocks(int halves) {

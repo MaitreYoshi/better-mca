@@ -8,6 +8,8 @@ import java.util.function.BiConsumer;
 
 public interface TimeSpeedRule {
     String NAME = "mcaVieTimeSpeed";
+    /** Identifiant 26.x de la règle (mca_vie:time_speed). */
+    String ID = "time_speed";
 
     void register(TimeSpeed defaultValue, BiConsumer<MinecraftServer, TimeSpeed> onChanged);
 

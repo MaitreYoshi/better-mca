@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.life.client;
 
+import net.minecraft.client.input.MouseButtonEvent;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.client.ClientPlayNetworking;
 import com.maitreyoshi.mcavie.life.TombReservations;
@@ -48,7 +49,7 @@ public class TombReservationScreen extends Screen {
             for (int i = 0; i < count; i++) {
                 entries.add(new Entry(buf.readUUID(), buf.readUtf(), buf.readBoolean()));
             }
-            client.execute(() -> client.setScreen(new TombReservationScreen(pos, village, current, entries)));
+            client.execute(() -> client.gui.setScreen(new TombReservationScreen(pos, village, current, entries)));
         });
     }
 
@@ -99,11 +100,11 @@ public class TombReservationScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
-        renderBackground(context);
-        context.drawCenteredString(font, title, width / 2, 10, 0xFFFFFF);
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+        extractBackground(context, mouseX, mouseY, delta);
+        context.centeredText(font, title, width / 2, 10, 0xFFFFFF);
         Component hint = entries.isEmpty() ? Component.translatable("gui.mca_vie.tomb.empty") : Component.translatable("gui.mca_vie.tomb.hint");
-        context.drawCenteredString(font, hint, width / 2, 21, 0xA0A0A0);
+        context.centeredText(font, hint, width / 2, 21, 0xA0A0A0);
         int hovered = indexAt(mouseX, mouseY);
         context.enableScissor(0, TOP, width, height - BOTTOM);
         for (int i = 0; i < entries.size(); i++) {
@@ -117,19 +118,22 @@ public class TombReservationScreen extends Screen {
                 context.fill(left(), y, left() + ROW_W, y + ROW_H, selected ? 0x6050A050 : 0x40FFFFFF);
             }
             int color = selected ? 0x80FF80 : entry.hasTomb() ? 0x909090 : 0xFFFFFF;
-            context.drawString(font, entry.name(), left() + 4, y + 3, color);
+            context.text(font, entry.name(), left() + 4, y + 3, color);
             if (entry.hasTomb() && !selected) {
                 Component tag = Component.translatable("gui.mca_vie.tomb.has_one");
-                context.drawString(font, tag, left() + ROW_W - 4 - font.width(tag), y + 3, 0x909090);
+                context.text(font, tag, left() + ROW_W - 4 - font.width(tag), y + 3, 0x909090);
             }
         }
         context.disableScissor();
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 
     @Override
-    public boolean mouseClicked(double mouseX, double mouseY, int button) {
-        if (super.mouseClicked(mouseX, mouseY, button)) {
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mouseX = event.x();
+        double mouseY = event.y();
+        int button = event.button();
+        if (super.mouseClicked(event, doubleClick)) {
             return true;
         }
         int index = button == 0 ? indexAt(mouseX, mouseY) : -1;
@@ -141,7 +145,7 @@ public class TombReservationScreen extends Screen {
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double amount) {
         scroll = Math.max(0, Math.min(maxScroll(), scroll - amount * ROW_H * 2));
         return true;
     }

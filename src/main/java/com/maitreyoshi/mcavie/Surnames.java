@@ -4,7 +4,7 @@ import com.maitreyoshi.mcavie.tree.server.mixin.FamilyTreeAccessor;
 import net.conczin.mca.entity.VillagerEntityMCA;
 import net.conczin.mca.entity.VillagerLike;
 import net.conczin.mca.network.s2c.PlayerDataMessage;
-import net.conczin.mca.cobalt.network.NetworkHandler;
+import net.conczin.mca.network.Network;
 import net.conczin.mca.resources.Names;
 import net.conczin.mca.server.world.data.FamilyTree;
 import net.conczin.mca.server.world.data.FamilyTreeNode;
@@ -162,15 +162,15 @@ public final class Surnames {
 
     /** Joueur dont le nom MCA garde un nom de famille en minuscules. */
     public static void uppercasePlayer(ServerPlayer player) {
-        String surname = SurnameRegistry.get(player.getServer()).get(player.getUUID());
+        String surname = SurnameRegistry.get(player.level().getServer()).get(player.getUUID());
         if (surname == null) {
             return;
         }
         PlayerSaveData data = PlayerSaveData.get(player);
         CompoundTag entityData = data.getEntityData();
-        String name = entityData != null && entityData.contains("villagerName") ? entityData.getString("villagerName") : null;
+        String name = entityData != null && entityData.contains("villagerName") ? entityData.getStringOr("villagerName", "") : null;
         if (name == null) {
-            name = FamilyTree.get(player.serverLevel()).getOrEmpty(player.getUUID()).map(FamilyTreeNode::getName).orElse(null);
+            name = FamilyTree.get(player.level()).getOrEmpty(player.getUUID()).map(FamilyTreeNode::getName).orElse(null);
         }
         if (name != null && !SurnameText.withSurname(SurnameText.firstName(name, surname), surname).equals(name.trim())) {
             setPlayerSurname(player, surname, true);
@@ -207,7 +207,7 @@ public final class Surnames {
     }
 
     public static void setPlayerSurname(ServerPlayer player, String surname, boolean renameNow) {
-        ServerLevel world = player.serverLevel();
+        ServerLevel world = player.level();
         SurnameRegistry registry = SurnameRegistry.get(world.getServer());
         String previous = registry.get(player.getUUID());
         registry.set(player.getUUID(), surname);
@@ -217,7 +217,7 @@ public final class Surnames {
             PlayerSaveData data = PlayerSaveData.get(player);
             CompoundTag entityData = data.getEntityData();
             String oldName = entityData != null && entityData.contains("villagerName")
-                    ? entityData.getString("villagerName")
+                    ? entityData.getStringOr("villagerName", "")
                     : node.getName();
             String first = SurnameText.firstName(oldName, previous);
             if (first.isBlank()) {
@@ -230,7 +230,7 @@ public final class Surnames {
                 CompoundTag copy = entityData.copy();
                 copy.putString("villagerName", fullName);
                 data.setEntityData(copy);
-                world.players().forEach(p -> NetworkHandler.sendToPlayer(new PlayerDataMessage(player.getUUID(), copy), p));
+                world.players().forEach(p -> Network.sendToPlayer(new PlayerDataMessage(player.getUUID(), copy), p));
             }
         }
 

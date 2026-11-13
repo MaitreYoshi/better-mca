@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie;
 
+import net.minecraft.server.permissions.Permissions;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.maitreyoshi.mcavie.phone.PhoneServer;
 import com.maitreyoshi.mcavie.tree.server.TreeServer;
@@ -70,7 +71,7 @@ public final class MCAVie {
                         // Pas de requires() : sinon « fill » serait pris comme nom de famille par un non-opérateur.
                         .then(Commands.literal("fill")
                                 .executes(ctx -> {
-                                    if (!ctx.getSource().hasPermission(2)) {
+                                    if (!ctx.getSource().permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER)) {
                                         ctx.getSource().sendFailure(Component.translatable("command.mca_vie.fill_denied"));
                                         return 0;
                                     }

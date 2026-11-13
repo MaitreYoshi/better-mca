@@ -5,7 +5,7 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 @FunctionalInterface
 public interface HudRenderCallback {
-    Event EVENT = listener -> ClientGuiEvent.RENDER_HUD.register(listener::onHudRender);
+    Event EVENT = listener -> ClientGuiEvent.RENDER_HUD.register((graphics, delta) -> listener.onHudRender(graphics, delta.getGameTimeDeltaPartialTick(false)));
 
     void onHudRender(GuiGraphicsExtractor drawContext, float tickDelta);
 

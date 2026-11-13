@@ -79,7 +79,7 @@ public final class WorkNetwork {
             UUID uuid = buf.readUUID();
             server.execute(() -> findManaged(player, uuid).ifPresent(villager -> {
                 PENDING_DEPOTS.put(player.getUUID(), new PendingDepot(uuid, player.level().getGameTime() + 600));
-                player.displayClientMessage(Component.translatable("job.mca_vie.pick_depot", villager.getName()).withStyle(ChatFormatting.YELLOW), false);
+                player.sendSystemMessage(Component.translatable("job.mca_vie.pick_depot", villager.getName()).withStyle(ChatFormatting.YELLOW));
             }));
         });
 
@@ -91,7 +91,7 @@ public final class WorkNetwork {
                 WorkManager.dropDepotOutsideZone(record);
                 WorkRegistry.get(server).setDirty();
                 sendJobInfo(villager);
-                player.displayClientMessage(Component.translatable("job.mca_vie.zone_set", villager.getName()), true);
+                player.sendOverlayMessage(Component.translatable("job.mca_vie.zone_set", villager.getName()));
             }));
         });
 
@@ -119,20 +119,20 @@ public final class WorkNetwork {
                 WorkRegistry.Record record = WorkManager.getRecord(villager);
                 Job stationJob = ((com.maitreyoshi.mcavie.work.block.WorkstationBlock) world.getBlockState(pos).getBlock()).job();
                 if (stationJob != record.job) {
-                    serverPlayer.displayClientMessage(Component.translatable("job.mca_vie.wrong_workstation", villager.getName(), record.job.getName()).withStyle(ChatFormatting.RED), false);
+                    serverPlayer.sendSystemMessage(Component.translatable("job.mca_vie.wrong_workstation", villager.getName(), record.job.getName()).withStyle(ChatFormatting.RED));
                     return EventResult.interruptTrue();
                 }
-                Identifier dimension = world.dimension().location();
-                if (WorkRegistry.get(serverPlayer.getServer()).isClaimed(dimension, pos, villager.getUUID())) {
-                    serverPlayer.displayClientMessage(Component.translatable("job.mca_vie.workstation_taken").withStyle(ChatFormatting.RED), false);
+                Identifier dimension = world.dimension().identifier();
+                if (WorkRegistry.get(serverPlayer.level().getServer()).isClaimed(dimension, pos, villager.getUUID())) {
+                    serverPlayer.sendSystemMessage(Component.translatable("job.mca_vie.workstation_taken").withStyle(ChatFormatting.RED));
                     return EventResult.interruptTrue();
                 }
                 record.depot = pos.immutable();
                 record.depotDimension = dimension;
                 record.center = record.depot;
-                WorkRegistry.get(serverPlayer.getServer()).setDirty();
+                WorkRegistry.get(serverPlayer.level().getServer()).setDirty();
                 sendJobInfo(villager);
-                serverPlayer.displayClientMessage(Component.translatable("job.mca_vie.depot_set", villager.getName()).withStyle(ChatFormatting.GREEN), false);
+                serverPlayer.sendSystemMessage(Component.translatable("job.mca_vie.depot_set", villager.getName()).withStyle(ChatFormatting.GREEN));
             }
             return EventResult.interruptTrue();
         });
@@ -148,7 +148,7 @@ public final class WorkNetwork {
     }
 
     private static java.util.Optional<VillagerEntityMCA> findVillager(ServerPlayer player, UUID uuid) {
-        if (player.serverLevel().getEntity(uuid) instanceof VillagerEntityMCA villager && villager.distanceToSqr(player) <= MAX_DISTANCE_SQ) {
+        if (player.level().getEntity(uuid) instanceof VillagerEntityMCA villager && villager.distanceToSqr(player) <= MAX_DISTANCE_SQ) {
             return java.util.Optional.of(villager);
         }
         return java.util.Optional.empty();
@@ -157,7 +157,7 @@ public final class WorkNetwork {
     private static java.util.Optional<VillagerEntityMCA> findManaged(ServerPlayer player, UUID uuid) {
         java.util.Optional<VillagerEntityMCA> villager = findVillager(player, uuid);
         if (villager.isPresent() && !canManage(player, villager.get())) {
-            player.displayClientMessage(Component.translatable("job.mca_vie.denied", villager.get().getName()).withStyle(ChatFormatting.RED), true);
+            player.sendOverlayMessage(Component.translatable("job.mca_vie.denied", villager.get().getName()).withStyle(ChatFormatting.RED));
             return java.util.Optional.empty();
         }
         return villager;
@@ -166,10 +166,10 @@ public final class WorkNetwork {
     private static void showWorkstation(ServerPlayer player, VillagerEntityMCA villager) {
         WorkRegistry.Record record = WorkManager.findRecord(villager);
         if (record == null || record.depot == null) {
-            player.displayClientMessage(Component.translatable("job.mca_vie.show_none", villager.getName()).withStyle(ChatFormatting.GOLD), true);
+            player.sendOverlayMessage(Component.translatable("job.mca_vie.show_none", villager.getName()).withStyle(ChatFormatting.GOLD));
             return;
         }
-        ServerLevel world = player.serverLevel();
+        ServerLevel world = player.level();
         BlockPos depot = record.depot;
         for (int i = 0; i < 12; i++) {
             world.sendParticles(player, net.minecraft.core.particles.ParticleTypes.END_ROD, true,
@@ -195,7 +195,7 @@ public final class WorkNetwork {
             return true;
         }
         java.util.Optional<Village> home = villager.getResidency().getHomeVillage();
-        java.util.Optional<Village> village = home.isPresent() ? home : VillageManager.get(player.serverLevel()).findNearestVillage(villager);
+        java.util.Optional<Village> village = home.isPresent() ? home : VillageManager.get(player.level()).findNearestVillage(villager);
         return village.isPresent() && VillageRights.personalRank(village.get(), player).isAtLeast(VillageRights.MANAGE_WORK);
     }
 

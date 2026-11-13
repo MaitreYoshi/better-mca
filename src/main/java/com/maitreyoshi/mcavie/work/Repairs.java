@@ -1,20 +1,18 @@
 package com.maitreyoshi.mcavie.work;
 
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.item.equipment.Equippable;
+import net.minecraft.core.component.DataComponents;
+import com.maitreyoshi.mcavie.compat.Nbt;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.EquipmentSlot;
-import net.minecraft.world.item.ArmorItem;
-import net.minecraft.world.item.AxeItem;
 import net.minecraft.world.item.BowItem;
 import net.minecraft.world.item.CrossbowItem;
-import net.minecraft.world.item.ElytraItem;
 import net.minecraft.world.item.FishingRodItem;
-import net.minecraft.world.item.HoeItem;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.item.PickaxeItem;
 import net.minecraft.world.item.ShieldItem;
-import net.minecraft.world.item.SwordItem;
 import net.minecraft.world.item.TridentItem;
 import org.jetbrains.annotations.Nullable;
 
@@ -36,11 +34,12 @@ public final class Repairs {
 
     public static int count(ItemStack stack) {
         Item item = stack.getItem();
-        if (item instanceof ArmorItem armor) {
+        Equippable equippable = stack.get(DataComponents.EQUIPPABLE);
+        if (equippable != null && equippable.slot().getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
             if (isNetherite(stack)) {
                 return 1;
             }
-            return switch (armor.getEquipmentSlot()) {
+            return switch (equippable.slot()) {
                 case HEAD -> 5;
                 case CHEST -> 8;
                 case LEGS -> 7;
@@ -50,10 +49,10 @@ public final class Repairs {
         if (isNetherite(stack)) {
             return 1;
         }
-        if (item instanceof PickaxeItem || item instanceof AxeItem) {
+        if (stack.is(ItemTags.PICKAXES) || stack.is(ItemTags.AXES)) {
             return 3;
         }
-        if (item instanceof SwordItem || item instanceof HoeItem || item instanceof ElytraItem
+        if (stack.is(ItemTags.SWORDS) || stack.is(ItemTags.SPEARS) || stack.is(ItemTags.HOES) || stack.is(Items.ELYTRA)
                 || item instanceof BowItem || item instanceof CrossbowItem || item instanceof FishingRodItem
                 || item instanceof TridentItem) {
             return 2;
@@ -62,7 +61,7 @@ public final class Repairs {
     }
 
     private static boolean isNetherite(ItemStack stack) {
-        return stack.getItem().isValidRepairItem(stack, new ItemStack(Items.NETHERITE_INGOT));
+        return stack.isValidRepairItem(new ItemStack(Items.NETHERITE_INGOT));
     }
 
     // matériau de réparation vanilla (lingot, diamant, planches…) ; à défaut une matière proche
@@ -95,10 +94,10 @@ public final class Repairs {
         java.util.Map<Item, Integer> available = new java.util.HashMap<>();
         for (int i = 0; i < forge.getContainerSize(); i++) {
             ItemStack stack = forge.getItem(i);
-            if (stack.isEmpty() || stack.isDamageableItem() || stack.hasTag()) {
+            if (stack.isEmpty() || stack.isDamageableItem() || Nbt.hasTag(stack)) {
                 continue;
             }
-            if (stack.getItem() == fallback || damaged.getItem().isValidRepairItem(damaged, stack)) {
+            if (stack.getItem() == fallback || damaged.isValidRepairItem(stack)) {
                 available.merge(stack.getItem(), stack.getCount(), Integer::sum);
             }
         }
@@ -114,7 +113,7 @@ public final class Repairs {
         int left = cost.count();
         for (int i = 0; i < forge.getContainerSize() && left > 0; i++) {
             ItemStack stack = forge.getItem(i);
-            if (stack.is(cost.material()) && !stack.hasTag()) {
+            if (stack.is(cost.material()) && !Nbt.hasTag(stack)) {
                 int take = Math.min(left, stack.getCount());
                 stack.shrink(take);
                 left -= take;
@@ -127,11 +126,11 @@ public final class Repairs {
         if (stack.isEmpty() || !stack.isDamageableItem()) {
             return false;
         }
-        if (slot.getType() == EquipmentSlot.Type.ARMOR) {
+        if (slot.getType() == EquipmentSlot.Type.HUMANOID_ARMOR) {
             return true;
         }
         Item item = stack.getItem();
-        return item instanceof SwordItem || item instanceof AxeItem || item instanceof BowItem || item instanceof CrossbowItem
+        return stack.is(ItemTags.SWORDS) || stack.is(ItemTags.SPEARS) || stack.is(ItemTags.AXES) || item instanceof BowItem || item instanceof CrossbowItem
                 || item instanceof TridentItem || item instanceof ShieldItem;
     }
 }

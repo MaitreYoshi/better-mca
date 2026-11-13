@@ -174,7 +174,7 @@ public final class PhoneEmployees {
         if ((world.getGameTime() / 20 + villager.getId()) % SNAPSHOT_INTERVAL == 0) {
             record.lastName = villager.getName().getString();
             record.lastPos = villager.blockPosition();
-            record.lastDimension = world.dimension().location();
+            record.lastDimension = world.dimension().identifier();
             record.lastHealth = villager.getHealth();
             record.lastMaxHealth = villager.getMaxHealth();
             record.lastStatus = statusOf(villager);
@@ -219,7 +219,7 @@ public final class PhoneEmployees {
         record.alertCooldown = now + ALERT_COOLDOWN;
         int bit = Integer.numberOfTrailingZeros(Integer.highestOneBit(fresh));
         PhoneServer.ring(employer, PhoneNetwork.NOTIFY_MESSAGE);
-        employer.displayClientMessage(Component.translatable("msg.mca_vie.employee.alert." + ALERT_KEYS[bit], villager.getName()), true);
+        employer.sendOverlayMessage(Component.translatable("msg.mca_vie.employee.alert." + ALERT_KEYS[bit], villager.getName()));
     }
 
     // appelé sur le thread serveur pour chaque paquet de l'appli
@@ -227,7 +227,7 @@ public final class PhoneEmployees {
         if (!hasPhone(player)) {
             return false;
         }
-        long now = player.getServer().getTickCount();
+        long now = player.level().getServer().getTickCount();
         long[] rate = RATE.computeIfAbsent(player, p -> new long[2]);
         if (now - rate[0] >= RATE_WINDOW) {
             rate[0] = now;
@@ -284,7 +284,7 @@ public final class PhoneEmployees {
      */
     @Nullable
     public static Boolean order(ServerPlayer player, UUID uuid, String order) {
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         WorkRegistry registry = WorkRegistry.get(server);
         WorkRegistry.Record record = registry.get(uuid);
         if (record == null || !player.getUUID().equals(record.employer) || record.job == Job.NONE) {
@@ -320,12 +320,12 @@ public final class PhoneEmployees {
             record.report = new CompoundTag();
         }
         String id = BuiltInRegistries.ITEM.getKey(item).toString();
-        record.report.putInt(id, record.report.getInt(id) + count);
+        record.report.putInt(id, record.report.getIntOr(id, 0) + count);
         WorkRegistry.get(world.getServer()).setDirty();
     }
 
     public static long today(MinecraftServer server) {
-        return server.overworld().getDayTime() / 24000L;
+        return server.overworld().getOverworldClockTime() / 24000L;
     }
 
     public static CompoundTag report(MinecraftServer server, WorkRegistry.Record record) {
@@ -368,13 +368,13 @@ public final class PhoneEmployees {
     }
 
     private static void fire(ServerPlayer player, UUID uuid) {
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         WorkRegistry.Record record = WorkRegistry.get(server).get(uuid);
         if (record == null || !player.getUUID().equals(record.employer)) {
             return;
         }
         String name = dismiss(server, uuid, record);
-        player.displayClientMessage(Component.translatable("job.mca_vie.fired", name), true);
+        player.sendOverlayMessage(Component.translatable("job.mca_vie.fired", name));
     }
 
     // fin du contrat (licenciement ou démission) : immédiate si le PNJ est chargé, sinon à son rechargement
@@ -415,7 +415,7 @@ public final class PhoneEmployees {
     }
 
     public static void send(ServerPlayer player) {
-        MinecraftServer server = player.getServer();
+        MinecraftServer server = player.level().getServer();
         long now = server.overworld().getGameTime();
         List<Employee> list = new ArrayList<>();
         FamilyTree tree = FamilyTree.get(server.overworld());
@@ -433,7 +433,7 @@ public final class PhoneEmployees {
             if (villager != null) {
                 list.add(new Employee(uuid, villager.getName().getString(), record.job.ordinal(), statusOf(villager), true,
                         villager.getHealth(), villager.getMaxHealth(), villager.blockPosition(),
-                        villager.level().dimension().location().toString(), 0, look(villager),
+                        villager.level().dimension().identifier().toString(), 0, look(villager),
                         alertsOf(villager), activeOrder(villager, record), pendingOf(record), report(server, record)));
             } else {
                 list.add(new Employee(uuid, nameOf(server, uuid, record), record.job.ordinal(), record.lastStatus, false,

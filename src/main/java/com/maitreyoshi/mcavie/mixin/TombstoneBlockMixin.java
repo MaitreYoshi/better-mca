@@ -39,7 +39,7 @@ public abstract class TombstoneBlockMixin extends BaseEntityBlock {
     @Override
     public void attack(BlockState state, Level world, BlockPos pos, Player player) {
         if (!world.isClientSide && !VaultBlock.silkTouch(player) && TombstoneBlock.Data.of(world.getBlockEntity(pos)).map(TombstoneBlock.Data::hasEntity).orElse(false)) {
-            player.displayClientMessage(Component.translatable("tomb.mca_vie.occupied").withStyle(ChatFormatting.GOLD), true);
+            player.sendOverlayMessage(Component.translatable("tomb.mca_vie.occupied").withStyle(ChatFormatting.GOLD));
         }
         super.attack(state, world, pos, player);
     }

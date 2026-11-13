@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.life;
 
+import com.maitreyoshi.mcavie.compat.Saved;
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.MCAVie;
 import net.conczin.mca.entity.ai.relationship.Gender;
 import net.minecraft.nbt.CompoundTag;
@@ -25,7 +27,7 @@ public class HistoryRegistry extends SavedData {
     public record Spawn(UUID uuid, int village, String name, Gender gender) {
         CompoundTag toNbt() {
             CompoundTag nbt = new CompoundTag();
-            nbt.putUUID("uuid", uuid);
+            Nbt.putUUID(nbt, "uuid", uuid);
             nbt.putInt("village", village);
             nbt.putString("name", name);
             nbt.putInt("gender", gender.getId());
@@ -33,32 +35,32 @@ public class HistoryRegistry extends SavedData {
         }
 
         static Spawn fromNbt(CompoundTag nbt) {
-            return new Spawn(nbt.getUUID("uuid"), nbt.getInt("village"), nbt.getString("name"), Gender.byId(nbt.getInt("gender")));
+            return new Spawn(Nbt.getUUID(nbt, "uuid"), nbt.getIntOr("village", 0), nbt.getStringOr("name", ""), Gender.byId(nbt.getIntOr("gender", 0)));
         }
     }
 
     public static HistoryRegistry get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(HistoryRegistry::fromNbt, HistoryRegistry::new, DATA_ID);
+        return Saved.get(server.overworld(), HistoryRegistry::fromNbt, HistoryRegistry::new, HistoryRegistry::save, DATA_ID);
     }
 
     private static HistoryRegistry fromNbt(CompoundTag nbt) {
         HistoryRegistry registry = new HistoryRegistry();
-        CompoundTag deaths = nbt.getCompound("deaths");
-        for (String key : deaths.getAllKeys()) {
+        CompoundTag deaths = nbt.getCompoundOrEmpty("deaths");
+        for (String key : deaths.keySet()) {
             try {
-                registry.pendingDeaths.put(UUID.fromString(key), deaths.getLong(key));
+                registry.pendingDeaths.put(UUID.fromString(key), deaths.getLongOr(key, 0L));
             } catch (IllegalArgumentException e) {
                 MCAVie.LOGGER.warn("UUID invalide dans l'historique : {}", key);
             }
         }
-        ListTag spawns = nbt.getList("spawns", Tag.TAG_COMPOUND);
+        ListTag spawns = nbt.getListOrEmpty("spawns");
         for (int i = 0; i < spawns.size(); i++) {
-            registry.pendingSpawns.add(Spawn.fromNbt(spawns.getCompound(i)));
+            registry.pendingSpawns.add(Spawn.fromNbt(spawns.getCompoundOrEmpty(i)));
         }
-        CompoundTag origins = nbt.getCompound("origins");
-        for (String key : origins.getAllKeys()) {
+        CompoundTag origins = nbt.getCompoundOrEmpty("origins");
+        for (String key : origins.keySet()) {
             try {
-                registry.origins.put(UUID.fromString(key), origins.getInt(key));
+                registry.origins.put(UUID.fromString(key), origins.getIntOr(key, 0));
             } catch (IllegalArgumentException e) {
                 MCAVie.LOGGER.warn("UUID invalide dans l'historique : {}", key);
             }
@@ -66,8 +68,7 @@ public class HistoryRegistry extends SavedData {
         return registry;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag nbt) {
+        public CompoundTag save(CompoundTag nbt) {
         CompoundTag deaths = new CompoundTag();
         pendingDeaths.forEach((uuid, day) -> deaths.putLong(uuid.toString(), day));
         nbt.put("deaths", deaths);

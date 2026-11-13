@@ -118,7 +118,7 @@ public final class VillageServer {
     public static void notify(ServerLevel world, Village village, Component message) {
         for (ServerPlayer player : world.players()) {
             if (VillageRights.hasRights(village, player)) {
-                player.displayClientMessage(message, false);
+                player.sendSystemMessage(message);
             }
         }
     }

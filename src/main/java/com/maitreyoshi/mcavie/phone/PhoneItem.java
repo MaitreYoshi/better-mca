@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.phone;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
@@ -27,11 +28,11 @@ public class PhoneItem extends Item {
         if (!(stack.getItem() instanceof PhoneItem)) {
             return -1;
         }
-        CompoundTag nbt = stack.getTag();
+        CompoundTag nbt = Nbt.tag(stack);
         if (nbt == null || !nbt.contains(NUMBER_KEY, Tag.TAG_INT)) {
             return -1;
         }
-        int number = nbt.getInt(NUMBER_KEY);
+        int number = nbt.getIntOr(NUMBER_KEY, 0);
         return PhoneNetwork.validNumber(number) ? number : -1;
     }
 

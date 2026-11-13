@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.village;
 
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.work.tasks.DepositTask;
 import net.conczin.mca.server.world.data.Village;
 import net.minecraft.core.BlockPos;
@@ -28,7 +29,7 @@ public final class VillageNature {
     }
 
     public static int unitsPerEmerald(ItemStack stack) {
-        if (stack.isEmpty() || stack.hasTag()) {
+        if (stack.isEmpty() || Nbt.hasTag(stack)) {
             return 0;
         }
         return VillageConfig.get().unitsPerEmerald(BuiltInRegistries.ITEM.getKey(stack.getItem()).toString());

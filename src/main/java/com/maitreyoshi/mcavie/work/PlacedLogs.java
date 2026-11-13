@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.work;
 
+import com.maitreyoshi.mcavie.compat.Saved;
 import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
 import dev.architectury.event.EventResult;
 import dev.architectury.event.events.common.BlockEvent;
@@ -15,19 +16,18 @@ public class PlacedLogs extends SavedData {
     private final LongOpenHashSet positions = new LongOpenHashSet();
 
     public static PlacedLogs get(ServerLevel world) {
-        return world.getDataStorage().computeIfAbsent(PlacedLogs::fromNbt, PlacedLogs::new, DATA_ID);
+        return Saved.get(world, PlacedLogs::fromNbt, PlacedLogs::new, PlacedLogs::save, DATA_ID);
     }
 
     private static PlacedLogs fromNbt(CompoundTag nbt) {
         PlacedLogs registry = new PlacedLogs();
-        for (long pos : nbt.getLongArray("positions")) {
+        for (long pos : nbt.getLongArray("positions").orElse(new long[0])) {
             registry.positions.add(pos);
         }
         return registry;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag nbt) {
+        public CompoundTag save(CompoundTag nbt) {
         nbt.putLongArray("positions", positions.toLongArray());
         return nbt;
     }

@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.social;
 
+import com.maitreyoshi.mcavie.compat.Saved;
 import com.maitreyoshi.mcavie.MCAVie;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
@@ -23,22 +24,22 @@ public class SocialRegistry extends SavedData {
     private long lastForgetDay = Long.MIN_VALUE / 2;
 
     public static SocialRegistry get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(SocialRegistry::fromNbt, SocialRegistry::new, DATA_ID);
+        return Saved.get(server.overworld(), SocialRegistry::fromNbt, SocialRegistry::new, SocialRegistry::save, DATA_ID);
     }
 
     private static SocialRegistry fromNbt(CompoundTag nbt) {
         SocialRegistry registry = new SocialRegistry();
         if (nbt.contains("lastForgetDay")) {
-            registry.lastForgetDay = nbt.getLong("lastForgetDay");
+            registry.lastForgetDay = nbt.getLongOr("lastForgetDay", 0L);
         }
-        CompoundTag owners = nbt.getCompound("villagers");
-        for (String key : owners.getAllKeys()) {
+        CompoundTag owners = nbt.getCompoundOrEmpty("villagers");
+        for (String key : owners.keySet()) {
             try {
                 UUID owner = UUID.fromString(key);
-                CompoundTag entries = owners.getCompound(key);
+                CompoundTag entries = owners.getCompoundOrEmpty(key);
                 Map<UUID, Link> map = new HashMap<>();
-                for (String other : entries.getAllKeys()) {
-                    map.put(UUID.fromString(other), Link.fromNbt(entries.getCompound(other)));
+                for (String other : entries.keySet()) {
+                    map.put(UUID.fromString(other), Link.fromNbt(entries.getCompoundOrEmpty(other)));
                 }
                 registry.links.put(owner, map);
             } catch (IllegalArgumentException e) {
@@ -48,8 +49,7 @@ public class SocialRegistry extends SavedData {
         return registry;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag nbt) {
+        public CompoundTag save(CompoundTag nbt) {
         CompoundTag owners = new CompoundTag();
         links.forEach((owner, map) -> {
             CompoundTag entries = new CompoundTag();
@@ -167,12 +167,12 @@ public class SocialRegistry extends SavedData {
 
         static Link fromNbt(CompoundTag nbt) {
             Link link = new Link();
-            link.score = nbt.getInt("score");
-            link.lastSeen = nbt.getLong("lastSeen");
-            link.family = nbt.getBoolean("family");
-            link.talkDay = nbt.getLong("talkDay");
-            link.talks = nbt.getInt("talks");
-            link.hitDay = nbt.getLong("hitDay");
+            link.score = nbt.getIntOr("score", 0);
+            link.lastSeen = nbt.getLongOr("lastSeen", 0L);
+            link.family = nbt.getBooleanOr("family", false);
+            link.talkDay = nbt.getLongOr("talkDay", 0L);
+            link.talks = nbt.getIntOr("talks", 0);
+            link.hitDay = nbt.getLongOr("hitDay", 0L);
             return link;
         }
     }

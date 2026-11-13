@@ -45,7 +45,7 @@ public final class BlueprintPanels {
 
     public static int wrapped(GuiGraphicsExtractor context, Font text, Component line, int x, int y, int width, int color) {
         for (FormattedCharSequence part : text.split(line, Math.max(40, width))) {
-            context.drawString(text, part, x, y, color);
+            context.text(text, part, x, y, color);
             y += LINE;
         }
         return y;

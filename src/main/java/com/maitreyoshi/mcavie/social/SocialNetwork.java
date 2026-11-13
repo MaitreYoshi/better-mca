@@ -49,13 +49,13 @@ public final class SocialNetwork {
         ServerPlayNetworking.registerGlobalReceiver(RELATIONS_REQUEST, (server, player, handler, buf, responseSender) -> {
             UUID uuid = buf.readUUID();
             server.execute(() -> {
-                long time = player.serverLevel().getGameTime();
+                long time = player.level().getGameTime();
                 Long last = LAST_REQUEST.get(player.getUUID());
                 if (last != null && time - last >= 0 && time - last < REQUEST_COOLDOWN) {
                     return;
                 }
                 LAST_REQUEST.put(player.getUUID(), time);
-                VillagerEntityMCA villager = player.serverLevel().getEntity(uuid) instanceof VillagerEntityMCA v ? v : null;
+                VillagerEntityMCA villager = player.level().getEntity(uuid) instanceof VillagerEntityMCA v ? v : null;
                 if (villager != null && villager.distanceToSqr(player) <= MAX_DISTANCE_SQ) {
                     REACHABLE.remove(player.getUUID());
                     send(player, uuid, villager);
@@ -78,7 +78,7 @@ public final class SocialNetwork {
 
     /** {@code villager} peut être null : villageois non chargé ou mort, ses liens restent dans le registre. */
     private static void send(ServerPlayer player, UUID owner, @Nullable VillagerEntityMCA villager) {
-        ServerLevel world = player.serverLevel();
+        ServerLevel world = player.level();
         Map<UUID, Link> links = SocialRegistry.get(world.getServer()).links(owner);
         FamilyTree tree = FamilyTree.get(world);
         Optional<FamilyTreeNode> node = tree.getOrEmpty(owner);

@@ -24,9 +24,9 @@ public abstract class RenameVillageMessageMixin {
     @Inject(method = "receive", at = @At("HEAD"), cancellable = true)
     private void mcavie$checkRights(ServerPlayer player, CallbackInfo ci) {
         ci.cancel();
-        VillageManager.get(player.serverLevel()).getOrEmpty(id).ifPresent(village -> {
+        VillageManager.get(player.level()).getOrEmpty(id).ifPresent(village -> {
             if (!VillageRights.personalRank(village, player).isAtLeast(VillageRights.RENAME)) {
-                player.displayClientMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.RENAME.getTranslationKey())), true);
+                player.sendOverlayMessage(Component.translatable("msg.mca_vie.rights.denied", Component.translatable(VillageRights.RENAME.getTranslationKey())));
                 return;
             }
             String clean = name == null ? "" : name.strip();

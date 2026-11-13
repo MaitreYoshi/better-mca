@@ -273,17 +273,17 @@ public final class TombstoneClient {
         int r = color >> 16 & 0xFF;
         int g = color >> 8 & 0xFF;
         int b = color & 0xFF;
-        buffer.vertex(position, x0, y0, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.vertex(position, x0, y1, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.vertex(position, x1, y1, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.vertex(position, x1, y0, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.vertex(position, x1, y0, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.vertex(position, x1, y1, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.vertex(position, x0, y1, z).color(r, g, b, a).uv2(light).endVertex();
-        buffer.vertex(position, x0, y0, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.addVertex(position, x0, y0, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.addVertex(position, x0, y1, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.addVertex(position, x1, y1, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.addVertex(position, x1, y0, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.addVertex(position, x1, y0, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.addVertex(position, x1, y1, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.addVertex(position, x0, y1, z).color(r, g, b, a).uv2(light).endVertex();
+        buffer.addVertex(position, x0, y0, z).color(r, g, b, a).uv2(light).endVertex();
     }
 
     private static void vertex(VertexConsumer buffer, Matrix4f position, float x, float y, float z, float u, float v) {
-        buffer.vertex(position, x, y, z).color(255, 255, 255, 255).uv(u, v).uv2(LightTexture.FULL_BRIGHT).endVertex();
+        buffer.addVertex(position, x, y, z).color(255, 255, 255, 255).uv(u, v).uv2(LightTexture.FULL_BRIGHT).endVertex();
     }
 }

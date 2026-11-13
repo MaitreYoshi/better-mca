@@ -36,10 +36,10 @@ public final class WorkClient {
         ClientPlayNetworking.registerGlobalReceiver(WorkNetwork.JOB_REFUSED, (client, handler, buf, responseSender) -> {
             Component message = buf.readComponent();
             client.execute(() -> {
-                if (client.screen instanceof JobScreen screen) {
+                if (client.gui.screen() instanceof JobScreen screen) {
                     screen.showRefusal(message);
                 } else if (client.player != null) {
-                    client.player.displayClientMessage(message, true);
+                    client.player.sendOverlayMessage(message);
                 }
             });
         });

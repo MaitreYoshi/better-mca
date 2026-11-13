@@ -18,7 +18,7 @@ public final class TreeClient {
         ClientPlayNetworking.registerGlobalReceiver(TreeProtocol.RESPONSE, (client, handler, buf, responseSender) -> {
             TreeProtocol.Response response = TreeProtocol.Response.read(buf);
             client.execute(() -> {
-                if (client.screen instanceof TreeScreen screen) {
+                if (client.gui.screen() instanceof TreeScreen screen) {
                     screen.accept(response);
                 }
             });
@@ -26,7 +26,7 @@ public final class TreeClient {
     }
 
     public static void open(UUID root, @Nullable Screen parent) {
-        Minecraft.getInstance().setScreen(new TreeScreen(root, parent));
+        Minecraft.getInstance().gui.setScreen(new TreeScreen(root, parent));
     }
 
     public static void send(TreeProtocol.Request request) {

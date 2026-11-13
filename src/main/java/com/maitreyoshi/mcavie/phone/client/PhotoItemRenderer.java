@@ -72,10 +72,10 @@ public final class PhotoItemRenderer implements BuiltinItemRendererRegistry.Dyna
 
     private static void mapQuad(VertexConsumer buffer, Matrix4f position, float x0, float y0, float x1, float y1, float z,
                                 float u0, float v0, float u1, float v1, int light) {
-        buffer.vertex(position, x0, y1, z).color(255, 255, 255, 255).uv(u0, v1).uv2(light).endVertex();
-        buffer.vertex(position, x1, y1, z).color(255, 255, 255, 255).uv(u1, v1).uv2(light).endVertex();
-        buffer.vertex(position, x1, y0, z).color(255, 255, 255, 255).uv(u1, v0).uv2(light).endVertex();
-        buffer.vertex(position, x0, y0, z).color(255, 255, 255, 255).uv(u0, v0).uv2(light).endVertex();
+        buffer.addVertex(position, x0, y1, z).color(255, 255, 255, 255).uv(u0, v1).uv2(light).endVertex();
+        buffer.addVertex(position, x1, y1, z).color(255, 255, 255, 255).uv(u1, v1).uv2(light).endVertex();
+        buffer.addVertex(position, x1, y0, z).color(255, 255, 255, 255).uv(u1, v0).uv2(light).endVertex();
+        buffer.addVertex(position, x0, y0, z).color(255, 255, 255, 255).uv(u0, v0).uv2(light).endVertex();
     }
 
     private static void quad(VertexConsumer buffer, Matrix4f position, Matrix3f normal, float x0, float y0, float x1, float y1, float z,
@@ -87,6 +87,6 @@ public final class PhotoItemRenderer implements BuiltinItemRendererRegistry.Dyna
     }
 
     private static void vertex(VertexConsumer buffer, Matrix4f position, Matrix3f normal, float x, float y, float z, float u, float v, int light, int overlay) {
-        buffer.vertex(position, x, y, z).color(255, 255, 255, 255).uv(u, v).overlayCoords(overlay).uv2(light).normal(normal, 0, 0, 1).endVertex();
+        buffer.addVertex(position, x, y, z).color(255, 255, 255, 255).uv(u, v).overlayCoords(overlay).uv2(light).normal(normal, 0, 0, 1).endVertex();
     }
 }

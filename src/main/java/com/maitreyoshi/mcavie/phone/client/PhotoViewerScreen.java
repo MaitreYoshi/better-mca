@@ -85,7 +85,7 @@ public class PhotoViewerScreen extends Screen {
         if (minecraft == null) {
             return;
         }
-        minecraft.setScreen(parent);
+        minecraft.gui.setScreen(parent);
         if (parent != null) {
             parent.refresh();
         }
@@ -97,15 +97,15 @@ public class PhotoViewerScreen extends Screen {
     }
 
     @Override
-    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, width, height, 0xF0000000);
         PhonePhotos.Picture picture = parent == null ? PhonePhotos.print(id, true) : PhonePhotos.get(number, id, true);
         int margin = 8;
         if (picture == null) {
-            context.drawCenteredString(font, "…", width / 2, (height - BAR) / 2, 0xAAAAAA);
+            context.centeredText(font, "…", width / 2, (height - BAR) / 2, 0xAAAAAA);
         } else {
             PhoneScreen.drawFitted(context, picture, margin, margin, width - 2 * margin, height - BAR - 2 * margin);
         }
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(context, mouseX, mouseY, delta);
     }
 }

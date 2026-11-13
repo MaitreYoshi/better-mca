@@ -1,5 +1,7 @@
 package com.maitreyoshi.mcavie.phone;
 
+import com.maitreyoshi.mcavie.compat.Saved;
+import com.maitreyoshi.mcavie.compat.Nbt;
 import com.maitreyoshi.mcavie.MCAVie;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
@@ -25,17 +27,17 @@ public class PhoneRegistry extends SavedData {
     private final Map<Integer, Phone> phones = new HashMap<>();
 
     public static PhoneRegistry get(MinecraftServer server) {
-        return server.overworld().getDataStorage().computeIfAbsent(PhoneRegistry::fromNbt, PhoneRegistry::new, DATA_ID);
+        return Saved.get(server.overworld(), PhoneRegistry::fromNbt, PhoneRegistry::new, PhoneRegistry::save, DATA_ID);
     }
 
     private static PhoneRegistry fromNbt(CompoundTag nbt) {
         PhoneRegistry registry = new PhoneRegistry();
-        CompoundTag all = nbt.getCompound("phones");
-        for (String key : all.getAllKeys()) {
+        CompoundTag all = nbt.getCompoundOrEmpty("phones");
+        for (String key : all.keySet()) {
             try {
                 int number = Integer.parseInt(key);
                 if (number >= 0 && number < NUMBERS) {
-                    registry.phones.put(number, Phone.fromNbt(all.getCompound(key)));
+                    registry.phones.put(number, Phone.fromNbt(all.getCompoundOrEmpty(key)));
                 }
             } catch (IllegalArgumentException e) {
                 MCAVie.LOGGER.warn("Téléphone invalide dans le registre : {}", key);
@@ -44,8 +46,7 @@ public class PhoneRegistry extends SavedData {
         return registry;
     }
 
-    @Override
-    public CompoundTag save(CompoundTag nbt) {
+        public CompoundTag save(CompoundTag nbt) {
         CompoundTag all = new CompoundTag();
         phones.forEach((number, phone) -> all.put(String.valueOf(number), phone.toNbt()));
         nbt.put("phones", all);
@@ -125,7 +126,7 @@ public class PhoneRegistry extends SavedData {
         CompoundTag toNbt() {
             CompoundTag nbt = new CompoundTag();
             if (owner != null) {
-                nbt.putUUID("owner", owner);
+                Nbt.putUUID(nbt, "owner", owner);
             }
             nbt.putString("ownerName", ownerName);
             nbt.putString("ownerSkin", ownerSkin);
@@ -149,7 +150,7 @@ public class PhoneRegistry extends SavedData {
             ListTag galleryList = new ListTag();
             for (Photo photo : gallery) {
                 CompoundTag entry = new CompoundTag();
-                entry.putUUID("id", photo.id());
+                Nbt.putUUID(entry, "id", photo.id());
                 entry.putLong("time", photo.time());
                 if (photo.folder() != 0) {
                     entry.putInt("folder", photo.folder());
@@ -186,39 +187,39 @@ public class PhoneRegistry extends SavedData {
 
         static Phone fromNbt(CompoundTag nbt) {
             Phone phone = new Phone();
-            if (nbt.hasUUID("owner")) {
-                phone.owner = nbt.getUUID("owner");
+            if (Nbt.hasUUID(nbt, "owner")) {
+                phone.owner = Nbt.getUUID(nbt, "owner");
             }
-            phone.ownerName = nbt.getString("ownerName");
-            phone.ownerSkin = nbt.getString("ownerSkin");
+            phone.ownerName = nbt.getStringOr("ownerName", "");
+            phone.ownerSkin = nbt.getStringOr("ownerSkin", "");
             if (nbt.contains("code")) {
-                phone.code = nbt.getString("code");
+                phone.code = nbt.getStringOr("code", "");
             }
-            for (Tag element : nbt.getList("contacts", Tag.TAG_COMPOUND)) {
+            for (Tag element : nbt.getListOrEmpty("contacts")) {
                 CompoundTag contact = (CompoundTag) element;
-                phone.contacts.add(contact.getInt("number"));
+                phone.contacts.add(contact.getIntOr("number", 0));
             }
-            for (Tag element : nbt.getList("conversations", Tag.TAG_COMPOUND)) {
+            for (Tag element : nbt.getListOrEmpty("conversations")) {
                 CompoundTag entry = (CompoundTag) element;
-                phone.conversations.put(entry.getInt("number"), Conversation.fromNbt(entry));
+                phone.conversations.put(entry.getIntOr("number", 0), Conversation.fromNbt(entry));
             }
-            for (Tag element : nbt.getList("folders", Tag.TAG_COMPOUND)) {
+            for (Tag element : nbt.getListOrEmpty("folders")) {
                 CompoundTag entry = (CompoundTag) element;
-                phone.folders.put(entry.getInt("id"), entry.getString("name"));
+                phone.folders.put(entry.getIntOr("id", 0), entry.getStringOr("name", ""));
             }
-            phone.nextFolder = Math.max(1, nbt.getInt("nextFolder"));
-            phone.wallpaper = nbt.getString("wallpaper");
-            for (Tag element : nbt.getList("agenda", Tag.TAG_COMPOUND)) {
+            phone.nextFolder = Math.max(1, nbt.getIntOr("nextFolder", 0));
+            phone.wallpaper = nbt.getStringOr("wallpaper", "");
+            for (Tag element : nbt.getListOrEmpty("agenda")) {
                 CompoundTag entry = (CompoundTag) element;
-                phone.agenda.add(new AgendaEvent(entry.getInt("id"), entry.getLong("day"), entry.getBoolean("yearly"), entry.getString("title")));
+                phone.agenda.add(new AgendaEvent(entry.getIntOr("id", 0), entry.getLongOr("day", 0L), entry.getBooleanOr("yearly", false), entry.getStringOr("title", "")));
             }
-            phone.nextEvent = Math.max(1, nbt.getInt("nextEvent"));
-            phone.agendaDay = nbt.contains("agendaDay") ? nbt.getLong("agendaDay") : -1;
-            for (Tag element : nbt.getList("gallery", Tag.TAG_COMPOUND)) {
+            phone.nextEvent = Math.max(1, nbt.getIntOr("nextEvent", 0));
+            phone.agendaDay = nbt.contains("agendaDay") ? nbt.getLongOr("agendaDay", 0L) : -1;
+            for (Tag element : nbt.getListOrEmpty("gallery")) {
                 CompoundTag entry = (CompoundTag) element;
-                if (entry.hasUUID("id")) {
-                    int folder = entry.getInt("folder");
-                    phone.gallery.add(new Photo(entry.getUUID("id"), entry.getLong("time"), phone.folders.containsKey(folder) ? folder : 0));
+                if (Nbt.hasUUID(entry, "id")) {
+                    int folder = entry.getIntOr("folder", 0);
+                    phone.gallery.add(new Photo(Nbt.getUUID(entry, "id"), entry.getLongOr("time", 0L), phone.folders.containsKey(folder) ? folder : 0));
                 }
             }
             return phone;
@@ -241,7 +242,7 @@ public class PhoneRegistry extends SavedData {
                 entry.putString("text", message.text());
                 entry.putLong("time", message.time());
                 if (message.photo() != null) {
-                    entry.putUUID("photo", message.photo());
+                    Nbt.putUUID(entry, "photo", message.photo());
                 }
                 list.add(entry);
             }
@@ -251,11 +252,11 @@ public class PhoneRegistry extends SavedData {
 
         static Conversation fromNbt(CompoundTag nbt) {
             Conversation conversation = new Conversation();
-            conversation.unread = nbt.getInt("unread");
-            conversation.lastTime = nbt.getLong("lastTime");
-            for (Tag element : nbt.getList("messages", Tag.TAG_COMPOUND)) {
+            conversation.unread = nbt.getIntOr("unread", 0);
+            conversation.lastTime = nbt.getLongOr("lastTime", 0L);
+            for (Tag element : nbt.getListOrEmpty("messages")) {
                 CompoundTag entry = (CompoundTag) element;
-                conversation.messages.add(new Message(entry.getBoolean("out"), entry.getString("text"), entry.getLong("time"), entry.hasUUID("photo") ? entry.getUUID("photo") : null));
+                conversation.messages.add(new Message(entry.getBooleanOr("out", false), entry.getStringOr("text", ""), entry.getLongOr("time", 0L), Nbt.hasUUID(entry, "photo") ? Nbt.getUUID(entry, "photo") : null));
             }
             return conversation;
         }

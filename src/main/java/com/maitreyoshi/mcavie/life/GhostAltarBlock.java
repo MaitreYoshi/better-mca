@@ -129,9 +129,9 @@ public class GhostAltarBlock extends BaseEntityBlock {
         } else {
             UUID person = altar.person();
             Component message = person == null ? Component.translatable("block.mca_vie.ghost_altar.empty")
-                    : Component.translatable("block.mca_vie.ghost_altar.person", FamilyTree.get(((ServerPlayer) player).serverLevel())
+                    : Component.translatable("block.mca_vie.ghost_altar.person", FamilyTree.get(((ServerPlayer) player).level())
                     .getOrEmpty(person).map(n -> n.getName()).orElse("?"));
-            player.displayClientMessage(message, true);
+            player.sendOverlayMessage(message);
         }
         return InteractionResult.CONSUME;
     }

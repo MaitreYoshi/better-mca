@@ -134,30 +134,30 @@ public class IllustratedPage extends Page {
         int titleWidth = font.width(title);
         if (titleWidth > WIDTH) {
             float scale = WIDTH / (float) titleWidth;
-            context.pose().pushPose();
+            context.pose().pushMatrix();
             context.pose().translate(left, 30 + 4 * (1 - scale), 0);
             context.pose().scale(scale, scale, 1);
-            context.drawString(font, title, 0, 0, TITLE_COLOR, false);
-            context.pose().popPose();
+            context.text(font, title, 0, 0, TITLE_COLOR, false);
+            context.pose().popMatrix();
         } else {
-            context.drawString(font, title, left + (WIDTH - titleWidth) / 2, 30, TITLE_COLOR, false);
+            context.text(font, title, left + (WIDTH - titleWidth) / 2, 30, TITLE_COLOR, false);
         }
         context.fill(left + 10, 41, left + WIDTH - 10, 42, 0x55000000 | TITLE_COLOR);
 
         int y = 46;
         if (introKey != null) {
             for (FormattedCharSequence line : font.split(Component.translatable(introKey), WIDTH)) {
-                context.drawString(font, line, left, y, TEXT_COLOR, false);
+                context.text(font, line, left, y, TEXT_COLOR, false);
                 y += 9;
             }
             y += 4;
         }
         if (bigIcon != null) {
-            context.pose().pushPose();
+            context.pose().pushMatrix();
             context.pose().translate(left + (WIDTH - 48) / 2f, y, 0);
             context.pose().scale(3, 3, 1);
-            context.renderItem(stack(bigIcon), 0, 0);
-            context.pose().popPose();
+            context.item(stack(bigIcon), 0, 0);
+            context.pose().popMatrix();
             y += 52;
         }
         if (recipe != null) {
@@ -168,37 +168,37 @@ public class IllustratedPage extends Page {
                 context.fill(sx, sy, sx + 18, sy + 18, 0x40000000 | TITLE_COLOR);
                 context.fill(sx + 1, sy + 1, sx + 17, sy + 17, 0xFFE9DDBF);
                 if (i < recipe.length && !recipe[i].isEmpty()) {
-                    context.renderItem(stack(recipe[i]), sx + 1, sy + 1);
+                    context.item(stack(recipe[i]), sx + 1, sy + 1);
                 }
             }
             int arrowX = gridLeft + 54 + 4;
-            context.drawString(font, Component.literal("→").withStyle(ChatFormatting.BOLD), arrowX + 3, y + 23, TITLE_COLOR, false);
+            context.text(font, Component.literal("→").withStyle(ChatFormatting.BOLD), arrowX + 3, y + 23, TITLE_COLOR, false);
             int rx = arrowX + 18;
             context.fill(rx, y + 18, rx + 18, y + 36, 0x40000000 | TITLE_COLOR);
             context.fill(rx + 1, y + 19, rx + 17, y + 35, 0xFFE9DDBF);
-            context.renderItem(stack(recipeResult), rx + 1, y + 19);
+            context.item(stack(recipeResult), rx + 1, y + 19);
             y += 58;
         }
         Row hovered = null;
         for (Row row : rows) {
             if (row.icon == null) {
                 Component value = Component.literal(row.value).withStyle(ChatFormatting.BOLD);
-                context.drawString(font, Component.literal("\u2022 ").append(Component.translatable(row.key)), left + 4, y, TEXT_COLOR, false);
-                context.drawString(font, value, left + WIDTH - font.width(value), y, row.color, false);
+                context.text(font, Component.literal("\u2022 ").append(Component.translatable(row.key)), left + 4, y, TEXT_COLOR, false);
+                context.text(font, value, left + WIDTH - font.width(value), y, row.color, false);
                 y += LINE_HEIGHT;
                 continue;
             }
-            context.renderItem(stack(row.icon), left, y);
+            context.item(stack(row.icon), left, y);
             Component value = Component.literal(row.value).withStyle(ChatFormatting.BOLD);
             int valueWidth = font.width(value);
-            context.drawString(font, value, left + WIDTH - valueWidth, y + 4, row.color, false);
+            context.text(font, value, left + WIDTH - valueWidth, y + 4, row.color, false);
             List<FormattedCharSequence> lines = font.split(Component.translatable(row.key), WIDTH - 20 - valueWidth - 3);
             int rowHeight = Math.max(ROW_HEIGHT, lines.size() * 9 + 2);
             if (lines.size() == 1) {
-                context.drawString(font, lines.get(0), left + 19, y + 4, TEXT_COLOR, false);
+                context.text(font, lines.get(0), left + 19, y + 4, TEXT_COLOR, false);
             } else {
                 for (int i = 0; i < lines.size(); i++) {
-                    context.drawString(font, lines.get(i), left + 19, y + i * 9, TEXT_COLOR, false);
+                    context.text(font, lines.get(i), left + 19, y + i * 9, TEXT_COLOR, false);
                 }
             }
             if (mouseX >= left && mouseX < left + WIDTH && mouseY >= y - 1 && mouseY < y + rowHeight - 1) {
@@ -211,7 +211,7 @@ public class IllustratedPage extends Page {
             int perLine = WIDTH / 19;
             int gridLeft = left + (WIDTH - perLine * 19 + 3) / 2;
             for (int i = 0; i < grid.size(); i++) {
-                context.renderItem(stack(grid.get(i)), gridLeft + (i % perLine) * 19, y + (i / perLine) * 18);
+                context.item(stack(grid.get(i)), gridLeft + (i % perLine) * 19, y + (i / perLine) * 18);
             }
             y += ((grid.size() + perLine - 1) / perLine) * 18 + 2;
         }
@@ -221,7 +221,7 @@ public class IllustratedPage extends Page {
                 if (y > LAST_LINE_Y) {
                     break;
                 }
-                context.drawString(font, line, left, y, NOTE_COLOR, false);
+                context.text(font, line, left, y, NOTE_COLOR, false);
                 y += 9;
             }
         }

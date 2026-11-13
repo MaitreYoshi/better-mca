@@ -1,5 +1,6 @@
 package com.maitreyoshi.mcavie.compat.client;
 
+import com.maitreyoshi.mcavie.compat.RawPayload;
 import dev.architectury.networking.NetworkManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -11,18 +12,18 @@ public final class ClientPlayNetworking {
     }
 
     public static void registerGlobalReceiver(Identifier id, PlayChannelHandler handler) {
-        NetworkManager.registerReceiver(NetworkManager.Side.S2C, id, (buf, context) -> {
+        RawPayload.registerClient(id, (buf, context) -> {
             Minecraft client = Minecraft.getInstance();
             handler.receive(client, client.getConnection(), buf, null);
         });
     }
 
     public static void send(Identifier id, FriendlyByteBuf buf) {
-        NetworkManager.sendToServer(id, buf);
+        NetworkManager.sendToServer(RawPayload.of(RawPayload.C2S, id, buf));
     }
 
     public static boolean canSend(Identifier id) {
-        return Minecraft.getInstance().getConnection() != null && NetworkManager.canServerReceive(id);
+        return Minecraft.getInstance().getConnection() != null && NetworkManager.canServerReceive(RawPayload.C2S);
     }
 
     @FunctionalInterface

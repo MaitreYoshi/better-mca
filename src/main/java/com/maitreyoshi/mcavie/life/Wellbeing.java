@@ -64,7 +64,7 @@ public final class Wellbeing {
             return;
         }
         long today = WorldCalendar.now(world).dayIndex();
-        long night = world.getDayTime() / WorldCalendar.TICKS_PER_DAY;
+        long night = world.getOverworldClockTime() / WorldCalendar.TICKS_PER_DAY;
         FamilyTreeNode node = villager.getRelationships().getFamilyEntry();
 
         Record record = registry.get(villager.getUUID());
