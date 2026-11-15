@@ -11,7 +11,7 @@ An addon for **MCA Reborn** (Fabric and Forge 1.20.1). Singleplayer and multipla
 Hire a jobless adult from the **Job** tab of their menu. Each job has its own workstation and outfit:
 
 *   **Farmer**, **Lumberjack**, **Fisher**, **Breeder**, **Baker**, **Blacksmith**, **Doctor**, **Teacher**
-*   **Miner** and **Cook** *(new)*
+*   **Miner** and **Cook** _(new)_
 *   **Guard** and **Archer** (MCA's defenders)
 
 10 workstations with unique models: Seed Shed, Chopping Block, Fish Stall, Feeding Trough, Bread Oven, Forge, Apothecary Table, School Desk, Miner's Cart, Cooking Pot. Villagers work in their zone, store their output in their workstation right away, rise from **Apprentice** to **Master** (new trades at each level) and **retire** in old age.
@@ -51,7 +51,7 @@ Hire a jobless adult from the **Job** tab of their menu. Each job has its own wo
 
 ### 📱 Phone
 
-*   Your own number, photos, gallery, sharing, printed photos (placeable on any surface) and a villager tracker.
+*   Your own number, photos, gallery, sharing, printed photos (placeable on any surface).
 
 ### 🎒 Also
 
@@ -69,9 +69,15 @@ Hire a jobless adult from the **Job** tab of their menu. Each job has its own wo
 *   `/villagemarket` (op): sell the Market stalls right now (normally done on Saturday at 6 PM).
 *   `/time add <ticks>` (op): skip time, villagers live through it (max 100 years).
 *   `/gamerule mcaVieTimeSpeed <day|week|month|season|year>` (op): change the time speed.
+*   `/age set [targets] <years>` (op): set a villager's age (no target = the villager you're looking at).
+*   `/age get [targets]` (op): see a villager's age.
+*   `/treemerge list <name>` (op): list the family tree entries with that name.
+*   `/treemerge <remove> <keep>` (op): merge a duplicate family tree entry into the one to keep.
 
 ## Requirements
 
-Minecraft 1.20.1 + Fabric (with Fabric API 0.92.6) or Forge 47.x, MCA Reborn 7.6.26, Architectury API 9.2.14.
+*   MCA REBORN : \[Universal 1.20.1\] MCA Reborn - 7.6.26
+*   Fabric API 0.92.6 (if you playing on fabric)
+*   Architectury API 9.2.14
 
 Bug reports and ideas are very welcome!
