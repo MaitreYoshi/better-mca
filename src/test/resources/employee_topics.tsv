@@ -1,0 +1,75 @@
+comment va ton enfant ?	children	how
+t'as un mari ?	spouse	has
+qui sont tes parents ?	parents	who
+je t'aime	love	declare
+tu as un mari ?	spouse	has
+tas un mari	spouse	has
+as-tu une femme ?	spouse	has
+tu es marié ?	spouse	has
+t'es mariée ?	spouse	has
+t'es pas marié ?	spouse	has
+tu es célibataire ?	spouse	has
+qui est ton mari ?	spouse	who
+comment s'appelle ta femme ?	spouse	who
+comment va ta femme ?	spouse	how
+ton mari va bien ?	spouse	how
+où est ton époux ?	spouse	where
+elle est où ta femme ?	spouse	where
+ta femme va bien ?	spouse	how
+tu as des enfants ?	children	has
+t'as des gosses ?	children	has
+as-tu un fils ?	children	has
+t'as une fille ?	children	has
+t'as pas d'enfants ?	children	has
+combien d'enfants tu as ?	children	count
+t'as combien d'enfants ?	children	count
+tu as combien de gosses ?	children	count
+qui sont tes enfants ?	children	who
+comment s'appelle ton fils ?	children	who
+comment s'appelle ta fille ?	children	who
+comment vont tes enfants ?	children	how
+tes enfants vont bien ?	children	how
+ton fils va bien ?	children	how
+où sont tes enfants ?	children	where
+ton fils a quel âge ?	children	age
+qui est ton père ?	parents	who
+c'est qui ta mère ?	parents	who
+comment va ta mère ?	parents	how
+comment vont tes parents ?	parents	how
+ton père va bien ?	parents	how
+ta maman a quel âge ?	parents	age
+as-tu des parents ?	parents	has
+t'as un frère ?	siblings	has
+tu as des sœurs ?	siblings	has
+combien de frères tu as ?	siblings	count
+comment va ton frère ?	siblings	how
+qui est ta sœur ?	siblings	who
+comment va ta famille ?	family	how
+ta famille va bien ?	family	how
+je t'adore	love	declare
+jtm	love	declare
+je ne t'aime pas	love	declare!
+je t'aime plus	love	declare!
+tu me manques	miss	declare
+tu m'aimes ?	likeme	declare
+on se marie ?	proposal	declare
+épouse-moi	proposal	declare
+veux-tu m'épouser ?	proposal	declare
+il a quel âge ?	anaphora	age
+comment il s'appelle ?	anaphora	who
+elle va bien ?	anaphora	how
+il est où ?	anaphora	where
+do you have a husband?	spouse	has
+are you married?	spouse	has
+how is your wife?	spouse	how
+how many kids do you have?	children	count
+who are your parents?	parents	who
+i love you	love	declare
+marry me	proposal	declare
+salut	-	-
+ça va ?	-	-
+il fait beau	-	-
+il est quelle heure ?	-	-
+tu fais quoi ?	-	-
+c'est quoi ton métier ?	-	-
+le mariage c'est nul	-	-

@@ -1,0 +1,34 @@
+{
+  "variants": {
+    "facing=north,waterlogged=false": {
+      "model": "mca_vie:block/wooden_cross_tomb"
+    },
+    "facing=north,waterlogged=true": {
+      "model": "mca_vie:block/wooden_cross_tomb"
+    },
+    "facing=east,waterlogged=false": {
+      "model": "mca_vie:block/wooden_cross_tomb",
+      "y": 90
+    },
+    "facing=east,waterlogged=true": {
+      "model": "mca_vie:block/wooden_cross_tomb",
+      "y": 90
+    },
+    "facing=south,waterlogged=false": {
+      "model": "mca_vie:block/wooden_cross_tomb",
+      "y": 180
+    },
+    "facing=south,waterlogged=true": {
+      "model": "mca_vie:block/wooden_cross_tomb",
+      "y": 180
+    },
+    "facing=west,waterlogged=false": {
+      "model": "mca_vie:block/wooden_cross_tomb",
+      "y": 270
+    },
+    "facing=west,waterlogged=true": {
+      "model": "mca_vie:block/wooden_cross_tomb",
+      "y": 270
+    }
+  }
+}

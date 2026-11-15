@@ -1,0 +1,10 @@
+{
+  "color": "ffe8e0c8",
+  "visible": true,
+  "priority": 4,
+  "blocks": {
+    "#minecraft:candles": 6
+  },
+  "iconU": 2,
+  "iconV": 1
+}

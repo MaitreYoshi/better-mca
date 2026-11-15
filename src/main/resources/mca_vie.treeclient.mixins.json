@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.maitreyoshi.mcavie.tree.client.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "FamilyTreeScreenAccessor",
+    "MinecraftClientMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

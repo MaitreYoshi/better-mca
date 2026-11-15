@@ -1,0 +1,19 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "mca_vie:block/ghost_altar"
+    },
+    "facing=east": {
+      "model": "mca_vie:block/ghost_altar",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "mca_vie:block/ghost_altar",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "mca_vie:block/ghost_altar",
+      "y": 270
+    }
+  }
+}

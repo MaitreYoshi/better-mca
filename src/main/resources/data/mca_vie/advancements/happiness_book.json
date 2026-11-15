@@ -1,0 +1,30 @@
+{
+  "display": {
+    "icon": {
+      "item": "mca_vie:happiness_book"
+    },
+    "title": {
+      "translate": "advancements.mca_vie.happiness_book.title"
+    },
+    "description": {
+      "translate": "advancements.mca_vie.happiness_book.description"
+    },
+    "background": "minecraft:textures/block/honeycomb_block.png",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": true,
+    "hidden": false
+  },
+  "criteria": {
+    "has_book": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          {
+            "items": ["mca_vie:happiness_book"]
+          }
+        ]
+      }
+    }
+  }
+}

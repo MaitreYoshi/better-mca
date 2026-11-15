@@ -1,0 +1,47 @@
+sup	greeting
+wassup bro	greeting
+hru	how_are_you
+wyd	ask_status
+gtg ttyl	goodbye
+lmao	laugh
+ty bro	thanks
+u idiot	insult
+just checking in on you	checking_in
+i miss you	miss_you
+im bored	bored
+im sad	sad
+no worries	no_worries
+just kidding	joking
+u there ?	are_you_there
+wanna be friends	friend_ask
+im hungry	hungry
+take care	take_care
+have a good day	good_day
+hold on a sec	wait
+do you need help	need_help
+i dont care	dont_care
+guess what	good_news
+what are you doing tonight	tonight_plans
+im happy	happy
+youre annoying	annoyed
+oh my god	react_wow
+i am going to the market	!insult,offensive,threat,order_fire
+the weather is nice today	!insult,offensive,threat,order_fire
+did you finish your day	!insult,offensive,threat,order_fire
+my horse ran away	!insult,offensive,threat,order_fire
+sup dude	greeting
+yo mate	greeting
+how r u	how_are_you
+brb	goodbye
+gn	goodnight
+lol	laugh
+thx	thanks
+mb	apology
+ur the goat	compliment
+ur a legend	compliment
+shut up	insult
+im so tired	tired
+yes	yes
+nope	no
+and u ?	ask_you
+why tho	ask_why
