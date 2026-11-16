@@ -3,14 +3,12 @@ package com.maitreyoshi.mcavie.work.block;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import com.maitreyoshi.mcavie.work.Job;
 import com.maitreyoshi.mcavie.compat.Registration;
-import dev.architectury.registry.CreativeTabRegistry;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumMap;
 import java.util.Map;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
@@ -31,7 +29,6 @@ public final class WorkBlocks {
         }, block -> BY_JOB.put(job, block));
         Registration.register(Registries.ITEM, name, () -> new BlockItem(BY_JOB.get(job), Registration.blockItem(name)), item -> {
         });
-        CreativeTabRegistry.append(CreativeModeTabs.FUNCTIONAL_BLOCKS, (java.util.function.Supplier<net.minecraft.world.level.ItemLike>) () -> BY_JOB.get(job));
     }
 
     @Nullable

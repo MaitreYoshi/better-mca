@@ -14,7 +14,7 @@ modId = "mca_vie"
 version = "${version}"
 displayName = "Better MCA"
 authors = "MaitreYoshi"
-description = '''Addon pour Minecraft Comes Alive : noms de famille, calendrier, ÃƒÂ¢ges rÃƒÂ©alistes, bonheur et santÃƒÂ©, arbre gÃƒÂ©nÃƒÂ©alogique et mÃƒÂ©tiers pour les villageois.'''
+description = '''Addon pour Minecraft Comes Alive : noms de famille, calendrier, âges réalistes, bonheur et santé, arbre généalogique et métiers pour les villageois.'''
 
 [[dependencies.mca_vie]]
 modId = "neoforge"

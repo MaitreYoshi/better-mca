@@ -8,7 +8,6 @@ import com.maitreyoshi.mcavie.phone.PhoneRegistry.Phone;
 import com.maitreyoshi.mcavie.phone.PhoneRegistry.Photo;
 import com.maitreyoshi.mcavie.compat.ServerLifecycleEvents;
 import com.maitreyoshi.mcavie.compat.Registration;
-import dev.architectury.registry.CreativeTabRegistry;
 import net.conczin.mca.server.world.data.FamilyTree;
 import com.maitreyoshi.mcavie.compat.PacketByteBufs;
 import com.maitreyoshi.mcavie.compat.ServerPlayConnectionEvents;
@@ -28,7 +27,6 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
@@ -90,7 +88,6 @@ public final class PhoneServer {
                 () -> EntityType.Builder.<PhotoFrameEntity>of(PhotoFrameEntity::new, MobCategory.MISC)
                         .sized(0.5f, 0.5f).clientTrackingRange(10).updateInterval(Integer.MAX_VALUE).build(Registration.entity("photo_frame")),
                 type -> PHOTO_FRAME = type);
-        CreativeTabRegistry.append(CreativeModeTabs.TOOLS_AND_UTILITIES, (java.util.function.Supplier<net.minecraft.world.level.ItemLike>) () -> PHONE);
         ServerPlayNetworking.registerGlobalReceiver(PhoneNetwork.ACTION, (server, player, handler, buf, responseSender) -> {
             int number = buf.readVarInt();
             int op = buf.readVarInt();

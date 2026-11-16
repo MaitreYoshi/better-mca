@@ -3,14 +3,12 @@ package com.maitreyoshi.mcavie.life;
 import net.minecraft.world.level.block.state.BlockBehaviour;
 import com.maitreyoshi.mcavie.MCAVie;
 import com.maitreyoshi.mcavie.compat.Registration;
-import dev.architectury.registry.CreativeTabRegistry;
 import net.conczin.mca.block.TombstoneBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.BlockItem;
-import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
@@ -74,9 +72,6 @@ public final class TombstoneBlocks {
                     dev.architectury.registry.level.entity.EntityAttributeRegistry.register(() -> type, GhostEntity::createAttributes);
                 });
         Ghosts.registerNetwork();
-        CreativeTabRegistry.append(CreativeModeTabs.FUNCTIONAL_BLOCKS,
-                (java.util.function.Supplier<net.minecraft.world.level.ItemLike>) () -> WOODEN_CROSS,
-                () -> STELE, () -> MARBLE, () -> VAULT, () -> MEMORIAL, () -> GHOST_ALTAR);
     }
 
     public static Tomb forTier(int tier) {
